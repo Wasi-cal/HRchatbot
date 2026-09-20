@@ -7,7 +7,7 @@ import pymupdf
 from PIL import Image
 
 from .ocr_utils import ocr_plain_text, try_extract_tables, upscale_if_low_dpi, MIN_OCR_DPI_TARGET
-from .utils import NUMBERED_SECTION_RE
+from .utils import BARE_NUMBERED_ITEM_RE, NUMBERED_SECTION_RE
 
 import io
 
@@ -69,7 +69,49 @@ def extract_pdf(path):
                     errors.append(f"page {page_num}: OCR extraction failed: {exc}")
     finally:
         doc.close()
+    blocks = _demote_numbered_list_runs(blocks)
     return blocks, page_raw_texts, errors
+
+
+def _demote_numbered_list_runs(blocks):
+    """A run of >=3 consecutive bare-numbered lines ("1. Verbal warning",
+    "2. Corrective Actions", "3. Official written reprimand", ...) is a
+    numbered procedural list, not a run of section headings - each one
+    individually looks like a plausible short heading, but treating them
+    as separate headings fragments one cohesive list into many near-empty
+    sections. Collapse such runs into a single list-item paragraph."""
+    out = []
+    run = []
+
+    def flush_run():
+        if not run:
+            return
+        if len(run) >= 3:
+            text = "\n".join(f"- {b['text']}" for b in run)
+            pages = [b["page"] for b in run if b.get("page") is not None]
+            out.append({
+                "kind": "paragraph", "text": text, "level": None,
+                "page": min(pages) if pages else None,
+                "source_type": "digital_text", "ocr_confidence": None,
+            })
+        else:
+            out.extend(run)
+        run.clear()
+
+    expected = None
+    for b in blocks:
+        bn = b.pop("bare_number", None)
+        if bn is not None:
+            if expected is None or bn != expected:
+                flush_run()
+            run.append(b)
+            expected = bn + 1
+        else:
+            flush_run()
+            expected = None
+            out.append(b)
+    flush_run()
+    return out
 
 
 def _estimate_body_font_size(doc):
@@ -116,7 +158,34 @@ def _heading_level_for_size(size, heading_sizes, body_size):
     return None
 
 
-def _bbox_overlaps(bbox, table_bboxes, thresh=0.5):
+def _numbered_level(n_dots, max_size, heading_sizes, body_size):
+    """Level for a dotted numbered heading ("1.1 OBJECTIVE", "1.0 Introduction"),
+    combining font-size tier with dot-count depth.
+
+    A consolidated multi-policy document (e.g. one PDF bundling 14 IT
+    policies) styles each policy's chapter title in a visually distinct,
+    larger font than its own "X.0"/"X.Y" subsections, which are the same
+    size as body text. Pure dot-count is blind to this: "1.0 Introduction"
+    (1 dot) and a bare "1. Acceptable Use Policy" chapter title both
+    reduce to "depth 1", so without font-size input they collide as
+    siblings and the chapter title - the very thing that disambiguates 14
+    policies' otherwise-identical "1.0 Introduction" sections - gets
+    dropped from the tree.
+
+    If this heading itself carries a distinct font tier, that tier IS its
+    level (a numbered chapter title is still a chapter title). Otherwise
+    it has no visual distinction from body text - the same case as most
+    single-tier documents - so nest it below every font-based tier found
+    in the doc, using dot-count for depth within that shared tier.
+    """
+    size_level = _heading_level_for_size(max_size, heading_sizes, body_size)
+    if size_level is not None:
+        return size_level
+    base = (len(heading_sizes) if heading_sizes else 0) + 1
+    return base + min(n_dots - 1, 3)
+
+
+def _bbox_overlaps(bbox, table_bboxes, thresh=0.4):
     x0, y0, x1, y1 = bbox
     area = max(0, x1 - x0) * max(0, y1 - y0)
     if area == 0:
@@ -129,6 +198,17 @@ def _bbox_overlaps(bbox, table_bboxes, thresh=0.5):
         if inter / area > thresh:
             return True
     return False
+
+
+def _pad_bbox(bbox, top=16, sides=5, bottom=5):
+    """find_tables() sometimes returns a bbox anchored tightly to the
+    detected grid lines, clipping the header row's label text which sits
+    just above the first gridline (no visible borders in these docs -
+    detection is heuristic column-alignment, not ruled lines). Pad the top
+    generously so the overlap check below reliably excludes the whole
+    table region, including its header row, from paragraph extraction."""
+    x0, y0, x1, y1 = bbox
+    return (x0 - sides, y0 - top, x1 + sides, y1 + bottom)
 
 
 def _extract_digital_page(page, page_num, body_size, heading_sizes):
@@ -154,7 +234,7 @@ def _extract_digital_page(page, page_num, body_size, heading_sizes):
                 "ocr_confidence": None,
                 "row_mismatch": mismatch,
             })
-            table_bboxes.append(tuple(table.bbox))
+            table_bboxes.append(_pad_bbox(tuple(table.bbox)))
     except Exception as exc:
         logger.debug("find_tables failed on page %s: %s", page_num, exc)
 
@@ -173,36 +253,55 @@ def _extract_digital_page(page, page_num, body_size, heading_sizes):
             line_text = "".join(s.get("text", "") for s in spans).strip()
             if not line_text:
                 continue
-            max_size = max(s["size"] for s in spans)
-            is_bold = any(s.get("flags", 0) & 2**4 for s in spans)
+            # Ignore whitespace-only spans when sizing the line - Word-
+            # exported PDFs often leave a trailing blank run at a different
+            # (sometimes much larger) font size, which would otherwise be
+            # mistaken for a real font-size heading signal.
+            text_spans = [s for s in spans if s.get("text", "").strip()] or spans
+            max_size = max(s["size"] for s in text_spans)
+            is_bold = any(s.get("flags", 0) & 2**4 for s in text_spans)
 
-            # Numbered-section patterns ("1.1 OBJECTIVE", "4.2 Parental Leave")
-            # are a stronger, more consistent structural signal than font-size
-            # clustering, so they take priority when present.
+            # Dotted section labels ("1.1 OBJECTIVE", "4.2 Parental Leave")
+            # are a strong, unambiguous structural signal - no length limit
+            # needed since the dots themselves disambiguate from prose.
+            # Level combines dot-count with font-size tier (see
+            # _numbered_level) so a chapter title and its own numbered
+            # subsections don't collide onto the same level.
             m = NUMBERED_SECTION_RE.match(line_text)
             level = None
+            bare_number = None
             if m:
                 n_dots = m.group(1).count(".")
-                # A bare "2." (no dot) is structurally ambiguous - it could be
-                # a top-level section number, or the 2nd item of a numbered
-                # definition/glossary list ("2. Aggrieved Person: ...").
-                # Require it to be short (a title), not a full sentence, to
-                # count as a heading; dotted patterns ("1.1", "4.2") are
-                # unambiguous section labels regardless of length.
-                short_enough = len(line_text) < 40 if n_dots == 0 else len(line_text) < 100
-                if short_enough and (is_bold or len(line_text.split()) < 12):
-                    # "1.1", "1.2" siblings under an implicit top section both
-                    # get 1 dot -> same level; "1.1.1" (2 dots) nests deeper.
-                    depth = max(n_dots, 1)
-                    level = min(depth, 4)
-            if level is None:
+                if is_bold or len(line_text) < 100 or len(line_text.split()) < 12:
+                    level = _numbered_level(n_dots, max_size, heading_sizes, body_size)
+            else:
+                # A bare number ("3", "12") is structurally ambiguous - it
+                # could be a real chapter title, a table/legend cell
+                # ("3 - Medium"), or one item of a numbered list ("3.
+                # Official written reprimand") - all three share identical
+                # surface syntax. Require an explicit delimiter + capitalized
+                # title (BARE_NUMBERED_ITEM_RE) before considering it at
+                # all, and even then only treat it as a heading if it
+                # carries a font size distinctly larger than body text (a
+                # real chapter title) - a bare-numbered list item is
+                # visually indistinguishable from body prose, so it stays
+                # a plain paragraph. Keep the bare_number tag regardless,
+                # so a run of these can still be caught and grouped into a
+                # single list by _demote_numbered_list_runs.
+                bm = BARE_NUMBERED_ITEM_RE.match(line_text)
+                if bm:
+                    bare_number = int(bm.group(1))
+                    size_level = _heading_level_for_size(max_size, heading_sizes, body_size)
+                    if size_level is not None and len(line_text) < 100:
+                        level = size_level
+            if level is None and bare_number is None:
                 level = _heading_level_for_size(max_size, heading_sizes, body_size)
 
             if level is not None and len(line_text) < 150:
                 blocks.append({
                     "kind": "heading", "text": line_text, "level": level,
                     "page": page_num, "source_type": "digital_text",
-                    "ocr_confidence": None,
+                    "ocr_confidence": None, "bare_number": bare_number,
                 })
             else:
                 if blocks and blocks[-1]["kind"] == "paragraph" and blocks[-1]["page"] == page_num:
@@ -211,7 +310,7 @@ def _extract_digital_page(page, page_num, body_size, heading_sizes):
                     blocks.append({
                         "kind": "paragraph", "text": line_text, "level": None,
                         "page": page_num, "source_type": "digital_text",
-                        "ocr_confidence": None,
+                        "ocr_confidence": None, "bare_number": bare_number,
                     })
     return blocks
 

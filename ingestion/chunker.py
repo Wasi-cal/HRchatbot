@@ -128,10 +128,14 @@ def chunk_document(sections, document_title, id_prefix):
             else:
                 # section_path_str already contains document_title.
                 header = section_path_str
+                # Reserve room for the header that gets prepended below, so
+                # the final piece_text (header + piece) stays under the cap
+                # instead of the piece alone.
+                budget = max(MAX_CHUNK_TOKENS - estimate_tokens(header) - 10, 100)
 
                 for piece in _split_into_token_budgets(
                     full_text,
-                    MAX_CHUNK_TOKENS,
+                    budget,
                 ):
                     counter += 1
                     piece_text = f"{header}\n\n{piece}"

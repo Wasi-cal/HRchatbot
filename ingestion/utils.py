@@ -75,9 +75,18 @@ def find_repeated_lines(page_texts, min_repeat_ratio=0.6, max_line_len=120):
         edge_lines = set(lines[:3]) | set(lines[-3:])
         for line in edge_lines:
             if 0 < len(line) <= max_line_len:
-                candidates[line] += 1
+                candidates[_repeat_key(line)] += 1
     threshold = max(2, int(n_pages * min_repeat_ratio))
-    return {line for line, count in candidates.items() if count >= threshold}
+    return {key for key, count in candidates.items() if count >= threshold}
+
+
+def _repeat_key(line: str) -> str:
+    """Normalize a line for repeat detection by collapsing digit runs, so a
+    footer combining a fixed phrase with a varying page number - e.g.
+    "Page 66 of 78 Confidential" or "Document Classification - Internal
+    Page 11 of 12" - is still recognized as the same repeating line even
+    though the exact digits differ from page to page."""
+    return re.sub(r"\d+", "#", line.strip())
 
 
 _PAGE_NUM_RE = re.compile(r"^\s*(page\s+)?\d+(\s*/\s*\d+)?\s*$", re.IGNORECASE)
@@ -88,7 +97,7 @@ def strip_headers_footers(text: str, repeated_lines: set) -> str:
     out = []
     for line in lines:
         stripped = line.strip()
-        if stripped in repeated_lines:
+        if _repeat_key(stripped) in repeated_lines:
             continue
         if _PAGE_NUM_RE.match(stripped):
             continue
@@ -115,6 +124,19 @@ def is_garbled(text: str) -> bool:
     return False
 
 
-NUMBERED_SECTION_RE = re.compile(r"^(\d{1,2}(?:\.\d{1,2}){0,3})[.)]?\s+(\S.*)$")
+# Dotted section labels ("1.1 OBJECTIVE", "4.2 Parental Leave") are an
+# unambiguous structural signal - no delimiter needed after the number.
+# A bare number ("3", "12") is NOT required here; see BARE_NUMBERED_ITEM_RE
+# below for the stricter pattern used for those.
+NUMBERED_SECTION_RE = re.compile(r"^(\d{1,2}(?:\.\d{1,2}){1,3})[.)]?\s+(\S.*)$")
+
+# A bare number ("3 - Medium: ...", "4. Disciplinary meeting...") is
+# structurally ambiguous - it could be a real top-level section number, a
+# table/legend cell ("3 - Medium"), or one item of a numbered list/glossary.
+# Require an explicit delimiter directly after the digits (no bare
+# whitespace, no dash) plus a capitalized, non-trivial title, to cut down
+# false positives.
+BARE_NUMBERED_ITEM_RE = re.compile(r"^(\d{1,2})[.):]\s+([A-Z][A-Za-z].{2,})$")
+
 QA_PATTERN_RE = re.compile(r"^(Q\s*[:.\-]|Q\d+[:.\-]|Question\s*[:.\-])", re.IGNORECASE)
 ANSWER_PATTERN_RE = re.compile(r"^(A\s*[:.\-]|A\d+[:.\-]|Answer\s*[:.\-])", re.IGNORECASE)
