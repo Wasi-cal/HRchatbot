@@ -1,0 +1,22 @@
+[project]
+name = "hrchatbot"
+version = "0.1.0"
+description = "HR RAG chatbot - document ingestion, chunking, embedding, and vector store pipeline"
+requires-python = ">=3.11"
+dependencies = [
+    "pymupdf>=1.24",
+    "python-docx>=1.1",
+    "pytesseract>=0.3.10",
+    "pillow>=10.0",
+    "img2table>=1.3",
+    "numpy>=1.24",
+    "pandas>=2.0",
+    # --- vector store / embedding layer ---
+    "psycopg[binary,pool]>=3.2",
+    "pgvector>=0.3",
+    "python-dotenv>=1.0",
+    "flagembedding>=1.3",
+]
+
+[tool.uv]
+package = false
