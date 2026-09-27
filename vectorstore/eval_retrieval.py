@@ -53,7 +53,7 @@ def _print_ranked(label: str, ranked_chunk_db_ids, details: dict):
         print("     (no results)")
         return
     for rank, chunk_db_id in enumerate(ranked_chunk_db_ids[:TOP_N_DISPLAY], start=1):
-        chunk_id, section_path, text, _document_title = details[chunk_db_id]
+        chunk_id, section_path, text, _document_title, _document_id = details[chunk_db_id]
         print(f"     {rank}. {chunk_id} | {section_path}")
         print(f"        {_snippet(text)}...")
 
