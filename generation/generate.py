@@ -57,7 +57,7 @@ _client = None
 _generation_model_name = None
 
 
-def _get_client() -> OpenAI:
+def get_client() -> OpenAI:
     global _client
     if _client is None:
         api_key = os.environ.get("OPENAI_API_KEY")
@@ -110,7 +110,7 @@ def ensure_active_generation_config(conn) -> str:
     return model_name
 
 
-def _get_generation_model() -> str:
+def get_generation_model() -> str:
     global _generation_model_name
     if _generation_model_name is None:
         pool = get_pool()
@@ -144,6 +144,7 @@ def generate_answer(
     candidate_n: int = 20,
     k: int = 60,
     confidence_threshold: float | None = None,
+    user_attributes: dict | None = None,
 ):
     """Retrieves grounding chunks for query, then streams a generated
     answer. A generator yielding dict events:
@@ -158,11 +159,14 @@ def generate_answer(
 
     top_k/candidate_n/k are forwarded to retrieve(); confidence_threshold
     overrides DEFAULT_CONFIDENCE_THRESHOLD for this call only.
+    user_attributes (see access_control/user_attributes.py) is forwarded
+    to retrieve() unchanged - omitting it (the default) keeps this
+    function's behavior exactly as it was before access control existed.
     """
     threshold = DEFAULT_CONFIDENCE_THRESHOLD if confidence_threshold is None else confidence_threshold
 
     retrieval_start = time.monotonic()
-    results = retrieve(query, top_k=top_k, candidate_n=candidate_n, k=k)
+    results = retrieve(query, top_k=top_k, candidate_n=candidate_n, k=k, user_attributes=user_attributes)
     retrieval_time_ms = (time.monotonic() - retrieval_start) * 1000
 
     top_score = results[0]["fused_score"] if results else 0.0
@@ -176,8 +180,8 @@ def generate_answer(
         }
         return
 
-    model_name = _get_generation_model()
-    client = _get_client()
+    model_name = get_generation_model()
+    client = get_client()
     messages = _build_messages(query, results)
 
     generation_start = time.monotonic()

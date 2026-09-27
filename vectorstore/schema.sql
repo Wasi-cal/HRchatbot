@@ -20,9 +20,12 @@ CREATE TABLE IF NOT EXISTS documents (
     effective_date  TEXT,   -- free-text date from the source doc (e.g. "07-Nov-2025"); not all source dates are unambiguous, so this is kept as text rather than a strict DATE column
     version         TEXT,   -- free-text version label from the source doc (e.g. "1.0", "2.0"), distinct from effective_date
     status          TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'superseded')),
+    is_restricted   BOOLEAN NOT NULL DEFAULT false,  -- manual-only flag (see access_control/) - never set true automatically; retrieve() excludes restricted documents unconditionally
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS is_restricted BOOLEAN NOT NULL DEFAULT false;
 
 -- Only one active document per source_file at a time - re-ingesting a
 -- changed file supersedes the old row rather than replacing it in place.
