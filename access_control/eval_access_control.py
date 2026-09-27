@@ -5,77 +5,41 @@ user_attributes that should trigger a clarifying question, a fully
 matching user_attributes, and a fully provided but NON-matching
 user_attributes (to confirm exclusion actually happens).
 
-Demo fixtures, not real extracted data
----------------------------------------
-access_control.extract_applicability (task 1) found zero usable tags in
-this real corpus - the only two documents with a raw applicability
-fragment ("All IT Policies" and the India employee handbook) don't name
-a specific country or employment type in that fragment (confirmed via
-access_control.verify_applicability). Extraction only ever looks at
-that narrow ingestion-level raw field, by design, so it never gets a
-chance to look at the rest of a document's text.
+Now backed by real extracted data, not demo fixtures
+------------------------------------------------------
+An earlier version of this script had to seed manual demo tags, because
+the old regex-gated extraction pipeline found nothing real to filter
+on. access_control/extract_applicability.py is now a single-stage LLM
+extraction over every document's title + opening text (see that
+module's docstring for why), and re-running it against this corpus
+produced real tags on most documents - including
+"Calfus Crew - Employee Referral Policy.pdf" (country=India,
+employment_type=full-time employee / intern), which this script uses
+below. No fixtures are seeded here anymore; run
+access_control.extract_applicability first if the tag tables are
+empty.
 
-To exercise hard filtering against something more meaningful than an
-empty tag table, this script manually seeds two tags directly grounded
-in real corpus content that extraction's narrow scope doesn't reach:
-  - "Calfus Crew - Employee Referral Policy.pdf" is titled "REFERRAL
-    BONUS PROGRAM - INDIA" and its body text scopes the policy to
-    "permanent employees" - both explicit statements in the source
-    document, just not in its ingestion-level applicability field.
-  - Its near-duplicate "Calfus Crew - Employee Referral Policy_1.2.pdf"
-    is deliberately left untagged, to also demonstrate that untagged
-    documents keep applying to everyone even when a similar document
-    IS tagged.
-
-These are clearly-labeled fixtures for THIS SCRIPT only - not a claim
-that extract_applicability.py produced them.
+Its near-duplicate "Calfus Crew - Employee Referral Policy_1.2.pdf" got
+the SAME real tags (both files really do contain the same India /
+full-time-or-intern scoping language), so scenario (d) below correctly
+excludes both duplicates when the mismatch is on country - unlike the
+old demo-fixture version, where only one copy was tagged. The control
+query intentionally targets "All IT Policies.pdf" instead of a PIP or
+POSH query, since those are now genuinely tagged too (real signal, not
+a demo artifact) and would no longer make a valid "untagged" control.
 
     python3 -m access_control.eval_access_control
 """
 from access_control.ask_and_answer import ask_and_answer
-from vectorstore.db import close_pool, get_pool
 from vectorstore.retrieve import retrieve
 
-TAGGED_SOURCE_FILE = "Calfus Crew - Employee Referral Policy.pdf"
-DEMO_TAGS = [
-    (TAGGED_SOURCE_FILE, "country", "India"),
-    (TAGGED_SOURCE_FILE, "employment_type", "permanent employee"),
-]
-
-# Touches the tagged referral policy document (see DEMO_TAGS above).
+# Touches "Calfus Crew - Employee Referral Policy.pdf" /
+# "..._1.2.pdf", both real-tagged: country=India,
+# employment_type=full-time employee, employment_type=intern.
 TAGGED_QUERY = "will I get paid extra for recommending a friend for a job here"
-# Untagged content, used as a control to confirm user_attributes has no
-# effect at all when nothing in the candidate pool carries tags.
-UNTAGGED_QUERY = "PIP objective"
-
-
-def _seed_demo_tags(conn):
-    for source_file, tag_type, tag_value in DEMO_TAGS:
-        doc_row = conn.execute(
-            "SELECT id FROM documents WHERE source_file = %s AND status = 'active'",
-            (source_file,),
-        ).fetchone()
-        if not doc_row:
-            print(f"  WARNING: {source_file!r} not found - skipping seed tag {tag_type}={tag_value}")
-            continue
-        document_id = doc_row[0]
-
-        tag_row = conn.execute(
-            "SELECT id FROM applicability_tags WHERE tag_type = %s AND tag_value = %s",
-            (tag_type, tag_value),
-        ).fetchone()
-        tag_id = tag_row[0] if tag_row else conn.execute(
-            "INSERT INTO applicability_tags (tag_type, tag_value) VALUES (%s, %s) RETURNING id",
-            (tag_type, tag_value),
-        ).fetchone()[0]
-
-        conn.execute(
-            "INSERT INTO document_applicability (document_id, tag_id) VALUES (%s, %s) "
-            "ON CONFLICT DO NOTHING",
-            (document_id, tag_id),
-        )
-    conn.commit()
-    print(f"Seeded demo tags on {TAGGED_SOURCE_FILE!r}: {[(t, v) for _, t, v in DEMO_TAGS]}\n")
+# "All IT Policies.pdf" has no applicability tags at all (see
+# access_control.verify_applicability) - a genuine untagged control.
+UNTAGGED_QUERY = "what are the password requirements"
 
 
 def _print_unfiltered_vs_filtered(query: str, user_attributes: dict | None):
@@ -105,10 +69,6 @@ def run_scenario(label: str, query: str, user_attributes: dict | None):
 
 
 def main():
-    pool = get_pool()
-    with pool.connection() as conn:
-        _seed_demo_tags(conn)
-
     print("############ Scenario (a): no user_attributes at all ############")
     run_scenario("Tagged-content query, no attributes (backward-compatible: no filtering)", TAGGED_QUERY, None)
 
@@ -123,14 +83,14 @@ def main():
     run_scenario(
         "Tagged-content query, both attributes known and matching -> normal answer, doc included",
         TAGGED_QUERY,
-        {"country": "India", "employment_type": "permanent employee"},
+        {"country": "India", "employment_type": "full-time employee"},
     )
 
     print("############ Scenario (d): user_attributes fully provided, NOT matching ############")
     run_scenario(
-        "Tagged-content query, country known but WRONG -> tagged doc excluded from context",
+        "Tagged-content query, country known but WRONG -> both tagged duplicates excluded from context",
         TAGGED_QUERY,
-        {"country": "United States", "employment_type": "permanent employee"},
+        {"country": "United States", "employment_type": "full-time employee"},
     )
 
     print("############ Control: untagged-content query, attributes should have zero effect ############")
@@ -139,8 +99,6 @@ def main():
         "employment_type": "contractor",
     })
     run_scenario("Same untagged query, no attributes (should match the above exactly)", UNTAGGED_QUERY, None)
-
-    close_pool()
 
 
 if __name__ == "__main__":

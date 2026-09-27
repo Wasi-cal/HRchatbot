@@ -3,6 +3,12 @@
 tags, for manual spot-checking against the real corpus after running
 access_control.extract_applicability.
 
+Note: the "ambiguous" flag extract_applicability.py prints per document
+is a point-in-time signal from that extraction pass, not a stored DB
+column - re-run access_control.extract_applicability to see it again.
+This script only shows what's durably in the database: the tags
+themselves (or their absence) and the is_restricted flag.
+
     python3 -m access_control.verify_applicability
 """
 from collections import defaultdict

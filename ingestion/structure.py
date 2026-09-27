@@ -92,6 +92,29 @@ def detect_effective_date(blocks):
 
 
 def detect_applicability(blocks):
+    """DEPRECATED - kept for reference only, no longer called from
+    pipeline.py (process_document() now always sets applicability=None).
+
+    Root-cause diagnosis of why this regex-based approach was replaced:
+    _APPLICABILITY_RE only matches the phrasing "applicable to ..." or
+    "applicability: ...". Real policy documents in this corpus almost
+    always phrase scope differently - "This policy applies to ...",
+    "... is applicable for ..." - which this regex never matches, so it
+    silently returns None for documents that do state a clear scope
+    (e.g. the India referral policy's "This policy applies to all
+    full-time employee/ Interns ..." sentence). Conversely, on the rare
+    block where the exact phrase "applicable to" IS present, this
+    function returns whatever text follows it within that SAME block
+    only - block boundaries (a table cell, a line wrap) routinely cut
+    that sentence short, producing noise like "1. Date of purchase" or
+    a truncated fragment ending mid-sentence with no usable content.
+
+    Superseded by access_control/extract_applicability.py, which runs a
+    single LLM extraction pass per document over its title plus an
+    opening window of chunk text pulled from the loaded database
+    (not from this ingestion-time field), rather than pre-filtering by
+    a regex match first.
+    """
     for b in blocks:
         text = b.get("text", "")
         m = _APPLICABILITY_RE.search(text)

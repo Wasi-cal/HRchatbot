@@ -7,7 +7,7 @@ from .extract_docx import extract_docx
 from .extract_pdf import extract_pdf
 from .qaflags import apply_qa_flags
 from .structure import (
-    build_sections, detect_applicability, detect_document_title,
+    build_sections, detect_document_title,
     detect_effective_date, evaluate_structure_status,
 )
 from .utils import find_repeated_lines, normalize_text, strip_headers_footers
@@ -40,7 +40,12 @@ def process_document(path: Path):
 
     document_title = detect_document_title(blocks, path.stem)
     effective_date = detect_effective_date(blocks)
-    applicability = detect_applicability(blocks)
+    # detect_applicability() is deprecated (see its docstring in
+    # ingestion/structure.py for the diagnosis) - applicability tags are
+    # now extracted by access_control/extract_applicability.py directly
+    # from the loaded document's title + chunk text, not from this
+    # ingestion-time field.
+    applicability = None
 
     sections = build_sections(blocks, document_title)
     status, reason = evaluate_structure_status(blocks, sections)
