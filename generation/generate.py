@@ -6,7 +6,7 @@ answer from an OpenAI chat model grounded only in those chunks.
 
 No STT/TTS integration and no serving/API layer here - this module ends
 at a working, streaming, timed generate_answer() function, testable via
-text queries (see generation/eval_generation.py).
+text queries (see eval/run_regression.py and eval/run_quality_eval.py).
 
 Low-confidence threshold: RRF (see vectorstore/retrieve.py) bounds a
 top-1 result's fused_score to a narrow, rank-derived range. With the
@@ -16,7 +16,7 @@ for a top-1 result, since retrieve() always returns whatever chunk had
 the best fused score even when nothing in the corpus is a real match.
 A chunk ranked 1 in BOTH lists (the strongest possible signal) scores
 2/(60+1) ~= 0.0328. Empirically, over this corpus's known-good eval
-queries (see eval_retrieval.py), genuine matches cluster at 0.027-0.033
+queries (see eval/run_regression.py), genuine matches cluster at 0.027-0.033
 (agreement in both lists), while a query with no real match in the
 corpus can still drift up to that floor by pure coincidence. The default
 threshold (0.02) sits just above the theoretical floor and below the
@@ -151,8 +151,10 @@ def generate_answer(
 
         {"type": "token", "text": str}
             One streamed piece of the answer, in order.
-        {"type": "done", "answer": str, "shortcut": bool, "timing": dict}
-            Always the final event. "answer" is the full accumulated
+        {"type": "done", "answer": str, "shortcut": bool, "timing": dict,
+         "chunk_ids": list[str]}
+            Always the final event. "chunk_ids" are the retrieved chunks'
+            string ids used as grounding (empty on a shortcut). "answer" is the full accumulated
             text. "timing" has "retrieval_time_ms" always, plus
             "time_to_first_token_ms" and "total_generation_time_ms" when
             a real generation call was made (shortcut=False).
@@ -177,6 +179,7 @@ def generate_answer(
             "answer": NO_MATCH_RESPONSE,
             "shortcut": True,
             "timing": {"retrieval_time_ms": retrieval_time_ms},
+            "chunk_ids": [],
         }
         return
 
@@ -207,7 +210,13 @@ def generate_answer(
         ),
         "total_generation_time_ms": (generation_end - generation_start) * 1000,
     }
-    yield {"type": "done", "answer": answer, "shortcut": False, "timing": timing}
+    yield {
+        "type": "done",
+        "answer": answer,
+        "shortcut": False,
+        "timing": timing,
+        "chunk_ids": [r["chunk_id"] for r in results],
+    }
 
 
 def main():

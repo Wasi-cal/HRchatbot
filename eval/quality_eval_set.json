@@ -1,0 +1,113 @@
+[
+  {
+    "id": "p1",
+    "query": "can I do my job from home instead of coming into the office",
+    "category": "paraphrase",
+    "expected_behavior": "answer",
+    "user_attributes": {"country": "India"},
+    "notes": "No keyword overlap with the source WFH policy wording. country supplied so the applicability gate doesn't block on the incidental India tag before generation even runs - this case is testing retrieval+generation quality, not access control."
+  },
+  {
+    "id": "p2",
+    "query": "how much time off do I get when I have a baby",
+    "category": "paraphrase",
+    "expected_behavior": "answer",
+    "user_attributes": {"country": "India"},
+    "notes": "Paraphrase of maternity/paternity leave with no keyword overlap. Historically the model has declined here rather than citing the corpus's actual maternity-leave table - worth re-checking whether that's still the case."
+  },
+  {
+    "id": "p3",
+    "query": "if I quit, how long do I have to keep working before I can leave for good",
+    "category": "paraphrase",
+    "expected_behavior": "answer",
+    "user_attributes": {"country": "India"},
+    "notes": "Paraphrase of the notice-period policy."
+  },
+  {
+    "id": "p4",
+    "query": "will I get paid extra for recommending a friend for a job here",
+    "category": "paraphrase",
+    "expected_behavior": "answer",
+    "user_attributes": {"country": "India", "employment_type": "full-time employee"},
+    "notes": "Paraphrase of the referral bonus policy. Touches the real-tagged referral policy document, so both attributes are supplied to reach generation."
+  },
+  {
+    "id": "e1",
+    "query": "POSH redressal mechanism",
+    "category": "exact_term",
+    "expected_behavior": "answer",
+    "user_attributes": {"country": "India"},
+    "notes": "Exact-term/acronym query verified present verbatim in the corpus (POSH Policy > 1.10 REDRESSAL MECHANISM)."
+  },
+  {
+    "id": "e2",
+    "query": "PIP objective",
+    "category": "exact_term",
+    "expected_behavior": "answer",
+    "user_attributes": {"country": "India", "employment_type": "full-time employee"},
+    "notes": "Exact-term query against the PIP Process policy, which is real-tagged country=India + employment_type=full-time employee."
+  },
+  {
+    "id": "e3",
+    "query": "90 calendar days notice period buyout",
+    "category": "exact_term",
+    "expected_behavior": "answer",
+    "user_attributes": {"country": "India"},
+    "notes": "Exact-term query against the Employee Handbook's separation policy section."
+  },
+  {
+    "id": "o1",
+    "query": "what is the weather forecast for tomorrow",
+    "category": "out_of_corpus",
+    "expected_behavior": "refusal",
+    "user_attributes": {"country": "India"},
+    "notes": "Nothing in this HR corpus could plausibly answer this. Takes the low-confidence shortcut in generate_answer() (fused_score below threshold) - see eval/run_regression.py for the shortcut=True assertion. country supplied only to avoid an incidental clarification on the (irrelevant) top candidate's country tag."
+  },
+  {
+    "id": "o2",
+    "query": "can you recommend a good recipe for dinner",
+    "category": "out_of_corpus",
+    "expected_behavior": "refusal",
+    "user_attributes": {"country": "India", "employment_type": "full-time employee"},
+    "notes": "Same as o1 - also takes the low-confidence shortcut. Needs both attributes (not just country): its irrelevant top candidates happen to include a real-tagged Travel Policy chunk, so employment_type is also blocking unless supplied."
+  },
+  {
+    "id": "o3",
+    "query": "what is the capital of France",
+    "category": "out_of_corpus",
+    "expected_behavior": "refusal",
+    "user_attributes": {"country": "India"},
+    "notes": "Known threshold edge case: this query's top fused_score sits just ABOVE the confidence threshold (see generation/generate.py's docstring for the RRF-floor math), so it does NOT take the internal shortcut - it reaches real generation, and the model must refuse via its own grounding instructions instead. A regression on this specific case would mean the shortcut's threshold or the system prompt's refusal behavior drifted."
+  },
+  {
+    "id": "k1",
+    "query": "BGV disclaimer",
+    "category": "known_edge_case",
+    "expected_behavior": "refusal",
+    "user_attributes": {"country": "India"},
+    "notes": "Discovered edge case: retrieval confidently returns a real, on-topic chunk (BGV_Policy_Ver1_0_0005, the BGV policy's own OBJECTIVE section) with a normal-looking fused_score - but that chunk does not actually contain disclaimer wording. Correct behavior is refusal despite a confident-looking retrieval, proving the model is grounded in actual chunk content rather than topical proximity."
+  },
+  {
+    "id": "k2",
+    "query": "will I get paid extra for recommending a friend for a job here",
+    "category": "known_edge_case",
+    "expected_behavior": "refusal",
+    "user_attributes": {"country": "United States", "employment_type": "full-time employee"},
+    "notes": "Discovered edge case: both attributes are known (so no clarification is triggered), but country=United States doesn't match the referral policy's country=India tag. Both real-tagged referral-policy duplicates get excluded by hard filtering; the filtered fallback candidates score low enough that generate_answer()'s low-confidence shortcut fires (shortcut=True) rather than reaching a real generation call - either way, the black-box result is a correct refusal instead of an answer synthesized from irrelevant fallback content."
+  },
+  {
+    "id": "a1",
+    "query": "when do I get confirmed as a permanent employee",
+    "category": "applicability_ambiguous",
+    "expected_behavior": "clarification",
+    "user_attributes": {"country": "India", "employment_type": null},
+    "notes": "NEW query, not tested in earlier tasks. Covers the gap where employment_type (not country) is the blocking attribute: Confirmation Policy is real-tagged employment_type=full-time employee only, with no country tag at all, so with country already known this is the one dimension left unresolved. Expect the clarifying question to ask specifically about employment type."
+  },
+  {
+    "id": "a2",
+    "query": "how many vacation days do I get per year",
+    "category": "applicability_ambiguous",
+    "expected_behavior": "clarification",
+    "notes": "NEW query, not tested in earlier tasks (user_attributes omitted -> defaults to None). Retrieves from the real-tagged Employee Handbook (country=India); with nothing known about the user, this should trigger the clarifying-question path in general, not just on the previously-tested referral-bonus query."
+  }
+]

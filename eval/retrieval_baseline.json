@@ -1,0 +1,45 @@
+{
+  "top_k": 3,
+  "cases": {
+    "can I do my job from home instead of coming into the office": [
+      "Calfus_India_Employee_Handbook_v4_0022",
+      "All_IT_Policies_0182",
+      "Calfus_India_Employee_Handbook_v4_0024"
+    ],
+    "how much time off do I get when I have a baby": [
+      "Calfus_India_Employee_Handbook_v4_0025",
+      "Calfus_India_Employee_Handbook_v4_0024",
+      "Calfus_India_Employee_Handbook_v4_0018"
+    ],
+    "if I quit, how long do I have to keep working before I can leave for good": [
+      "Calfus_India_Employee_Handbook_v4_0036",
+      "Calfus_India_Employee_Handbook_v4_0023",
+      "Calfus_India_Employee_Handbook_v4_0032"
+    ],
+    "will I get paid extra for recommending a friend for a job here": [
+      "Calfus_Crew_Employee_Referral_Policy_0004",
+      "Calfus_India_Employee_Handbook_v4_0028",
+      "Calfus_India_Employee_Handbook_v4_0026"
+    ],
+    "POSH redressal mechanism": [
+      "POSH_Policy_2025_Ver2_0_0014",
+      "POSH_Policy_2025_Ver2_0_0004",
+      "POSH_Policy_2025_Ver2_0_0022"
+    ],
+    "PIP objective": [
+      "PIP_Process_Ver1_0_0004",
+      "PIP_Process_Ver1_0_0003",
+      "PIP_Process_Ver1_0_0002"
+    ],
+    "BGV disclaimer": [
+      "BGV_Policy_Ver1_0_0005",
+      "HR_Security_Policy_V1_0_0017",
+      "HR_Security_Policy_V1_0_0008"
+    ],
+    "90 calendar days notice period buyout": [
+      "Calfus_India_Employee_Handbook_v4_0032",
+      "Calfus_India_Employee_Handbook_v4_0028",
+      "Calfus_India_Employee_Handbook_v4_0036"
+    ]
+  }
+}
