@@ -24,7 +24,14 @@ dependencies = [
     "python-multipart>=0.0.9",
     # --- runtime config cache ---
     "redis>=5.0",
+    "httpx>=0.28.1",
 ]
 
 [tool.uv]
 package = false
+
+[dependency-groups]
+voice-test = [
+    "deepgram-sdk>=7.12.0",
+    "sounddevice>=0.5.6",
+]

@@ -21,6 +21,7 @@ Print the JSON:  python3 -m api.voice_settings
 """
 import json
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -34,6 +35,7 @@ from config.runtime import (
 load_dotenv()
 
 DEEPGRAM_AGENT_WS_URL = "wss://agent.deepgram.com/v1/agent/converse"
+ENV_PATH_DEFAULT = Path(__file__).resolve().parent.parent / ".env"
 THINK_PATH = "/api/voice/v1/chat/completions"
 
 

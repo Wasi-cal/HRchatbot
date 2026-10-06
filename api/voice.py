@@ -29,13 +29,16 @@ import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 
-from fastapi import APIRouter, Header, HTTPException
+import httpx
+from dotenv import dotenv_values
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict
 
 from access_control.ask_and_answer import ask_and_answer_stream
 from access_control.resolve_clarification import resolve_clarification
 from api.query_log import log_query
+from api.voice_settings import ENV_PATH_DEFAULT, build_agent_settings
 from cache.redis_cache import MISS, get_cached, set_cached
 
 logger = logging.getLogger(__name__)
@@ -247,6 +250,95 @@ def _logged_pieces(turns):
 
 
 # --------------------------------------------------------------------------
+# Settings + browser token
+# --------------------------------------------------------------------------
+
+DEEPGRAM_GRANT_URL = "https://api.deepgram.com/v1/auth/grant"
+
+
+@router.get("/settings")
+def agent_settings():
+    """Deepgram Settings message, rebuilt on every call (no caching). The
+    tunnel script rewrites PUBLIC_BASE_URL in .env while this server is
+    running, so .env is re-read here rather than trusting the process
+    environment captured at startup. provider_configs values are read
+    fresh through config.runtime (<=30s cache; PATCH writes through)."""
+    base = dotenv_values(ENV_PATH_DEFAULT).get("PUBLIC_BASE_URL") or os.environ.get("PUBLIC_BASE_URL")
+    try:
+        # think_secret is the one this process actually enforces.
+        return build_agent_settings(public_base_url=base, think_secret=THINK_ENDPOINT_SECRET or "")
+    except ValueError as exc:
+        raise HTTPException(503, str(exc))
+
+
+@router.post("/token")
+def mint_token():
+    """Mints a short-lived Deepgram token via POST /v1/auth/grant so the
+    long-lived DEEPGRAM_API_KEY never leaves the server (the key needs
+    Member role or higher).
+
+    ASSUMPTION: a token only has to be valid when the WebSocket handshake
+    happens, not for the whole session. Checked once empirically: an idle
+    session held open 110s on a 60s token without dropping. If sessions
+    ever drop around expiry (DEEPGRAM_TOKEN_TTL_SECONDS, default 60), the
+    token needs periodic reissue or a longer TTL. Not verified with
+    long mic conversations.
+
+    No auth on this endpoint: anyone who can reach it can mint tokens
+    (same dev-only gap as the rest of the API - see api/main.py)."""
+    key = os.environ.get("DEEPGRAM_API_KEY")
+    if not key or key == "changeme":
+        raise HTTPException(503, "DEEPGRAM_API_KEY is not configured on the server")
+    # Must be an int: Deepgram silently ignores a float (e.g. 60.0) and uses its 30s default.
+    ttl = int(float(os.environ.get("DEEPGRAM_TOKEN_TTL_SECONDS", 60)))
+    try:
+        r = httpx.post(DEEPGRAM_GRANT_URL, headers={"Authorization": f"Token {key}"},
+                       json={"ttl_seconds": ttl}, timeout=10)
+    except httpx.HTTPError as exc:
+        raise HTTPException(502, f"Could not reach Deepgram: {exc}")
+    if r.status_code != 200:
+        raise HTTPException(502, f"Deepgram /v1/auth/grant returned {r.status_code}: {r.text[:300]}")
+    data = r.json()
+    return {"token": data["access_token"], "expires_in": data.get("expires_in", ttl)}
+
+
+# --------------------------------------------------------------------------
+# DEBUG-ONLY raw request logging
+# --------------------------------------------------------------------------
+
+def _debug_raw_enabled() -> bool:
+    return os.environ.get("VOICE_DEBUG_LOG_RAW_REQUEST", "").strip().lower() in ("1", "true", "yes", "on")
+
+
+async def _debug_log_raw_request(request: Request):
+    """DEBUG ONLY - off unless VOICE_DEBUG_LOG_RAW_REQUEST=1. Logs the
+    complete, unredacted request body Deepgram sends to the think
+    endpoint on every call (it contains the user's transcribed speech
+    and conversation history, i.e. personal data - never leave this on
+    outside of a debugging session). Header NAMES are logged, not values,
+    so the bearer secret isn't written out. Exists to resolve what Deepgram
+    actually sends (body shape; whether `stream` is present)."""
+    if not _debug_raw_enabled():
+        return
+    raw = await request.body()
+    try:
+        body = json.loads(raw)
+        summary = (
+            f"top-level keys={sorted(body)} | stream={body.get('stream', '<ABSENT>')!r} | "
+            f"roles={[m.get('role') for m in body.get('messages', [])]} | "
+            f"tools={'present' if body.get('tools') or body.get('functions') else 'absent'}"
+        ) if isinstance(body, dict) else "body is not a JSON object"
+    except ValueError:
+        summary = "body is not valid JSON"
+    line = (f"[VOICE_DEBUG_LOG_RAW_REQUEST] {summary}\n  headers={sorted(request.headers.keys())}\n"
+            f"  raw body: {raw.decode('utf-8', 'replace')}")
+    print(line, flush=True)
+    if path := os.environ.get("VOICE_DEBUG_LOG_FILE"):
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(line + "\n")
+
+
+# --------------------------------------------------------------------------
 # OpenAI-compatible endpoint
 # --------------------------------------------------------------------------
 
@@ -275,7 +367,7 @@ def _chunk(completion_id, model, created, delta, finish=None) -> str:
 
 
 @router.post("/v1/chat/completions")
-def think(req: ThinkRequest, authorization: str | None = Header(None)):
+def think(req: ThinkRequest, authorization: str | None = Header(None), _debug=Depends(_debug_log_raw_request)):
     _check_auth(authorization)
     turns = _turns(req.messages)
     if not turns or turns[-1][0] != "user":
