@@ -10,12 +10,12 @@ Protocol facts (checked against developers.deepgram.com):
   - provider.model is required by the schema but is just a label for us:
     api/voice.py ignores it and uses the generation layer's own model.
 
-Configuration (env; all optional except the public URL):
-  PUBLIC_BASE_URL          https URL Deepgram's cloud can reach (ngrok in dev)
-  THINK_ENDPOINT_SECRET    if set, sent as a Bearer header and enforced by api/voice.py
-  DEEPGRAM_LISTEN_MODEL    default nova-3
-  DEEPGRAM_TTS_MODEL       default aura-2-thalia-en
-  VOICE_GREETING           spoken first
+Configuration:
+  env  PUBLIC_BASE_URL        https URL Deepgram's cloud can reach (ngrok in dev)
+  env  THINK_ENDPOINT_SECRET  if set, sent as a Bearer header and enforced by api/voice.py
+  DB   provider_configs stt.model, tts.voice, tts.greeting (editable via
+       /api/admin/config; seeded once from DEEPGRAM_LISTEN_MODEL,
+       DEEPGRAM_TTS_MODEL, VOICE_GREETING). Explicit function args override.
 
 Print the JSON:  python3 -m api.voice_settings
 """
@@ -24,11 +24,17 @@ import os
 
 from dotenv import load_dotenv
 
+from config.runtime import (
+    DEFAULT_GREETING,
+    DEFAULT_STT_MODEL,
+    DEFAULT_TTS_VOICE,
+    get_active_provider_config,
+)
+
 load_dotenv()
 
 DEEPGRAM_AGENT_WS_URL = "wss://agent.deepgram.com/v1/agent/converse"
 THINK_PATH = "/api/voice/v1/chat/completions"
-DEFAULT_GREETING = "Hi, I'm the HR assistant. What would you like to know about company policy?"
 
 
 def build_agent_settings(
@@ -47,6 +53,8 @@ def build_agent_settings(
             "localhost will not work - see api/README.md."
         )
     secret = think_secret if think_secret is not None else os.environ.get("THINK_ENDPOINT_SECRET")
+    stt = get_active_provider_config("stt")
+    tts = get_active_provider_config("tts")
     headers = {"authorization": f"Bearer {secret}"} if secret else {}
 
     return {
@@ -59,7 +67,7 @@ def build_agent_settings(
             "listen": {
                 "provider": {
                     "type": "deepgram",
-                    "model": listen_model or os.environ.get("DEEPGRAM_LISTEN_MODEL", "nova-3"),
+                    "model": listen_model or stt.get("model") or DEFAULT_STT_MODEL,
                 }
             },
             "think": {
@@ -69,10 +77,10 @@ def build_agent_settings(
             "speak": {
                 "provider": {
                     "type": "deepgram",
-                    "model": tts_model or os.environ.get("DEEPGRAM_TTS_MODEL", "aura-2-thalia-en"),
+                    "model": tts_model or tts.get("voice") or DEFAULT_TTS_VOICE,
                 }
             },
-            "greeting": greeting or os.environ.get("VOICE_GREETING", DEFAULT_GREETING),
+            "greeting": greeting or tts.get("greeting") or DEFAULT_GREETING,
         },
     }
 

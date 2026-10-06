@@ -19,6 +19,7 @@ Clarifying questions are recognised by a fixed spoken lead-in plus one of
 a closed set of per-attribute question wordings (no hidden token: TTS
 would read it aloud).
 """
+import hashlib
 import json
 import logging
 import os
@@ -35,6 +36,7 @@ from pydantic import BaseModel, ConfigDict
 from access_control.ask_and_answer import ask_and_answer_stream
 from access_control.resolve_clarification import resolve_clarification
 from api.query_log import log_query
+from cache.redis_cache import MISS, get_cached, set_cached
 
 logger = logging.getLogger(__name__)
 
@@ -130,15 +132,25 @@ def _original_query(turns, a: int) -> str | None:
     return turns[u][1]
 
 
-_resolve_cache: dict[tuple[str, str], str | None] = {}
+NEGATIVE_TTL_SECONDS = 300
 
 
 def _resolve_value(tag_type: str, reply: str, original: str | None) -> str | None:
-    key = (tag_type, reply)
-    if key not in _resolve_cache:
-        merged = resolve_clarification(original or "", tag_type, reply, {})
-        _resolve_cache[key] = merged.get(tag_type) if merged else None
-    return _resolve_cache[key]
+    """Classification of one clarification reply, memoized in Redis with
+    no expiry: a given (attribute, reply text) always classifies the same
+    way, and Redis (unlike a per-process dict) is shared across workers
+    and survives restarts. If Redis is down this just recomputes."""
+    key = "clarif:" + hashlib.sha256(f"{tag_type}\0{reply}".encode()).hexdigest()
+    cached = get_cached(key)
+    if cached is not MISS:
+        return cached
+    merged = resolve_clarification(original or "", tag_type, reply, {})
+    value = merged.get(tag_type) if merged else None
+    # Only successful classifications are permanent. resolve_clarification()
+    # also returns None when the LLM call itself failed, and caching that
+    # forever would poison the pair, so "no usable value" gets a short TTL.
+    set_cached(key, value, ttl=None if value else NEGATIVE_TTL_SECONDS)
+    return value
 
 
 def attributes_from_history(turns) -> dict:

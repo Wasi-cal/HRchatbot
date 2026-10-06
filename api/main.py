@@ -12,12 +12,21 @@ from fastapi.middleware.cors import CORSMiddleware
 load_dotenv()
 
 from api import admin, chat, voice  # noqa: E402  (after load_dotenv so env is set at import)
-from vectorstore.db import close_pool  # noqa: E402
+from cache import redis_cache  # noqa: E402
+from config.runtime import seed_runtime_config  # noqa: E402
+from vectorstore.db import close_pool, get_pool  # noqa: E402
 from vectorstore.retrieve import _get_embedder  # noqa: E402
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # One shared psycopg_pool pool for the whole app (vectorstore/db.py),
+    # opened here and closed on shutdown; every module checks connections
+    # out of it via get_pool().connection().
+    pool = get_pool()
+    pool.wait()
+    seed_runtime_config()  # idempotent: fills any missing app_config/provider_configs rows
+    redis_cache.configure()
     _get_embedder()  # load BGE-M3 now rather than on the first request
     yield
     close_pool()

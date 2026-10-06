@@ -57,3 +57,14 @@ since TTS would read it out); the next user turn is then treated as the reply. C
 The request body Deepgram sends isn't fully documented, so the endpoint reads only `messages` and
 should be checked against a real session. Voice turns are logged with `source = 'voice'`
 (`/api/admin/usage/summary?source=voice` filters on it).
+
+## Runtime config, cache, pooling
+
+- `docker compose up -d` starts Postgres (5434) and Redis (6380). Redis is a cache only; if it's down, reads fall back to Postgres.
+- `GET /api/admin/config` lists `app_config` rows and the active generation/stt/tts `provider_configs`.
+  `PATCH /api/admin/config/{key}` with `{"value": ...}` updates one setting (validated) and refreshes the cache.
+  Keys: `retrieval.top_k|candidate_n|rrf_k`, `generation.model|confidence_threshold`, `stt.model`, `tts.voice|greeting`.
+  Other servers/workers see DB-side edits within 30s (cache TTL).
+- The env vars `GENERATION_MODEL_NAME`, `GENERATION_CONFIDENCE_THRESHOLD`, `DEEPGRAM_LISTEN_MODEL`, `DEEPGRAM_TTS_MODEL`,
+  `VOICE_GREETING` only seed the DB the first time. API keys, `THINK_ENDPOINT_SECRET` and DB credentials stay env-only.
+- Tests: `python3 -m eval.config_test` (API running), `python3 -m eval.run_regression`.

@@ -19,6 +19,9 @@ def main():
     with pool.connection() as conn:
         conn.execute(sql)
         conn.commit()
+    from config.runtime import seed_runtime_config  # after the tables exist
+
+    seed_runtime_config()
     print(f"Schema applied from {SCHEMA_PATH}")
     close_pool()
 

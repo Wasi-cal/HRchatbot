@@ -242,14 +242,14 @@ def run_shape_sanity():
 
     event = get_final_answer("PIP objective")
     check("generate_answer()'s 'done' event has the expected keys",
-          set(event.keys()) == {"type", "answer", "shortcut", "timing"}, f"got {set(event.keys())}")
+          set(event.keys()) == {"type", "answer", "shortcut", "timing", "chunk_ids"}, f"got {set(event.keys())}")
 
     # UNTAGGED_QUERY, not "PIP objective" - PIP is now real-tagged
     # (country=India, employment_type=full-time employee), so it would
     # return needs_clarification here rather than an "answer" shape.
     answer_result = ask_and_answer(UNTAGGED_QUERY, user_attributes=None)
     check("ask_and_answer() 'answer' result has the expected keys",
-          set(answer_result.keys()) == {"type", "answer", "shortcut", "timing"}, f"got {set(answer_result.keys())}")
+          set(answer_result.keys()) == {"type", "answer", "shortcut", "timing", "chunk_ids"}, f"got {set(answer_result.keys())}")
 
     clarification_result = ask_and_answer(TAGGED_QUERY, user_attributes=None)
     check("ask_and_answer() 'needs_clarification' result has the expected keys",

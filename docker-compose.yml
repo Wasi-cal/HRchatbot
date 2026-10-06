@@ -17,5 +17,21 @@ services:
       timeout: 5s
       retries: 10
 
+  # Cache only (config cache-aside + LLM classification memo) - the source of
+  # truth is Postgres, so no persistence. Host port 6380 (override REDIS_PORT)
+  # keeps it clear of any other local Redis on 6379.
+  redis:
+    image: redis:7-alpine
+    container_name: hrchatbot-redis
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "${REDIS_PORT:-6380}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
 volumes:
   hrchatbot_pgdata:

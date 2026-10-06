@@ -7,7 +7,7 @@ filtered call, to decide whether a clarifying question is needed first.
 """
 from generation.generate import generate_answer
 from vectorstore.db import get_pool
-from vectorstore.retrieve import DEFAULT_CANDIDATE_N, DEFAULT_RRF_K, DEFAULT_TOP_K, retrieve
+from vectorstore.retrieve import retrieve
 
 CLARIFYING_QUESTIONS = {
     "country": "Which country are you based in?",
@@ -43,9 +43,9 @@ def detect_blocking_tag_types(conn, candidate_results: list[dict], user_attribut
 def ask_and_answer_stream(
     query: str,
     user_attributes: dict | None = None,
-    top_k: int = DEFAULT_TOP_K,
-    candidate_n: int = DEFAULT_CANDIDATE_N,
-    k: int = DEFAULT_RRF_K,
+    top_k: int | None = None,
+    candidate_n: int | None = None,
+    k: int | None = None,
     confidence_threshold: float | None = None,
 ):
     """Streaming core of ask_and_answer(). A generator yielding either a
@@ -87,9 +87,9 @@ def ask_and_answer_stream(
 def ask_and_answer(
     query: str,
     user_attributes: dict | None = None,
-    top_k: int = DEFAULT_TOP_K,
-    candidate_n: int = DEFAULT_CANDIDATE_N,
-    k: int = DEFAULT_RRF_K,
+    top_k: int | None = None,
+    candidate_n: int | None = None,
+    k: int | None = None,
     confidence_threshold: float | None = None,
 ) -> dict:
     """Wraps retrieve() + generate_answer() with access-control-aware

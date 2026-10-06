@@ -19,7 +19,7 @@ A chunk ranked 1 in BOTH lists (the strongest possible signal) scores
 queries (see eval/run_regression.py), genuine matches cluster at 0.027-0.033
 (agreement in both lists), while a query with no real match in the
 corpus can still drift up to that floor by pure coincidence. The default
-threshold (0.02) sits just above the theoretical floor and below the
+threshold (0.02, now the generation provider_configs' confidence_threshold, editable at runtime) sits just above the theoretical floor and below the
 observed good-match cluster, so it only short-circuits the clearest
 retrieval failures (single-list, uncorroborated top-1 hits) rather than
 trying to be a general relevance classifier - that job is left to the
@@ -30,13 +30,13 @@ import os
 import time
 
 from openai import OpenAI
-from psycopg.types.json import Jsonb
 
-from vectorstore.db import get_pool
+from config.runtime import (
+    DEFAULT_CONFIDENCE_THRESHOLD,
+    DEFAULT_GENERATION_MODEL,
+    get_active_provider_config,
+)
 from vectorstore.retrieve import retrieve
-
-DEFAULT_GENERATION_MODEL = "gpt-4o-mini"
-DEFAULT_CONFIDENCE_THRESHOLD = float(os.environ.get("GENERATION_CONFIDENCE_THRESHOLD", 0.02))
 
 NO_MATCH_RESPONSE = (
     "I don't have information on that. You should check with HR directly to get a "
@@ -54,7 +54,6 @@ Rules:
 """
 
 _client = None
-_generation_model_name = None
 
 
 def get_client() -> OpenAI:
@@ -69,54 +68,16 @@ def get_client() -> OpenAI:
     return _client
 
 
-def ensure_active_generation_config(conn) -> str:
-    """Reads the active category='generation' provider_configs row and
-    returns its model name. If none is active yet, registers one for
-    OpenAI using GENERATION_MODEL_NAME (or DEFAULT_GENERATION_MODEL) and
-    marks it active. The model name is stored in config jsonb, never
-    hardcoded elsewhere."""
-    row = conn.execute(
-        "SELECT config FROM provider_configs WHERE category = 'generation' AND is_active LIMIT 1"
-    ).fetchone()
-    if row:
-        conn.commit()
-        return row[0]["model"]
-
-    model_name = os.environ.get("GENERATION_MODEL_NAME", DEFAULT_GENERATION_MODEL)
-
-    # Defensively deactivate any other generation row first, mirroring
-    # vectorstore/embedder.py's handling of the same partial unique index
-    # (provider_configs(category) WHERE is_active).
-    conn.execute(
-        "UPDATE provider_configs SET is_active = false, updated_at = now() "
-        "WHERE category = 'generation' AND is_active"
-    )
-    existing = conn.execute(
-        "SELECT id FROM provider_configs WHERE category = 'generation' AND provider_name = 'openai'"
-    ).fetchone()
-    config = Jsonb({"model": model_name})
-    if existing:
-        conn.execute(
-            "UPDATE provider_configs SET is_active = true, config = %s, updated_at = now() WHERE id = %s",
-            (config, existing[0]),
-        )
-    else:
-        conn.execute(
-            "INSERT INTO provider_configs (category, provider_name, config, is_active) "
-            "VALUES ('generation', 'openai', %s, true)",
-            (config,),
-        )
-    conn.commit()
-    return model_name
-
-
 def get_generation_model() -> str:
-    global _generation_model_name
-    if _generation_model_name is None:
-        pool = get_pool()
-        with pool.connection() as conn:
-            _generation_model_name = ensure_active_generation_config(conn)
-    return _generation_model_name
+    """Model name from the active category='generation' provider_configs
+    row (cached for config.runtime.CACHE_TTL_SECONDS; seeded by
+    config.runtime.seed_runtime_config)."""
+    return get_active_provider_config("generation").get("model") or DEFAULT_GENERATION_MODEL
+
+
+def get_confidence_threshold() -> float:
+    value = get_active_provider_config("generation").get("confidence_threshold")
+    return DEFAULT_CONFIDENCE_THRESHOLD if value is None else float(value)
 
 
 def _build_messages(query: str, chunks: list[dict]) -> list[dict]:
@@ -140,9 +101,9 @@ def _build_messages(query: str, chunks: list[dict]) -> list[dict]:
 
 def generate_answer(
     query: str,
-    top_k: int = 3,
-    candidate_n: int = 20,
-    k: int = 60,
+    top_k: int | None = None,
+    candidate_n: int | None = None,
+    k: int | None = None,
     confidence_threshold: float | None = None,
     user_attributes: dict | None = None,
 ):
@@ -160,12 +121,13 @@ def generate_answer(
             a real generation call was made (shortcut=False).
 
     top_k/candidate_n/k are forwarded to retrieve(); confidence_threshold
-    overrides DEFAULT_CONFIDENCE_THRESHOLD for this call only.
+    overrides the configured generation.confidence_threshold for this call only.
+    top_k/candidate_n/k default to the runtime app_config values (see retrieve()).
     user_attributes (see access_control/user_attributes.py) is forwarded
     to retrieve() unchanged - omitting it (the default) keeps this
     function's behavior exactly as it was before access control existed.
     """
-    threshold = DEFAULT_CONFIDENCE_THRESHOLD if confidence_threshold is None else confidence_threshold
+    threshold = get_confidence_threshold() if confidence_threshold is None else confidence_threshold
 
     retrieval_start = time.monotonic()
     results = retrieve(query, top_k=top_k, candidate_n=candidate_n, k=k, user_attributes=user_attributes)

@@ -26,9 +26,13 @@ is_restricted filter - since no document is flagged restricted by
 default, this keeps retrieve() fully backward compatible for existing
 callers that don't know about user_attributes.
 """
+from config.runtime import get_app_config
 from vectorstore.db import get_pool
 from vectorstore.embedder import BGEM3Embedder
 
+# Code-level fallbacks only. The live defaults are the app_config rows
+# retrieval.top_k / candidate_n / rrf_k (seeded with these same values by
+# config/runtime.py); an explicit argument to retrieve() overrides both.
 DEFAULT_CANDIDATE_N = 20
 DEFAULT_TOP_K = 3
 DEFAULT_RRF_K = 60
@@ -191,9 +195,9 @@ def fetch_chunk_details(conn, chunk_db_ids: list) -> dict:
 
 def retrieve(
     query: str,
-    top_k: int = DEFAULT_TOP_K,
-    candidate_n: int = DEFAULT_CANDIDATE_N,
-    k: int = DEFAULT_RRF_K,
+    top_k: int | None = None,
+    candidate_n: int | None = None,
+    k: int | None = None,
     user_attributes: dict | None = None,
 ) -> list[dict]:
     """Hybrid dense+sparse retrieval fused with RRF. Returns up to top_k
@@ -202,7 +206,16 @@ def retrieve(
 
     user_attributes (see access_control/user_attributes.py): optional.
     When omitted, only the always-on is_restricted filter applies - see
-    this module's docstring for the full filtering behavior."""
+    this module's docstring for the full filtering behavior.
+
+    top_k / candidate_n / k default to the app_config values (None = use
+    the runtime-configured value; an explicit int always wins)."""
+    if top_k is None:
+        top_k = get_app_config("retrieval.top_k", DEFAULT_TOP_K)
+    if candidate_n is None:
+        candidate_n = get_app_config("retrieval.candidate_n", DEFAULT_CANDIDATE_N)
+    if k is None:
+        k = get_app_config("retrieval.rrf_k", DEFAULT_RRF_K)
     query_dense, query_sparse = embed_query(query)
 
     pool = get_pool()

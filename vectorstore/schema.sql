@@ -92,6 +92,11 @@ CREATE TABLE IF NOT EXISTS chunk_embeddings (
 CREATE INDEX IF NOT EXISTS idx_chunk_embeddings_dense_hnsw
     ON chunk_embeddings USING hnsw (dense_vector vector_cosine_ops);
 
+-- SECRETS NEVER LIVE HERE: API keys (OPENAI_API_KEY, DEEPGRAM_API_KEY),
+-- THINK_ENDPOINT_SECRET and DB credentials are env-only, on purpose. This
+-- table holds non-secret, per-provider tunables (model names, thresholds,
+-- voice, greeting) and is readable via the admin API - do not "centralize"
+-- secrets into it.
 CREATE TABLE IF NOT EXISTS provider_configs (
     id              SERIAL PRIMARY KEY,
     category        TEXT NOT NULL CHECK (category IN ('embedding', 'generation', 'stt', 'tts')),
@@ -139,3 +144,17 @@ DO $$ BEGIN
     ALTER TABLE query_logs ADD CONSTRAINT query_logs_source_check CHECK (source IN ('text', 'voice'));
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
+
+-- Pipeline-level tunables, editable at runtime via /api/admin/config
+-- (read through a Redis cache, see config/runtime.py). Seeded by
+-- config/runtime.py's seed_runtime_config() with the values previously
+-- hardcoded in vectorstore/retrieve.py.
+-- SECRETS NEVER LIVE HERE: API keys, THINK_ENDPOINT_SECRET and DB
+-- credentials are env-only, on purpose. This table is readable via the
+-- admin API - do not "centralize" secrets into it.
+CREATE TABLE IF NOT EXISTS app_config (
+    key         TEXT PRIMARY KEY,
+    value       JSONB NOT NULL,
+    description TEXT,
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);

@@ -7,7 +7,7 @@ import os
 import shutil
 import threading
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile
@@ -15,6 +15,7 @@ from psycopg.rows import dict_row
 from pydantic import BaseModel
 
 from access_control.extract_applicability import extract_and_store_for_document
+from config.runtime import set_app_config, set_provider_setting
 from generation.generate import get_client, get_generation_model
 from ingestion.pipeline import process_document
 from vectorstore.db import get_pool
@@ -233,3 +234,87 @@ def usage_recent(limit: int = Query(50, ge=1, le=500)):
     with get_pool().connection() as conn, conn.cursor(row_factory=dict_row) as cur:
         cur.execute("SELECT * FROM query_logs ORDER BY created_at DESC, id DESC LIMIT %s", (limit,))
         return cur.fetchall()
+
+
+# --------------------------------------------------------------------------
+# Runtime config (app_config + provider_configs; secrets are env-only)
+# --------------------------------------------------------------------------
+
+def _pos_int(v):
+    if isinstance(v, bool) or not isinstance(v, int) or v < 1:
+        raise ValueError("must be a positive integer")
+    return v
+
+
+def _unit_interval(v):
+    if isinstance(v, bool) or not isinstance(v, (int, float)) or not 0 <= v <= 1:
+        raise ValueError("must be a number between 0 and 1")
+    return float(v)
+
+
+def _non_empty_str(v):
+    if not isinstance(v, str) or not v.strip():
+        raise ValueError("must be a non-empty string")
+    return v.strip()
+
+
+# key -> validator. app_config keys have no table prefix; provider_configs
+# keys are "<category>.<field>".
+_APP_CONFIG_VALIDATORS = {
+    "retrieval.top_k": _pos_int,
+    "retrieval.candidate_n": _pos_int,
+    "retrieval.rrf_k": _pos_int,
+}
+_PROVIDER_VALIDATORS = {
+    "generation.model": _non_empty_str,
+    "generation.confidence_threshold": _unit_interval,
+    "stt.model": _non_empty_str,
+    "tts.voice": _non_empty_str,
+    "tts.greeting": _non_empty_str,
+}
+
+
+@router.get("/config")
+def get_config():
+    with get_pool().connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+        cur.execute("SELECT key, value, description, updated_at FROM app_config ORDER BY key")
+        app_config = cur.fetchall()
+        cur.execute(
+            "SELECT category, provider_name, config, updated_at FROM provider_configs "
+            "WHERE is_active AND category = ANY(%s) ORDER BY category",
+            (["generation", "stt", "tts"],),
+        )
+        providers = cur.fetchall()
+    return {
+        "app_config (table: app_config)": app_config,
+        "provider_configs (table: provider_configs, active rows)": providers,
+    }
+
+
+class ConfigUpdate(BaseModel):
+    value: Any
+
+
+@router.patch("/config/{key}")
+def update_config(key: str, body: ConfigUpdate):
+    """key is an app_config key (e.g. "retrieval.top_k") or a
+    provider_configs setting as "<category>.<field>" (e.g.
+    "generation.confidence_threshold"). Writes the DB row, then the cache."""
+    validator = _PROVIDER_VALIDATORS.get(key) or _APP_CONFIG_VALIDATORS.get(key)
+    if validator is None:
+        raise HTTPException(404, {"detail": f"Unknown config key {key!r}",
+                                  "valid_keys": sorted([*_APP_CONFIG_VALIDATORS, *_PROVIDER_VALIDATORS])})
+    try:
+        value = validator(body.value)
+    except ValueError as exc:
+        raise HTTPException(422, f"Invalid value for {key}: {exc} (got {body.value!r})")
+
+    if key in _PROVIDER_VALIDATORS:
+        category, field = key.split(".", 1)
+        updated = set_provider_setting(category, field, value)
+        if updated is None:
+            raise HTTPException(404, f"No active provider_configs row for category {category!r}")
+        return {"key": key, "value": value, "source": "provider_configs", "config": updated}
+    if not set_app_config(key, value):
+        raise HTTPException(404, f"app_config row {key!r} not found (run vectorstore.setup_db)")
+    return {"key": key, "value": value, "source": "app_config"}
