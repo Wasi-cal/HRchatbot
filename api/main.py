@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 
-from api import admin, chat  # noqa: E402  (after load_dotenv so env is set at import)
+from api import admin, chat, voice  # noqa: E402  (after load_dotenv so env is set at import)
 from vectorstore.db import close_pool  # noqa: E402
 from vectorstore.retrieve import _get_embedder  # noqa: E402
 
@@ -42,6 +42,7 @@ app.add_middleware(
 
 app.include_router(chat.router)
 app.include_router(admin.router)
+app.include_router(voice.router)
 
 
 @app.get("/health")

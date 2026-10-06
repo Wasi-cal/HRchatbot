@@ -132,3 +132,10 @@ CREATE TABLE IF NOT EXISTS query_logs (
 );
 
 CREATE INDEX IF NOT EXISTS idx_query_logs_created_at ON query_logs (created_at DESC);
+
+-- Request origin: the text API (api/chat.py) vs the voice think endpoint (api/voice.py).
+ALTER TABLE query_logs ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'text';
+DO $$ BEGIN
+    ALTER TABLE query_logs ADD CONSTRAINT query_logs_source_check CHECK (source IN ('text', 'voice'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;

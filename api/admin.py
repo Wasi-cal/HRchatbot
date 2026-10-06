@@ -7,6 +7,7 @@ import os
 import shutil
 import threading
 from pathlib import Path
+from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile
@@ -181,8 +182,16 @@ def restrict_document(document_id: UUID, body: RestrictRequest):
 @router.get("/usage/summary")
 def usage_summary(
     days: int = Query(7, ge=0, description="Window in days; 0 = all time"),
+    source: Literal["text", "voice"] | None = Query(None, description="Filter by request origin"),
 ):
-    where, params = ("WHERE created_at >= now() - make_interval(days => %s)", [days]) if days else ("", [])
+    clauses, params = [], []
+    if days:
+        clauses.append("created_at >= now() - make_interval(days => %s)")
+        params.append(days)
+    if source:
+        clauses.append("source = %s")
+        params.append(source)
+    where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with get_pool().connection() as conn, conn.cursor(row_factory=dict_row) as cur:
         cur.execute(
             f"""
@@ -204,6 +213,7 @@ def usage_summary(
     rnd = lambda v: round(float(v), 2) if v is not None else None
     return {
         "window_days": days or None,
+        "source": source,
         "total_queries": total,
         "by_response_type": {
             "answer": r["answer"],
