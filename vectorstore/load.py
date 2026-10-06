@@ -164,6 +164,41 @@ def _insert_chunks_and_embeddings(conn, document_id, chunks: list[dict], embedde
     return chunk_db_ids
 
 
+def load_document(pool, doc_json: dict, embedder: BGEM3Embedder, model_id: int) -> dict:
+    """Loads one ingestion-output document (see ingestion/pipeline.py's
+    doc_json) with the supersede-on-change semantics described in this
+    module's docstring. Returns {"status": "inserted" | "superseded" |
+    "unchanged", "document_id": <uuid of the active document>,
+    "chunks": <chunks inserted>, "superseded_document_id": <uuid or None>}.
+    "superseded" means a new row was inserted AND a prior active row for
+    the same source_file was superseded. Raises on failure (the
+    transaction is rolled back)."""
+    with pool.connection() as conn:
+        new_fingerprint = {(c["chunk_id"], c["content_hash"]) for c in doc_json["chunks"]}
+        existing = _existing_active_document(conn, doc_json["source_file"])
+        superseded_id = None
+
+        if existing:
+            existing_id = existing[0]
+            if _existing_chunk_fingerprint(conn, existing_id) == new_fingerprint:
+                conn.commit()
+                return {"status": "unchanged", "document_id": existing_id, "chunks": 0,
+                        "superseded_document_id": None}
+            _supersede_document(conn, existing_id)
+            superseded_id = existing_id
+
+        document_id = _insert_document(conn, doc_json)
+        _insert_applicability(conn, document_id, doc_json.get("applicability"))
+        chunk_ids = _insert_chunks_and_embeddings(conn, document_id, doc_json["chunks"], embedder, model_id)
+        conn.commit()
+        return {
+            "status": "superseded" if superseded_id else "inserted",
+            "document_id": document_id,
+            "chunks": len(chunk_ids),
+            "superseded_document_id": superseded_id,
+        }
+
+
 def load_all(output_dir: Path):
     pool = get_pool()
     embedder = BGEM3Embedder()
@@ -176,29 +211,19 @@ def load_all(output_dir: Path):
 
     for path, doc_json in _load_document_jsons(output_dir):
         try:
-            with pool.connection() as conn:
-                new_fingerprint = {(c["chunk_id"], c["content_hash"]) for c in doc_json["chunks"]}
-                existing = _existing_active_document(conn, doc_json["source_file"])
-
-                if existing:
-                    existing_id = existing[0]
-                    if _existing_chunk_fingerprint(conn, existing_id) == new_fingerprint:
-                        print(f"  {path.name}: unchanged, skipping")
-                        stats["unchanged"] += 1
-                        conn.commit()
-                        continue
-                    _supersede_document(conn, existing_id)
-                    stats["superseded"] += 1
-
-                document_id = _insert_document(conn, doc_json)
-                _insert_applicability(conn, document_id, doc_json.get("applicability"))
-                chunk_ids = _insert_chunks_and_embeddings(conn, document_id, doc_json["chunks"], embedder, model_id)
-                conn.commit()
-                print(f"  {path.name}: loaded {len(chunk_ids)} chunks")
-                stats["inserted"] += 1
+            result = load_document(pool, doc_json, embedder, model_id)
         except Exception as exc:
             stats["errors"].append((path.name, str(exc)))
             print(f"  {path.name}: FAILED - {exc}")
+            continue
+        if result["status"] == "unchanged":
+            print(f"  {path.name}: unchanged, skipping")
+            stats["unchanged"] += 1
+            continue
+        if result["status"] == "superseded":
+            stats["superseded"] += 1
+        print(f"  {path.name}: loaded {result['chunks']} chunks")
+        stats["inserted"] += 1
 
     return stats
 

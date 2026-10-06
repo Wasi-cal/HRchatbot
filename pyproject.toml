@@ -18,6 +18,10 @@ dependencies = [
     "flagembedding>=1.3",
     # --- generation layer ---
     "openai>=1.50",
+    # --- serving layer (api/) ---
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "python-multipart>=0.0.9",
 ]
 
 [tool.uv]

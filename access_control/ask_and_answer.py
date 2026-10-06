@@ -57,7 +57,8 @@ def ask_and_answer(
             known value for. No generation call was made. Re-invoke
             ask_and_answer() with that attribute filled in to proceed.
 
-        {"type": "answer", "answer": str, "shortcut": bool, "timing": dict}
+        {"type": "answer", "answer": str, "shortcut": bool, "timing": dict,
+         "chunk_ids": list[str]}
             Same shape as generate_answer()'s final "done" event, with
             hard filtering (via user_attributes) applied throughout.
     """
@@ -99,4 +100,5 @@ def ask_and_answer(
         "answer": final_event["answer"],
         "shortcut": final_event["shortcut"],
         "timing": final_event["timing"],
+        "chunk_ids": final_event.get("chunk_ids", []),
     }

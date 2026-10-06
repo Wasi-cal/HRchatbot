@@ -112,3 +112,23 @@ CREATE INDEX IF NOT EXISTS idx_provider_configs_category_active
 CREATE UNIQUE INDEX IF NOT EXISTS ux_provider_configs_active_category
     ON provider_configs (category)
     WHERE is_active;
+
+-- Monitoring log for the serving layer (api/). One row per /api/chat
+-- call. Written fire-and-forget by api/query_log.py; failures to write
+-- never affect the response.
+CREATE TABLE IF NOT EXISTS query_logs (
+    id                          BIGSERIAL PRIMARY KEY,
+    created_at                  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    query_text                  TEXT NOT NULL,
+    response_type               TEXT NOT NULL CHECK (response_type IN ('answer', 'clarification', 'refusal_shortcut')),
+    answer_text                 TEXT,
+    user_attributes             JSONB,
+    blocking_tag_type           TEXT,     -- set when response_type = 'clarification'
+    shortcut_fired              BOOLEAN,  -- NULL for clarification (no generation attempted)
+    retrieval_time_ms           DOUBLE PRECISION,
+    ttft_ms                     DOUBLE PRECISION,
+    total_generation_time_ms    DOUBLE PRECISION,
+    chunk_ids_used              JSONB     -- array of chunks.chunk_id strings
+);
+
+CREATE INDEX IF NOT EXISTS idx_query_logs_created_at ON query_logs (created_at DESC);

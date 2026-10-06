@@ -140,6 +140,23 @@ def _link_tag(conn, document_id, tag_id: int):
     )
 
 
+def extract_and_store_for_document(conn, client, model_name: str, document_id, title: str) -> dict:
+    """Runs LLM applicability extraction for ONE document (title + opening
+    chunk window) and links the resulting tags. Commits. Returns
+    {"inserted": [(tag_type, value), ...], "ambiguous": bool}."""
+    window_text = _get_opening_window_text(conn, document_id)
+    extracted = extract_applicability_tags(client, model_name, title, window_text)
+
+    inserted = []
+    for tag_type in ("country", "employment_type"):
+        for value in extracted.get(tag_type, []):
+            tag_id = _get_or_create_tag(conn, tag_type, value)
+            _link_tag(conn, document_id, tag_id)
+            inserted.append((tag_type, value))
+    conn.commit()
+    return {"inserted": inserted, "ambiguous": extracted["ambiguous"]}
+
+
 def extract_all():
     client = get_client()
     model_name = get_generation_model()
@@ -148,26 +165,18 @@ def extract_all():
     results = []
     with pool.connection() as conn:
         for document_id, source_file, title in _get_active_documents(conn):
-            window_text = _get_opening_window_text(conn, document_id)
-            extracted = extract_applicability_tags(client, model_name, title, window_text)
-
-            inserted = []
-            for tag_type in ("country", "employment_type"):
-                for value in extracted.get(tag_type, []):
-                    tag_id = _get_or_create_tag(conn, tag_type, value)
-                    _link_tag(conn, document_id, tag_id)
-                    inserted.append((tag_type, value))
-            conn.commit()
+            outcome = extract_and_store_for_document(conn, client, model_name, document_id, title)
+            inserted, ambiguous = outcome["inserted"], outcome["ambiguous"]
 
             results.append(
                 {
                     "source_file": source_file,
                     "title": title,
                     "inserted": inserted,
-                    "ambiguous": extracted["ambiguous"],
+                    "ambiguous": ambiguous,
                 }
             )
-            flag = "  [AMBIGUOUS - spot-check this one]" if extracted["ambiguous"] else ""
+            flag = "  [AMBIGUOUS - spot-check this one]" if ambiguous else ""
             tag_str = inserted if inserted else "no tags extracted"
             print(f"  {source_file} ({title}){flag}")
             print(f"      -> {tag_str}")
