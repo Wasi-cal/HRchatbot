@@ -18,6 +18,7 @@ def log_query(
     shortcut_fired: bool | None = None,
     timing: dict | None = None,
     chunk_ids_used: list | None = None,
+    source: str = "text",
 ) -> None:
     timing = timing or {}
     try:
@@ -27,8 +28,8 @@ def log_query(
                 INSERT INTO query_logs (
                     query_text, response_type, answer_text, user_attributes,
                     blocking_tag_type, shortcut_fired, retrieval_time_ms,
-                    ttft_ms, total_generation_time_ms, chunk_ids_used
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ttft_ms, total_generation_time_ms, chunk_ids_used, source
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     query_text, response_type, answer_text,
@@ -38,6 +39,7 @@ def log_query(
                     timing.get("time_to_first_token_ms"),
                     timing.get("total_generation_time_ms"),
                     Jsonb(chunk_ids_used) if chunk_ids_used is not None else None,
+                    source,
                 ),
             )
             conn.commit()

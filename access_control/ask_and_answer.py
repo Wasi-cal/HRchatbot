@@ -40,6 +40,50 @@ def detect_blocking_tag_types(conn, candidate_results: list[dict], user_attribut
     return sorted(tag_type for tag_type in tag_types_present if user_attributes.get(tag_type) is None)
 
 
+def ask_and_answer_stream(
+    query: str,
+    user_attributes: dict | None = None,
+    top_k: int = DEFAULT_TOP_K,
+    candidate_n: int = DEFAULT_CANDIDATE_N,
+    k: int = DEFAULT_RRF_K,
+    confidence_threshold: float | None = None,
+):
+    """Streaming core of ask_and_answer(). A generator yielding either a
+    single {"type": "needs_clarification", "question", "blocking_tag_type"}
+    event, or generate_answer()'s "token" events followed by its "done"
+    event (see generation/generate.py)."""
+    # (a) Unfiltered probe: what would the candidate pool look like with
+    # no access-control filtering at all? Used only to decide whether a
+    # clarifying question is needed - never shown to the user as-is.
+    unfiltered_candidates = retrieve(query, top_k=top_k, candidate_n=candidate_n, k=k)
+
+    pool = get_pool()
+    with pool.connection() as conn:
+        blocking_tag_types = detect_blocking_tag_types(conn, unfiltered_candidates, user_attributes)
+
+    if blocking_tag_types:
+        blocking_tag_type = blocking_tag_types[0]
+        yield {
+            "type": "needs_clarification",
+            "question": CLARIFYING_QUESTIONS.get(
+                blocking_tag_type, f"Could you tell me your {blocking_tag_type.replace('_', ' ')}?"
+            ),
+            "blocking_tag_type": blocking_tag_type,
+        }
+        return
+
+    # (b) No blocking attribute: proceed with the real, hard-filtered
+    # retrieve() + generate_answer() call.
+    yield from generate_answer(
+        query,
+        top_k=top_k,
+        candidate_n=candidate_n,
+        k=k,
+        confidence_threshold=confidence_threshold,
+        user_attributes=user_attributes,
+    )
+
+
 def ask_and_answer(
     query: str,
     user_attributes: dict | None = None,
@@ -62,36 +106,13 @@ def ask_and_answer(
             Same shape as generate_answer()'s final "done" event, with
             hard filtering (via user_attributes) applied throughout.
     """
-    # (a) Unfiltered probe: what would the candidate pool look like with
-    # no access-control filtering at all? Used only to decide whether a
-    # clarifying question is needed - never shown to the user as-is.
-    unfiltered_candidates = retrieve(query, top_k=top_k, candidate_n=candidate_n, k=k)
-
-    pool = get_pool()
-    with pool.connection() as conn:
-        blocking_tag_types = detect_blocking_tag_types(conn, unfiltered_candidates, user_attributes)
-
-    if blocking_tag_types:
-        blocking_tag_type = blocking_tag_types[0]
-        return {
-            "type": "needs_clarification",
-            "question": CLARIFYING_QUESTIONS.get(
-                blocking_tag_type, f"Could you tell me your {blocking_tag_type.replace('_', ' ')}?"
-            ),
-            "blocking_tag_type": blocking_tag_type,
-        }
-
-    # (b) No blocking attribute: proceed with the real, hard-filtered
-    # retrieve() + generate_answer() call.
     final_event = None
-    for event in generate_answer(
-        query,
-        top_k=top_k,
-        candidate_n=candidate_n,
-        k=k,
+    for event in ask_and_answer_stream(
+        query, user_attributes, top_k=top_k, candidate_n=candidate_n, k=k,
         confidence_threshold=confidence_threshold,
-        user_attributes=user_attributes,
     ):
+        if event["type"] == "needs_clarification":
+            return event
         if event["type"] == "done":
             final_event = event
 
