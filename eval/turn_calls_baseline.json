@@ -1,0 +1,86 @@
+{
+  "text normal answer": {
+    "llm": 1,
+    "retrieve": 1,
+    "embed": 1,
+    "db": 5,
+    "redis": 7
+  },
+  "text question containing 'your' (what is your leave policy)": {
+    "llm": 1,
+    "retrieve": 1,
+    "embed": 1,
+    "db": 5,
+    "redis": 7
+  },
+  "text advisory follow-up": {
+    "llm": 1,
+    "retrieve": 1,
+    "embed": 1,
+    "db": 8,
+    "redis": 17
+  },
+  "text retrieval shortcut": {
+    "llm": 0,
+    "retrieve": 1,
+    "embed": 1,
+    "db": 5,
+    "redis": 6
+  },
+  "text small talk (wassup)": {
+    "llm": 0,
+    "retrieve": 0,
+    "embed": 0,
+    "db": 1,
+    "redis": 0
+  },
+  "text small talk (what can you do)": {
+    "llm": 0,
+    "retrieve": 0,
+    "embed": 0,
+    "db": 1,
+    "redis": 1
+  },
+  "text thanks after statement": {
+    "llm": 0,
+    "retrieve": 0,
+    "embed": 0,
+    "db": 1,
+    "redis": 0
+  },
+  "text source lookup": {
+    "llm": 0,
+    "retrieve": 1,
+    "embed": 1,
+    "db": 5,
+    "redis": 6
+  },
+  "text 'yes' after an offer": {
+    "llm": 1,
+    "retrieve": 1,
+    "embed": 1,
+    "db": 5,
+    "redis": 11
+  },
+  "voice normal turn": {
+    "llm": 1,
+    "retrieve": 1,
+    "embed": 1,
+    "db": 5,
+    "redis": 7
+  },
+  "voice small talk (wassup)": {
+    "llm": 0,
+    "retrieve": 0,
+    "embed": 0,
+    "db": 1,
+    "redis": 0
+  },
+  "voice source lookup": {
+    "llm": 0,
+    "retrieve": 1,
+    "embed": 1,
+    "db": 5,
+    "redis": 6
+  }
+}

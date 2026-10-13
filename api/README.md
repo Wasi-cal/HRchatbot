@@ -27,7 +27,9 @@ curl -s "$B/api/admin/usage/recent?limit=50"
 Response `type` is `answer`, `refusal_shortcut` (low-confidence canned reply), `smalltalk`
 (a pure greeting/thanks/goodbye etc., answered with no retrieval or LLM call), or `source_lookup` ("where is this from" after an
 answer: a templated reply naming up to 3 documents from a deterministic re-retrieval of the previous turn, 0 LLM calls; only when the
-history has an earlier assistant answer). Small-talk phrases (`smalltalk.phrases.<channel>`), the affirmations that are NOT small talk after
+history has an earlier assistant answer), or `catalog` ("what docs do you have": a templated list from the cached title list - 0 LLM, retrieval
+or embedding calls and no DB/network call on the turn; vocabulary, nouns, normalize map, limits and templates are `catalog.*` keys in `app_config`).
+Pipeline order: small talk, source lookup, catalog, normal turn. Small-talk phrases (`smalltalk.phrases.<channel>`), the affirmations that are NOT small talk after
 a question/offer (`smalltalk.affirmations`, `smalltalk.offer_markers`), the source phrases (`source.markers`) and the source reply templates
 (`source.templates.<channel>`) are editable in `app_config` (a 30s in-process copy; admin edits apply at once in the serving process).
 Answers come from

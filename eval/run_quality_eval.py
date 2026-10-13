@@ -39,6 +39,8 @@ EVAL_SET_PATH = Path(__file__).parent / "quality_eval_set.json"
 def _format_result(result: dict) -> str:
     if result["type"] == "smalltalk":
         return f"SMALLTALK (no retrieval, no LLM)\n    {result['answer']!r}"
+    if result["type"] == "catalog":
+        return f"CATALOG (0 LLM, 0 retrieval, 0 embedding)\n    {result['answer']!r}"
     if result["type"] == "source_lookup":
         return f"SOURCE LOOKUP (0 LLM calls, 1 retrieval; chunks {result.get('chunk_ids')})\n    {result['answer']!r}"
     return (
@@ -82,14 +84,17 @@ def run_case(case: dict, channel_override: str | None = None):
     print(f"  expected_behavior: {case['expected_behavior']!r}")
     print(f"  notes:             {case['notes']}")
 
-    # Mirror the API layer (api/chat.py, api/voice.py): small talk first, then a source lookup, then the pipeline.
+    # Mirror the API layer (api/chat.py, api/voice.py): small talk first, then a source lookup, then the catalog, then the pipeline.
     channel_module = get_channel(channel)
     category = channel_module.smalltalk_match(case["query"], history)
     source = None if category else channel_module.source_reply(case["query"], history)
+    catalog_answer = None if (category or source) else channel_module.catalog_reply(case["query"], history)
     if category:
         result = {"type": "smalltalk", "answer": channel_module.smalltalk_reply(category)}
     elif source:
         result = {"type": "source_lookup", "answer": source["text"], "chunk_ids": source["chunk_ids"]}
+    elif catalog_answer:
+        result = {"type": "catalog", "answer": catalog_answer["text"]}
     else:
         restricted = _restrict(case["restrict_document_title"]) if case.get("restrict_document_title") else None
         try:

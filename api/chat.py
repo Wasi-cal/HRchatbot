@@ -1,4 +1,4 @@
-"""POST /api/chat - the text channel: small talk, or a source lookup, else retrieve once + generate once."""
+"""POST /api/chat - the text channel: small talk, a source lookup or a catalog reply, else retrieve once + generate once."""
 from typing import Annotated, Literal, Union
 
 from fastapi import APIRouter, BackgroundTasks
@@ -45,6 +45,13 @@ class SourceLookupResponse(BaseModel):
     text: str
 
 
+class CatalogResponse(BaseModel):
+    """"What documents do you have": a templated reply from the cached title list - no LLM, retrieval or
+    embedding call."""
+    type: Literal["catalog"] = "catalog"
+    text: str
+
+
 class SmalltalkResponse(BaseModel):
     """A greeting / thanks / goodbye etc. answered by channels/text.py with no
     retrieval or LLM call."""
@@ -53,7 +60,7 @@ class SmalltalkResponse(BaseModel):
 
 
 ChatResponse = Annotated[
-    Union[AnswerResponse, RefusalResponse, SmalltalkResponse, SourceLookupResponse], Field(discriminator="type")
+    Union[AnswerResponse, RefusalResponse, SmalltalkResponse, SourceLookupResponse, CatalogResponse], Field(discriminator="type")
 ]
 
 
@@ -91,6 +98,19 @@ def chat(req: ChatRequest, background: BackgroundTasks):
             advisory=False,
         )
         return SourceLookupResponse(text=source["text"])
+
+    # "What documents do you have": templated from the cached title list, 0 LLM / retrieval / embedding calls.
+    catalog_answer = text_channel.catalog_reply(req.query, history)
+    if catalog_answer:
+        background.add_task(
+            log_query,
+            query_text=req.query,
+            response_type="catalog",
+            answer_text=catalog_answer["text"],
+            contextualized=False,
+            advisory=False,
+        )
+        return CatalogResponse(text=catalog_answer["text"])
 
     result = text_channel.answer(req.query, history=history)
     shortcut = result["shortcut"]

@@ -104,6 +104,13 @@ def _turn_pieces(turns, record: dict):
         yield source["text"]
         return
 
+    # "What documents do you have": templated from the cached title list, 0 LLM / retrieval / embedding calls.
+    catalog_answer = voice_channel.catalog_reply(current, history)
+    if catalog_answer:
+        record.update(query_text=current, response_type="catalog", pieces=[catalog_answer["text"]], contextualized=False, advisory=False)
+        yield catalog_answer["text"]
+        return
+
     record["query_text"] = current
     for event in voice_channel.answer_stream(current, history=history):
         if event["type"] == "token":

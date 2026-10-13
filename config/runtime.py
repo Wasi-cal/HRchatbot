@@ -86,6 +86,36 @@ DEFAULT_SOURCE_TEMPLATES = {
     },
 }
 
+# ---- catalog intent ("what documents do you have"): editable, see channels/catalog.py ---------------------------
+DEFAULT_CATALOG_VOCAB = [
+    "document", "documents", "policy", "policies", "topic", "topics", "file", "files", "source", "sources",
+    "information", "knowledge", "hr", "have", "has", "know", "cover", "covers", "available", "access", "list",
+    "show", "tell", "give", "which", "what", "all", "everything", "anything", "answer", "ask", "able", "can",
+]
+DEFAULT_CATALOG_NOUNS = [
+    "document", "documents", "policy", "policies", "topic", "topics", "file", "files", "source", "sources",
+    "knowledge", "information", "what you know", "what do you know",
+]
+DEFAULT_CATALOG_NORMALIZE_MAP = {
+    "u": "you", "ur": "your", "docs": "documents", "doc": "document", "rn": "", "pls": "", "plz": "",
+    "right now": "", "currently": "", "whats": "what", "wats": "what",
+}
+DEFAULT_CATALOG_TEMPLATES = {
+    "text": {
+        "main": "I can answer questions from {n} HR documents: {list}.",
+        "more": "and {k} more",
+        "topics": "Example topics: {topics}.",
+        "closing": "Just ask me about any of them.",
+        "empty": "There are no HR documents loaded yet.",
+    },
+    "voice": {
+        "main": "I have {n} HR policy documents, including {names}.",
+        "closing": "Just ask me about any of them.",
+        "empty": "I don't have any HR documents loaded yet.",
+    },
+}
+
+
 DEFAULT_APP_CONFIG = {
     "retrieval.top_k": (3, "Chunks returned by retrieve() after RRF fusion."),
     "retrieval.candidate_n": (20, "Candidates pulled from each of dense and sparse search before fusion."),
@@ -137,6 +167,16 @@ DEFAULT_APP_CONFIG = {
         ["would you like", "want me to", "i can also"],
         "Phrases that mark an assistant message as an offer (a message ending in '?' also counts).",
     ),
+    "catalog.enabled": (True, "Whether 'what documents do you have' questions get the deterministic catalog reply."),
+    "catalog.vocab": (DEFAULT_CATALOG_VOCAB, "A catalog question may contain ONLY these content words (after stopword removal and the normalize map)."),
+    "catalog.nouns": (DEFAULT_CATALOG_NOUNS, "A catalog question must contain at least one of these (multi-word entries match the whole utterance)."),
+    "catalog.normalize_map": (DEFAULT_CATALOG_NORMALIZE_MAP, "Informal forms expanded before matching; an empty replacement drops the word (u->you, docs->documents, rn->drop)."),
+    "catalog.max_words": (12, "A catalog question is at most this many words."),
+    "catalog.text_max_titles": (12, "Titles listed in a text catalog reply before 'and N more'."),
+    "catalog.voice_max_titles": (4, "Short spoken names listed in a voice catalog reply."),
+    "catalog.voice_max_title_words": (5, "Titles longer than this many words are not read aloud."),
+    "catalog.templates.text": (DEFAULT_CATALOG_TEMPLATES["text"], "Text catalog reply parts: main ({n},{list}), more ({k}), topics ({topics}), closing, empty. Must not end with a question or offer."),
+    "catalog.templates.voice": (DEFAULT_CATALOG_TEMPLATES["voice"], "Voice catalog reply parts: main ({n},{names}), closing, empty. Must not end with a question or offer."),
     "source.markers": (DEFAULT_SOURCE_MARKERS, "Whole-utterance phrases (normalized, <= 8 words) that ask where the previous answer came from."),
     "source.templates.text": (DEFAULT_SOURCE_TEMPLATES["text"], "Text replies for a source question. Keys: one, one_with_section, many, none, not_found."),
     "source.templates.voice": (DEFAULT_SOURCE_TEMPLATES["voice"], "Voice replies for a source question (document name only). Keys: one, many, none, not_found."),

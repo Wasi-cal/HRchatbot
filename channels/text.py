@@ -8,9 +8,9 @@ written for reading. Shared, behaviour-free helpers live in channels/common.py."
 import logging
 import time
 
-from channels import common
+from channels import catalog, common
 from config.prompts import get_system_prompt
-from config.topics import topic_phrase
+from config.topics import get_catalog_titles, get_topics_cached, topic_phrase
 from generation.generate import get_client, get_confidence_threshold, get_generation_model
 from vectorstore.retrieve import retrieve
 
@@ -148,6 +148,31 @@ def _template(templates: dict, key: str) -> str:
     from config.runtime import DEFAULT_SOURCE_TEMPLATES
 
     return templates.get(key) or DEFAULT_SOURCE_TEMPLATES[CHANNEL][key]
+
+
+# --------------------------------------------------------------------------
+# Catalog ("what documents do you have"): deterministic, 0 LLM / retrieval / embedding calls
+# --------------------------------------------------------------------------
+
+def catalog_reply(query: str, history: list | None) -> dict | None:
+    """If query is a catalog question (see channels/catalog.py) return {"text"} built from the cached title
+    list (in-process copy over Redis over the DB - no call on the turn itself); else None (the caller falls
+    through to the normal pipeline)."""
+    if not catalog.is_catalog_question(query, history):
+        return None
+    from config.runtime import DEFAULT_CATALOG_TEMPLATES
+
+    text = catalog.build_reply(
+        get_catalog_titles(),
+        [] if False else get_topics_cached(),
+        common.memo_config("catalog.templates.text", {}) or {},
+        spoken=False,
+        max_titles=common.memo_config("catalog.text_max_titles", 12),
+        max_title_words=common.memo_config("catalog.voice_max_title_words", 5),
+        defaults=DEFAULT_CATALOG_TEMPLATES["text"],
+    )
+    logger.info("turn type=catalog")
+    return {"text": text}
 
 
 # --------------------------------------------------------------------------

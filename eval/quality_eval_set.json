@@ -361,5 +361,37 @@
 ],
     "expected_behavior": "smalltalk",
     "notes": "REAL TRANSCRIPT (d). After a statement this must be small talk (0 LLM, 0 retrieval calls). After an offer it would instead be followed up (see f7)."
+  },
+  {
+    "id": "c1",
+    "query": "what docs do u have access to rn",
+    "category": "catalog",
+    "channel": "text",
+    "expected_behavior": "catalog",
+    "notes": "REAL TRANSCRIPT. Used to retrieve the IT access-control policy and answer 'I couldn't find information about document access ... check with your manager or relevant IT personnel'. Now a deterministic catalog reply (0 LLM, 0 retrieval, 0 embedding): 'I can answer questions from N HR documents: ... Example topics: ... Just ask me about any of them.' No question or offer at the end; duplicate titles listed once."
+  },
+  {
+    "id": "c2",
+    "query": "what docs do u have access to rn",
+    "category": "catalog",
+    "channel": "voice",
+    "expected_behavior": "catalog",
+    "notes": "Voice version of c1: 'I have N HR policy documents, including a, b, c and d. Just ask me about any of them.' Short spoken names only - no file names, version numbers, section paths or long titles read aloud."
+  },
+  {
+    "id": "c3",
+    "query": "what policies do you have on remote work",
+    "category": "catalog_false_positive_guard",
+    "channel": "text",
+    "expected_behavior": "answer",
+    "notes": "Must NOT be treated as a catalog question ('remote work' is a content word): it goes through retrieval + generation and answers from the Remote Connectivity & Data Protection policy / handbook WFH content."
+  },
+  {
+    "id": "c4",
+    "query": "who do i contact about my tax filing",
+    "category": "no_other_team_referral",
+    "channel": "text",
+    "expected_behavior": "refusal",
+    "notes": "The corpus has nothing on tax filing. Expect 'I couldn't find ... in the HR policies' - and NO suggestion to contact IT, legal, finance or any other team (the old transcript invented an IT referral). Suggesting HR is fine only if it is clearly an HR matter (it is not, so none is also fine)."
   }
 ]

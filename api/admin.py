@@ -208,6 +208,7 @@ def usage_summary(
                    count(*) FILTER (WHERE response_type = 'refusal_shortcut') AS refusal_shortcut,
                    count(*) FILTER (WHERE response_type = 'smalltalk') AS smalltalk,
                    count(*) FILTER (WHERE response_type = 'source_lookup') AS source_lookup,
+                   count(*) FILTER (WHERE response_type = 'catalog') AS catalog,
                    count(*) FILTER (WHERE contextualized) AS contextualized,
                    count(*) FILTER (WHERE advisory) AS advisory,
                    avg(retrieval_time_ms) AS avg_retrieval_time_ms,
@@ -232,6 +233,7 @@ def usage_summary(
             "refusal_shortcut": r["refusal_shortcut"],
             "smalltalk": r["smalltalk"],
             "source_lookup": r["source_lookup"],
+            "catalog": r["catalog"],
         },
         "avg_retrieval_time_ms": rnd(r["avg_retrieval_time_ms"]),
         "avg_ttft_ms": rnd(r["avg_ttft_ms"]),
@@ -321,6 +323,42 @@ def _source_templates(v):
     return {k: t.strip() for k, t in v.items()}
 
 
+_CATALOG_FIELDS = {
+    "text": {"main": {"n", "list"}, "more": {"k"}, "topics": {"topics"}, "closing": set(), "empty": set()},
+    "voice": {"main": {"n", "names"}, "closing": set(), "empty": set()},
+}
+
+
+def _catalog_templates(channel: str):
+    def validate(v):
+        import string
+
+        fields = _CATALOG_FIELDS[channel]
+        required = {"main", "closing", "empty"}
+        if not isinstance(v, dict) or any(k not in fields for k in v) or not required <= set(v):
+            raise ValueError(f"must be an object with keys {sorted(required)} (and optionally {sorted(set(fields) - required)})")
+        # The reply must never end in a question or an offer, so a following bare "yes" is never misrouted.
+        from config.runtime import DEFAULT_APP_CONFIG
+        offers = [m.lower() for m in DEFAULT_APP_CONFIG["smalltalk.offer_markers"][0]] + ["would you like", "want me to"]
+        for key, template in v.items():
+            if not isinstance(template, str) or not template.strip():
+                raise ValueError(f"{key!r} must be a non-empty string")
+            used = {f for _, f, _, _ in string.Formatter().parse(template) if f is not None}
+            if not used <= fields[key]:
+                raise ValueError(f"{key!r} may only use the placeholders {sorted(fields[key])}, found {sorted(used)}")
+            if template.strip().endswith("?") or any(m in template.lower() for m in offers):
+                raise ValueError(f"{key!r} must not be or contain a question or an offer")
+        return {k: t.strip() for k, t in v.items()}
+
+    return validate
+
+
+def _str_map(v):
+    if not isinstance(v, dict) or not v or any(not isinstance(k, str) or not k.strip() or not isinstance(x, str) for k, x in v.items()):
+        raise ValueError("must be an object mapping non-empty strings to strings (use \"\" to drop a word)")
+    return {k.strip().lower(): x.strip().lower() for k, x in v.items()}
+
+
 def _bool(v):
     if not isinstance(v, bool):
         raise ValueError("must be true or false")
@@ -351,6 +389,16 @@ _APP_CONFIG_VALIDATORS = {
     "smalltalk.affirmations": _str_list,
     "smalltalk.offer_markers": _str_list,
     "source.markers": _str_list,
+    "catalog.enabled": _bool,
+    "catalog.vocab": _str_list,
+    "catalog.nouns": _str_list,
+    "catalog.normalize_map": _str_map,
+    "catalog.max_words": _pos_int,
+    "catalog.text_max_titles": _pos_int,
+    "catalog.voice_max_titles": _pos_int,
+    "catalog.voice_max_title_words": _pos_int,
+    "catalog.templates.text": _catalog_templates("text"),
+    "catalog.templates.voice": _catalog_templates("voice"),
     "source.templates.text": _source_templates,
     "source.templates.voice": _source_templates,
     "retrieval.expansions": _expansions,

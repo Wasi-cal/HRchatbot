@@ -340,6 +340,9 @@ def test_counts(client):
 
 # ---- (e) behaviour of the real model with the v4 rules -------------------------------------------------------------
 
+# When the user has SAID they are an intern, "as an intern" / "you are an intern" is correct wording; only the
+# unsupported claims count there.
+BAD_CLAIM_STATED = re.compile(r"not entitled|are not eligible|typically|differs|different (?:leave )?polic", re.I)
 BAD_CLAIM = re.compile(r"as an intern|you are an intern|not entitled|are not eligible|typically|differs|different (?:leave )?polic", re.I)
 
 
@@ -354,7 +357,7 @@ def test_model_behaviour():
         h2 = h + msgs(("user", "how many leaves do i get"), ("assistant", answers[0]))
         flow = [ch.answer("i am an intern", history=h2)["answer"] for _ in range(3)]
         check(f"[{name}] after 'i am an intern': 'couldn't find' wording, no 'not entitled' claim",
-              all("couldn't find" in a.lower().replace("\u2019", "'") and not BAD_CLAIM.search(a) for a in flow), " || ".join(a[:90] for a in flow))
+              all("couldn't find" in a.lower().replace("\u2019", "'") and not BAD_CLAIM_STATED.search(a) for a in flow), " || ".join(a[:90] for a in flow))
         trips = [ch.answer(TRIP_Q)["answer"] for _ in range(3)]
         check(f"[{name}] trip / 3 leaves left: states the working-week assumption and says 2 unpaid days, never 4",
               all(re.search(r"five-day|5-day|working week|working days", a, re.I) and re.search(r"\b(2|two)\b", a) and not re.search(r"\b(4|four)\b", a) for a in trips), " || ".join(a[:110] for a in trips))
