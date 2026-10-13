@@ -6,3 +6,9 @@ out_chunks/
 hr docs/
 .env
 staging/
+
+# local-only dev files: kept on disk, not in the repo
+frontend/
+scripts/
+eval/ui/
+run_api.sh

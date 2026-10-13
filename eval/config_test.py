@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Tests for runtime config, Redis cache-aside, Redis-outage degradation and
-pooled concurrency. Needs the API running (./run_api.sh), Postgres and Redis up.
+pooled concurrency. Needs the API running (uvicorn api.main:app --port 8000), Postgres and Redis up.
 
     python3 -m eval.config_test [--base-url http://localhost:8000]
 

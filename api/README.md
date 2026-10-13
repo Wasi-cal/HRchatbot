@@ -2,7 +2,7 @@
 
 ```bash
 python3 -m vectorstore.setup_db   # idempotent; creates query_logs
-./run_api.sh                      # http://localhost:8000/docs
+uvicorn api.main:app --port 8000                      # http://localhost:8000/docs
 python3 -m eval.api_smoke_test    # end-to-end check (server running)
 ```
 
@@ -47,7 +47,7 @@ sends a `Settings` message. Deepgram's *cloud* then calls our think endpoint,
 **Deepgram's servers cannot reach `localhost`.** For local dev, expose the backend with a tunnel script:
 
 ```bash
-./run_api.sh                          # terminal 1 (FastAPI, port $PORT, default 8000)
+uvicorn api.main:app --port 8000                          # terminal 1 (FastAPI, port $PORT, default 8000)
 python3 scripts/start_tunnel.py       # terminal 2 - leave it open
 ```
 
@@ -56,7 +56,7 @@ It starts a **cloudflared** quick tunnel (default; no account; `brew install clo
 reads), prints the regenerated Settings JSON, and stops the tunnel on Ctrl+C. If the binary is missing it prints the
 install command. Switch providers with `--provider ngrok` (needs `ngrok config add-authtoken <token>` once) or
 `--provider localtunnel` (npm; may show an interstitial page that can block Deepgram's calls). `--port N` overrides the
-port; `--verbose` echoes the tunnel's own logs. Start `./run_api.sh` on the same port - the script warns if nothing is answering.
+port; `--verbose` echoes the tunnel's own logs. Start `uvicorn api.main:app --port 8000` on the same port - the script warns if nothing is answering.
 
 **The URL changes every time the tunnel starts**, so always restart via this script - not the tunnel binary directly -
 or `.env` and the Settings go stale. Re-send the new Settings to Deepgram on your next session.
@@ -95,7 +95,7 @@ Microphone); on Linux install it first (`sudo apt install libportaudio2`). `DEEP
 
 ```bash
 docker compose up -d                                           # postgres + redis
-VOICE_DEBUG_LOG_RAW_REQUEST=1 ./run_api.sh                     # terminal 1 (debug flag optional, see below)
+VOICE_DEBUG_LOG_RAW_REQUEST=1 uvicorn api.main:app --port 8000                     # terminal 1 (debug flag optional, see below)
 python3 scripts/start_tunnel.py                                # terminal 2
 python3 scripts/voice_live_test.py                             # terminal 3: speak, Ctrl+C to stop
 python3 scripts/voice_live_test.py --text "How many days of leave do I get?"   # no mic: typed turn(s), repeatable
@@ -123,13 +123,11 @@ Token notes: `ttl_seconds` must be an **integer** (a float such as `60.0` is sil
 (`--no-mic --seconds 110`) stayed connected well past a 60s token's expiry, so a token appears to be needed only at
 handshake time; a long mic conversation hasn't been tried.
 
-## Frontend
+## Frontend (local-only)
 
-A dummy, no-auth, no-build frontend (plain HTML/CSS/JS in `frontend/`) is served by the API itself: start
-`./run_api.sh` and open **http://localhost:8000/app/** (`/` redirects there). The **User** tab has text chat (refusals are styled distinctly; the last few messages are sent as history)
-and a **Start Voice** button; the
-**Admin** tab has Documents (upload, list, restrict toggle), Usage (day window, summary, recent queries) and Config
-(editable values, validated server-side).
+An optional dummy frontend (plain HTML/CSS/JS in `frontend/`) is a local dev tool: the folder is gitignored and not in the repo. If it is
+present, the API serves it at **http://localhost:8000/app/** (`/` redirects there); if not, the API runs without it. It has a text chat, a
+**Start Voice** button, and an Admin tab (Documents, Usage, Config, Prompts).
 
 Voice mode needs the tunnel too: the browser connects straight to Deepgram, but Deepgram's cloud then calls the think endpoint,
 so `python3 scripts/start_tunnel.py` must be running (and `DEEPGRAM_API_KEY` set on the server). The browser only ever gets a

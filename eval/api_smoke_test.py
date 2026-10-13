@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""End-to-end smoke test for the API (server must be running: ./run_api.sh).
+"""End-to-end smoke test for the API (server must be running: uvicorn api.main:app --port 8000).
 
     python3 -m eval.api_smoke_test [--base-url http://localhost:8000] [--upload "hr docs/Travel Policy_Ver1.0.pdf"]
 

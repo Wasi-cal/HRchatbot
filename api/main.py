@@ -1,13 +1,16 @@
 """FastAPI app for the HR RAG chatbot serving layer.
 
-Run locally:  ./run_api.sh   (or: uvicorn api.main:app --reload)
+Run locally:  uvicorn api.main:app --reload   (apply the schema first: python3 -m vectorstore.setup_db)
 Docs:         http://localhost:8000/docs
 """
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 load_dotenv()
 
@@ -26,6 +29,10 @@ async def lifespan(app: FastAPI):
     pool = get_pool()
     pool.wait()
     seed_runtime_config()  # idempotent: fills any missing app_config/provider_configs rows
+    from vectorstore.duplicates import backfill_fingerprints
+
+    with pool.connection() as conn:
+        backfill_fingerprints(conn)  # idempotent: only documents without a content_fingerprint
     redis_cache.configure()
     _get_embedder()  # load BGE-M3 now rather than on the first request
     yield
@@ -37,11 +44,9 @@ app = FastAPI(title="HR Chatbot API", lifespan=lifespan)
 # SECURITY GAP - DEV ONLY: there is NO authentication or authorization
 # anywhere in this API, and CORS is wide open. That means anyone who can
 # reach the server can call /api/admin/* (upload or restrict documents,
-# read all query logs, including user attributes and answers) and can
-# supply arbitrary user_attributes to /api/chat. Before any real
-# deployment: add auth (and derive user_attributes server-side from the
-# session rather than trusting the client), put /api/admin behind an
-# admin role, and restrict allow_origins to the real frontend origin.
+# read all query logs and answers). Before any real deployment: add auth,
+# put /api/admin behind an admin role, and restrict allow_origins to the
+# real frontend origin.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -52,6 +57,18 @@ app.add_middleware(
 app.include_router(chat.router)
 app.include_router(admin.router)
 app.include_router(voice.router)
+
+
+# Optional dummy frontend (plain HTML/CSS/JS, no build step): http://localhost:8000/app/
+# The frontend/ folder is a LOCAL-ONLY dev tool (gitignored, not in the repo), so the mount only exists when the
+# folder is present; the API itself never depends on it.
+FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
+if FRONTEND_DIR.is_dir():
+    app.mount("/app", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
+
+    @app.get("/", include_in_schema=False)
+    def root():
+        return RedirectResponse("/app/")
 
 
 @app.get("/health")

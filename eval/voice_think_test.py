@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Simulates Deepgram calling the think endpoint (no audio, no tunnel).
 
-    ./run_api.sh   # in another terminal
+    uvicorn api.main:app --port 8000   # in another terminal
     python3 -m eval.voice_think_test [--base-url http://localhost:8000]
 
 Each call POSTs an OpenAI-style {"messages": [...]} body with the FULL

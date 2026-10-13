@@ -1,8 +1,8 @@
 # Applicability filtering / clarification layer - unwired
 
-**Last commit that still contains the working layer: `fd317af`**
+**Last commit that still contains the working layer: `3f43596`**
 (`Add small talk, per-channel text/voice pipelines, DB-stored prompts, conversation-aware advisory retrieval`).
-Everything below can be read with `git show fd317af:<path>`.
+Everything below can be read with `git show 3f43596:<path>`.
 
 Nothing in the database was deleted. `applicability_tags`, `document_applicability`, the per-document tags,
 `documents.is_restricted` and the `query_logs` columns are all still there.
@@ -25,7 +25,7 @@ A turn is: small-talk match -> **retrieve once** -> **generate once** -> stream.
 `is_superseded` chunks and `is_restricted` documents, and nothing else. Everyone is answered from everything that is not
 restricted.
 
-| Where (at `fd317af`) | What held the logic | Now |
+| Where (at `3f43596`) | What held the logic | Now |
 |---|---|---|
 | `vectorstore/retrieve.py` | `_applicability_filter_sql()` and the `user_attributes` parameter of `dense_search`, `sparse_search`, `sparse_search_many`, `retrieve` | replaced by `_visibility_filter_sql()` (restricted only); `retrieve(user_attributes=...)` is accepted and ignored |
 | `channels/common.py` | `with_default_attributes()`, `detect_blocking_tag_types()` | removed |
@@ -59,14 +59,14 @@ rule applies to.
 
 1. Restore the code from the last commit that had it:
    ```bash
-   git show fd317af:access_control/resolve_clarification.py > access_control/resolve_clarification.py
-   git show fd317af:access_control/user_attributes.py       > access_control/user_attributes.py
+   git show 3f43596:access_control/resolve_clarification.py > access_control/resolve_clarification.py
+   git show 3f43596:access_control/user_attributes.py       > access_control/user_attributes.py
    ```
-2. `vectorstore/retrieve.py`: bring back `_applicability_filter_sql(user_attributes)` from `fd317af` (it returns
+2. `vectorstore/retrieve.py`: bring back `_applicability_filter_sql(user_attributes)` from `3f43596` (it returns
    `NOT d.is_restricted` plus one NOT-EXISTS clause per known attribute), give `dense_search`, `sparse_search`,
    `sparse_search_many` their `user_attributes` argument again and pass `retrieve()`'s `user_attributes` through.
    Keep the new `applies_to` column in `fetch_chunk_details()` - it is independent.
-3. `channels/common.py`: restore `with_default_attributes` and `detect_blocking_tag_types` from `fd317af`.
+3. `channels/common.py`: restore `with_default_attributes` and `detect_blocking_tag_types` from `3f43596`.
 4. `channels/text.py`, `channels/voice.py`: restore `CLARIFYING_QUESTIONS`, `default_attributes()` and the old
    `answer_stream()` wrapper (probe -> `detect_blocking_tag_types` -> `needs_clarification` event -> generation with
    `user_attributes`). Re-add `user_attributes` to `answer()` and the `needs_clarification` early return. Re-add the
@@ -77,11 +77,11 @@ rule applies to.
 6. Prompts: create new `prompt_templates` versions that again allow/require the clarification flow, and drop the rule
    "Never ask the user a clarifying question about their group, location or employment type" from `grounding_core`.
    (Rows are immutable; roll back with `POST /api/admin/prompts/{id}/activate` for the versions before the unwiring.)
-7. Frontend: restore the snippets in the appendix. 8. Run `eval/run_regression.py` from `fd317af`'s version of the access
-   control scenarios (`git show fd317af:eval/run_regression.py`) to confirm the filtering behaves as before.
+7. Frontend: restore the snippets in the appendix. 8. Run `eval/run_regression.py` from `3f43596`'s version of the access
+   control scenarios (`git show 3f43596:eval/run_regression.py`) to confirm the filtering behaves as before.
 
-A faster route for the backend: `git diff fd317af HEAD -- <paths above>` shows exactly what the unwiring changed, and
-`git checkout fd317af -- <path>` restores a whole file (then re-apply the unrelated changes made since, such as the
+A faster route for the backend: `git diff 3f43596 HEAD -- <paths above>` shows exactly what the unwiring changed, and
+`git checkout 3f43596 -- <path>` restores a whole file (then re-apply the unrelated changes made since, such as the
 `applies_to` label).
 
 ## Appendix - removed frontend code (frontend/ was never committed)

@@ -6,7 +6,7 @@ Tick all of these before calling the chat layer done:
 
 - [ ] `python3 -m eval.run_regression` is green (retrieval baseline byte-identical).
 - [ ] New tests are green: `eval.catalog_test`, `eval.documents_test`, `eval.followups_test`, `eval.smalltalk_test`, `eval.prompts_test`,
-      `eval.channel_separation_test`, `eval.advisory_test`, the jsdom checks (`NODE_PATH=... node eval/ui/ui_checks.js`) and, against a running
+      `eval.channel_separation_test`, `eval.advisory_test`, the local-only jsdom checks (`eval/ui/ui_checks.js`, not in the repo, needs the local `frontend/`) and, against a running
       server, `eval.config_test`, `eval.voice_think_test`, `eval.api_smoke_test`.
 - [ ] `eval.turn_calls` matches `eval/turn_calls_baseline.json` for every turn type (asserted by `catalog_test` and `documents_test`).
 - [ ] The quality set was **manually graded**: `python3 -m eval.run_quality_eval` (and `--channel voice`), then log the result in `eval/GRADING_LOG.md`.
@@ -217,7 +217,7 @@ workers' in-process copies expire within 30 seconds. Tags are read with each chu
 
 Applicability FILTERING and the clarifying-question flow were unwired (nothing deleted from the database). What was removed, which files held it and how
 to re-enable it are in [applicability_layer_removed.md](applicability_layer_removed.md); the last commit that still contained the working layer is
-`fd317af`.
+`3f43596`.
 
 ## Known limitations
 
