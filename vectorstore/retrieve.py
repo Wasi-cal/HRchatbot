@@ -26,6 +26,9 @@ is_restricted filter - since no document is flagged restricted by
 default, this keeps retrieve() fully backward compatible for existing
 callers that don't know about user_attributes.
 """
+from functools import lru_cache
+
+from config.channel_settings import channel_setting
 from config.runtime import get_app_config
 from vectorstore.db import get_pool
 from vectorstore.embedder import BGEM3Embedder
@@ -47,11 +50,24 @@ def _get_embedder() -> BGEM3Embedder:
     return _embedder
 
 
+@lru_cache(maxsize=256)
 def embed_query(query: str):
-    """Returns (dense_vector, sparse_dict) for a single query string."""
+    """Returns (dense_vector, sparse_dict) for a single query string. Memoized per
+    process: a turn retrieves twice with the SAME text (the unfiltered applicability
+    probe, then the filtered retrieval), and this keeps that to ONE embedding call.
+    The returned objects must be treated as read-only."""
     embedder = _get_embedder()
     dense, sparse, _token_counts = embedder.embed([query])
     return dense[0], sparse[0]
+
+
+@lru_cache(maxsize=64)
+def embed_queries(queries: tuple[str, ...]):
+    """Returns (dense_vectors, sparse_dicts) for several query strings in ONE batched
+    encode call (the advisory main query plus its expansion queries). Memoized on the
+    tuple so the probe and the filtered retrieval of one turn share a single encode."""
+    dense, sparse, _token_counts = _get_embedder().embed(list(queries))
+    return list(dense), sparse
 
 
 def get_active_embedding_model_id(conn) -> int:
@@ -155,6 +171,44 @@ def sparse_search(
     return scored[:candidate_n]
 
 
+def sparse_search_many(conn, query_sparses: list[dict], model_id: int, limits: list[int],
+                       user_attributes: dict | None = None):
+    """sparse_search() for several queries over ONE fetch of the chunk sparse vectors
+    (the fetch dominates its cost). limits[i] is candidate_n for query i."""
+    filter_sql, filter_params = _applicability_filter_sql(user_attributes)
+    rows = conn.execute(
+        f"""
+        SELECT ce.chunk_id, ce.sparse_vector
+        FROM chunk_embeddings ce
+        JOIN chunks c ON c.id = ce.chunk_id
+        JOIN documents d ON d.id = c.document_id
+        WHERE ce.embedding_model_id = %s AND NOT c.is_superseded AND {filter_sql}
+        """,
+        [model_id, *filter_params],
+    ).fetchall()
+    results = []
+    for query_sparse, limit in zip(query_sparses, limits):
+        scored = [(chunk_db_id, _sparse_dot(query_sparse, chunk_sparse or {})) for chunk_db_id, chunk_sparse in rows]
+        scored = [item for item in scored if item[1] > 0]
+        scored.sort(key=lambda item: item[1], reverse=True)
+        results.append(scored[:limit])
+    return results
+
+
+def add_expansion_scores(fused, expansion_lists, weight: float, k: int = DEFAULT_RRF_K):
+    """Adds weight/(k+rank) for every ranked expansion list (dense and sparse lists of
+    each expansion query) to the fused scores, including chunks only an expansion found
+    (their dense/sparse rank stays None). Returns the list re-sorted by score."""
+    scores = {chunk_db_id: [score, dr, sr] for chunk_db_id, score, dr, sr in fused}
+    for ranked in expansion_lists:
+        for rank, (chunk_db_id, _s) in enumerate(ranked, start=1):
+            entry = scores.setdefault(chunk_db_id, [0.0, None, None])
+            entry[0] += weight / (k + rank)
+    out = [(chunk_db_id, score, dr, sr) for chunk_db_id, (score, dr, sr) in scores.items()]
+    out.sort(key=lambda item: item[1], reverse=True)
+    return out
+
+
 def rrf_fuse(dense_results, sparse_results, k: int = DEFAULT_RRF_K):
     """Reciprocal Rank Fusion. A chunk absent from one list contributes 0
     for that term (no penalty, just no contribution). Returns a list of
@@ -193,12 +247,32 @@ def fetch_chunk_details(conn, chunk_db_ids: list) -> dict:
     return {row[0]: row[1:] for row in rows}
 
 
+def _diversify(fused, details, top_k: int, max_per_doc: int):
+    """Walks the RRF-ordered list keeping at most max_per_doc chunks per document
+    until top_k are chosen. details maps chunk_db_id -> (chunk_id, section_path,
+    text, document_title, document_id)."""
+    per_doc: dict = {}
+    chosen = []
+    for item in fused:
+        document_id = details[item[0]][4]
+        if per_doc.get(document_id, 0) >= max_per_doc:
+            continue
+        per_doc[document_id] = per_doc.get(document_id, 0) + 1
+        chosen.append(item)
+        if len(chosen) == top_k:
+            break
+    return chosen
+
+
 def retrieve(
     query: str,
     top_k: int | None = None,
     candidate_n: int | None = None,
     k: int | None = None,
     user_attributes: dict | None = None,
+    channel: str | None = None,
+    advisory: bool = False,
+    expansions: list[str] | None = None,
 ) -> list[dict]:
     """Hybrid dense+sparse retrieval fused with RRF. Returns up to top_k
     results, each: {chunk_id, section_path, text, document_title,
@@ -209,22 +283,60 @@ def retrieve(
     this module's docstring for the full filtering behavior.
 
     top_k / candidate_n / k default to the app_config values (None = use
-    the runtime-configured value; an explicit int always wins)."""
+    the runtime-configured value; an explicit int always wins). Each
+    resolves: explicit argument > <key>.<channel> (when a channel is
+    given: "text" or "voice", see config/channel_settings.py) > <key> >
+    the module default.
+
+    advisory=True (the user is asking for options, see channels/common.py
+    detect_advisory) widens the context: top_k comes from
+    retrieval.top_k.advisory.<channel> and, AFTER RRF fusion over the same
+    candidate pool (no extra queries), at most retrieval.advisory.max_chunks_per_doc
+    chunks per document are kept, so the context can span several policies.
+
+    expansions (advisory turns only; see channels/common.py select_expansions): extra
+    queries embedded in ONE batched encode with the main query, searched, and fused in
+    with weight retrieval.expansion.weight (RRF), so related policies the main query's
+    wording doesn't reach (e.g. work from home, comp-off) can enter the pool."""
+    if top_k is None and advisory:
+        top_k = channel_setting("retrieval.top_k.advisory", channel)
     if top_k is None:
-        top_k = get_app_config("retrieval.top_k", DEFAULT_TOP_K)
+        top_k = channel_setting("retrieval.top_k", channel, DEFAULT_TOP_K)
     if candidate_n is None:
-        candidate_n = get_app_config("retrieval.candidate_n", DEFAULT_CANDIDATE_N)
+        candidate_n = channel_setting("retrieval.candidate_n", channel, DEFAULT_CANDIDATE_N)
     if k is None:
-        k = get_app_config("retrieval.rrf_k", DEFAULT_RRF_K)
-    query_dense, query_sparse = embed_query(query)
+        k = channel_setting("retrieval.rrf_k", channel, DEFAULT_RRF_K)
+    expansions = list(expansions) if (advisory and expansions) else []
+    if expansions:
+        dense_vecs, sparse_vecs = embed_queries((query, *expansions))
+        query_dense, query_sparse = dense_vecs[0], sparse_vecs[0]
+    else:
+        query_dense, query_sparse = embed_query(query)
 
     pool = get_pool()
     with pool.connection() as conn:
         model_id = get_active_embedding_model_id(conn)
         dense_results = dense_search(conn, query_dense, model_id, candidate_n, user_attributes)
-        sparse_results = sparse_search(conn, query_sparse, model_id, candidate_n, user_attributes)
-        fused = rrf_fuse(dense_results, sparse_results, k)[:top_k]
-        details = fetch_chunk_details(conn, [chunk_db_id for chunk_db_id, *_ in fused])
+        if expansions:
+            expansion_n = get_app_config("retrieval.expansion.candidate_n", 5)
+            sparse_all = sparse_search_many(conn, sparse_vecs, model_id, [candidate_n] + [expansion_n] * len(expansions),
+                                            user_attributes)
+            sparse_results = sparse_all[0]
+            expansion_lists = []
+            for i, dense_vec in enumerate(dense_vecs[1:], start=1):
+                expansion_lists.append(dense_search(conn, dense_vec, model_id, expansion_n, user_attributes))
+                expansion_lists.append(sparse_all[i])
+        else:
+            sparse_results = sparse_search(conn, query_sparse, model_id, candidate_n, user_attributes)
+        fused = rrf_fuse(dense_results, sparse_results, k)
+        if expansions:
+            fused = add_expansion_scores(fused, expansion_lists, get_app_config("retrieval.expansion.weight", 1.0), k)
+        if advisory:
+            details = fetch_chunk_details(conn, [chunk_db_id for chunk_db_id, *_ in fused])
+            fused = _diversify(fused, details, top_k, channel_setting("retrieval.advisory.max_chunks_per_doc", channel, 2))
+        else:
+            fused = fused[:top_k]
+            details = fetch_chunk_details(conn, [chunk_db_id for chunk_db_id, *_ in fused])
 
     results = []
     for chunk_db_id, score, dr, sr in fused:

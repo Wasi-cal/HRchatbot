@@ -35,8 +35,8 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict
 
-from access_control.ask_and_answer import ask_and_answer_stream
 from access_control.resolve_clarification import resolve_clarification
+from channels import voice as voice_channel
 from api.query_log import log_query
 from api.voice_settings import ENV_PATH_DEFAULT, build_agent_settings
 from cache.redis_cache import MISS, get_cached, set_cached
@@ -44,8 +44,6 @@ from cache.redis_cache import MISS, get_cached, set_cached
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/voice", tags=["voice"])
-
-DEFAULT_ATTRIBUTES = {"country": "India"}
 
 CLARIFY_LEAD_IN = "Quick check before I answer - "
 
@@ -121,10 +119,10 @@ def _clarif_at(turns, i):
     return parse_clarification(turns[i][1]) if 0 <= i < len(turns) and turns[i][0] == "assistant" else None
 
 
-def _original_query(turns, a: int) -> str | None:
-    """Original blocked query for the clarifying question at index a: the
-    user message before it - walking back past earlier clarification
-    replies, since one query can trigger several clarifications in a row."""
+def _original_query_index(turns, a: int) -> int | None:
+    """Index of the original blocked query for the clarifying question at index a: the
+    user message before it - walking back past earlier clarification replies, since one
+    query can trigger several clarifications in a row."""
     u = a - 1
     if u < 0 or turns[u][0] != "user":
         return None
@@ -132,7 +130,33 @@ def _original_query(turns, a: int) -> str | None:
         u -= 2
         if u < 0 or turns[u][0] != "user":
             return None
-    return turns[u][1]
+    return u
+
+
+def _original_query(turns, a: int) -> str | None:
+    u = _original_query_index(turns, a)
+    return None if u is None else turns[u][1]
+
+
+def conversation_history(turns, end: int) -> list[dict]:
+    """Prior chat turns for the answer, from Deepgram's messages: everything before index
+    `end` (the user turn being answered), minus plumbing - the synthetic leading
+    {"role": "user", "content": "-"} and the greeting that follows it, and every
+    clarifying question with the reply to it. Caps and sanitising happen later
+    (channels/common.py clean_history)."""
+    start = 0
+    if turns and turns[0] == ("user", "-"):
+        start = 2 if len(turns) > 1 and turns[1][0] == "assistant" else 1
+    history = []
+    i = start
+    while i < end:
+        role, text = turns[i]
+        if role == "assistant" and parse_clarification(text):
+            i += 2  # skip the question and the user's reply to it
+            continue
+        history.append({"role": role, "content": text})
+        i += 1
+    return history
 
 
 NEGATIVE_TTL_SECONDS = 300
@@ -191,28 +215,44 @@ def _turn_pieces(turns, record: dict):
     """Generator of text pieces to speak for the final user turn. Fills
     `record` with what to log (query, attributes, outcome)."""
     current = turns[-1][1]
-    attrs = {**DEFAULT_ATTRIBUTES, **attributes_from_history(turns)}
+    pending = _clarif_at(turns, len(turns) - 2)
+
+    # Small talk first: before any history replay, retrieval, DB read or LLM
+    # work. Bypassed when the previous assistant turn was a clarifying question.
+    category = voice_channel.smalltalk_match(current, after_clarification=pending is not None)
+    if category:
+        text = voice_channel.smalltalk_reply(category)
+        record.update(query_text=current, response_type="smalltalk", pieces=[text], contextualized=False, advisory=False)
+        yield text
+        return
+
+    attrs = {**voice_channel.default_attributes(), **attributes_from_history(turns)}
     record["user_attributes"] = attrs
 
     query = current
-    pending = _clarif_at(turns, len(turns) - 2)
-    original = _original_query(turns, len(turns) - 2) if pending else None
+    original_index = _original_query_index(turns, len(turns) - 2) if pending else None
+    original = None if original_index is None else turns[original_index][1]
+    # The user turn being answered is the original blocked query after a clarification
+    # round, else the final turn; history is everything before it (minus plumbing).
+    history = conversation_history(turns, original_index if (pending and original) else len(turns) - 1)
     if pending and original:
         tag_type, prev_variant = pending
         merged = resolve_clarification(original, tag_type, current, attrs)
         if merged is None:
             # Unusable reply: ask again, worded differently.
-            record.update(query_text=original, response_type="clarification", blocking_tag_type=tag_type)
+            record.update(query_text=original, response_type="clarification", blocking_tag_type=tag_type,
+                          contextualized=False, advisory=False)
             yield clarifying_question(tag_type, prev_variant + 1)
             return
-        attrs = {**DEFAULT_ATTRIBUTES, **merged}
+        attrs = {**voice_channel.default_attributes(), **merged}
         record["user_attributes"] = attrs
         query = original
     record["query_text"] = query
 
-    for event in ask_and_answer_stream(query, attrs):
+    for event in voice_channel.answer_stream(query, attrs, history=history):
         if event["type"] == "needs_clarification":
-            record.update(response_type="clarification", blocking_tag_type=event["blocking_tag_type"])
+            record.update(response_type="clarification", blocking_tag_type=event["blocking_tag_type"],
+                          contextualized=event.get("contextualized"), advisory=event.get("advisory"))
             yield clarifying_question(event["blocking_tag_type"])
             return
         if event["type"] == "token":
@@ -224,6 +264,9 @@ def _turn_pieces(turns, record: dict):
                 shortcut_fired=event["shortcut"],
                 timing=event["timing"],
                 chunk_ids_used=event.get("chunk_ids", []),
+                prompt_version=event.get("prompt_version"),
+                contextualized=event.get("contextualized"),
+                advisory=event.get("advisory"),
             )
 
 

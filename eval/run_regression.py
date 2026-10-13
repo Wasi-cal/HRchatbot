@@ -78,6 +78,8 @@ UNTAGGED_QUERY = "what are the password requirements"
 UNCERTAINTY_PHRASES = (
     "don't have", "do not have", "not sure", "unable to", "no information",
     "check with hr", "reach out to hr", "don't know", "do not know",
+    "couldn't find", "could not find", "can't find", "cannot find",
+    "focus on hr",  # the non-policy-message rule's polite redirect ("...but I focus on HR policies")
 )
 
 _results = []  # (name, passed, detail)
@@ -91,7 +93,8 @@ def check(name: str, condition: bool, detail: str = ""):
 
 
 def indicates_uncertainty(answer: str) -> bool:
-    lowered = answer.lower()
+    # Normalise typographic apostrophes: the model often emits "don’t" (U+2019).
+    lowered = answer.lower().replace("\u2019", "'")
     return any(phrase in lowered for phrase in UNCERTAINTY_PHRASES)
 
 
@@ -141,8 +144,12 @@ def run_generation_regression():
     event = get_final_answer("what is the capital of France")
     check("shortcut does NOT fire for 'capital of France' (known threshold edge case)",
           event["shortcut"] is False, f"got shortcut={event['shortcut']}")
-    check("'capital of France' answer still indicates uncertainty/refusal",
-          indicates_uncertainty(event["answer"]), f"answer={event['answer']!r}")
+    # The system prompt now tells the model to answer a non-policy message with one
+    # friendly redirect sentence instead of "I don't have that information", so
+    # phrase-matching uncertainty is no longer the right check for a non-policy
+    # question: assert what actually matters - no outside knowledge leaked.
+    check("'capital of France' answer does not leak outside knowledge (refuses or redirects)",
+          "paris" not in event["answer"].lower(), f"answer={event['answer']!r}")
 
     # BGV disclaimer: a real, on-topic chunk (BGV_Policy_Ver1_0_0005) is
     # retrieved with a confident-looking fused score, but it doesn't
@@ -161,13 +168,15 @@ def run_access_control_regression():
     print("\n=== (c) Access control scenarios (real corpus data) ===")
 
     # (a) No user_attributes at all -> candidate pool touches tagged
-    # content, nothing known about the user -> clarification, blocking
-    # on "country" (first blocking tag_type alphabetically).
+    # content, nothing known about the user -> clarification. Country is
+    # never asked: every document is India-only, and ask_and_answer()
+    # fills country from app_config 'user.default_attributes' (India), so
+    # the only blocking attribute left is employment_type.
     result = ask_and_answer(TAGGED_QUERY, user_attributes=None)
     check("scenario (a) no attributes -> needs_clarification",
           result["type"] == "needs_clarification", f"got {result}")
-    check("scenario (a) blocks on 'country'",
-          result.get("blocking_tag_type") == "country", f"got {result}")
+    check("scenario (a) blocks on 'employment_type', never 'country'",
+          result.get("blocking_tag_type") == "employment_type", f"got {result}")
 
     # (b) country known, employment_type unknown -> clarification,
     # blocking on "employment_type".
@@ -242,18 +251,18 @@ def run_shape_sanity():
 
     event = get_final_answer("PIP objective")
     check("generate_answer()'s 'done' event has the expected keys",
-          set(event.keys()) == {"type", "answer", "shortcut", "timing", "chunk_ids"}, f"got {set(event.keys())}")
+          set(event.keys()) == {"type", "answer", "shortcut", "timing", "chunk_ids", "prompt_version", "contextualized", "advisory"}, f"got {set(event.keys())}")
 
     # UNTAGGED_QUERY, not "PIP objective" - PIP is now real-tagged
     # (country=India, employment_type=full-time employee), so it would
     # return needs_clarification here rather than an "answer" shape.
     answer_result = ask_and_answer(UNTAGGED_QUERY, user_attributes=None)
     check("ask_and_answer() 'answer' result has the expected keys",
-          set(answer_result.keys()) == {"type", "answer", "shortcut", "timing", "chunk_ids"}, f"got {set(answer_result.keys())}")
+          set(answer_result.keys()) == {"type", "answer", "shortcut", "timing", "chunk_ids", "prompt_version", "contextualized", "advisory"}, f"got {set(answer_result.keys())}")
 
     clarification_result = ask_and_answer(TAGGED_QUERY, user_attributes=None)
     check("ask_and_answer() 'needs_clarification' result has the expected keys",
-          set(clarification_result.keys()) == {"type", "question", "blocking_tag_type"},
+          set(clarification_result.keys()) == {"type", "question", "blocking_tag_type", "contextualized", "advisory"},
           f"got {set(clarification_result.keys())}")
 
 

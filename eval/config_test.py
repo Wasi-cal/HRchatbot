@@ -40,10 +40,13 @@ def main():
 
     print("1. Seeded values match the code constants / SQL")
     code = {"retrieval.top_k": DEFAULT_TOP_K, "retrieval.candidate_n": DEFAULT_CANDIDATE_N, "retrieval.rrf_k": DEFAULT_RRF_K}
-    for key, (seed, _d) in DEFAULT_APP_CONFIG.items():
+    for key in code:
+        seed = DEFAULT_APP_CONFIG[key][0]
         check(f"{key}: seed {seed} == retrieve.py constant {code[key]}", seed == code[key])
     rows = {r["key"]: r["value"] for r in c.get("/api/admin/config").json()["app_config (table: app_config)"]}
-    check("DB rows currently equal seeds", all(rows.get(k) == v[0] for k, v in DEFAULT_APP_CONFIG.items()), str(rows))
+    check("DB rows currently equal seeds", all(rows.get(k) == DEFAULT_APP_CONFIG[k][0] for k in code), str(rows))
+    check("per-channel top_k rows are seeded with the global's effective value",
+          rows.get("retrieval.top_k.text") == rows["retrieval.top_k"] and rows.get("retrieval.top_k.voice") == rows["retrieval.top_k"], str(rows))
 
     print("2. PATCH is reflected in GET, retrieve() and the chat pipeline")
     r = c.patch("/api/admin/config/retrieval.top_k", json={"value": 1})
@@ -52,11 +55,14 @@ def main():
     check("GET shows 1", rows["retrieval.top_k"] == 1)
     check("retrieve() (this process, via cache) returns exactly 1 chunk", len(retrieve(query)) == 1)
     check("explicit top_k argument still wins", len(retrieve(query, top_k=2)) == 2)
+    # /api/chat is the "text" channel, whose own key (seeded = global) overrides the global one.
+    c.patch("/api/admin/config/retrieval.top_k.text", json={"value": 1})
     r = c.post("/api/chat", json={"query": query, "user_attributes": FULL_USER})
     time.sleep(0.5)
     recent = c.get("/api/admin/usage/recent", params={"limit": 1}).json()[0]
     check("chat pipeline used exactly 1 chunk", r.json()["type"] == "answer" and len(recent["chunk_ids_used"] or []) == 1,
           f"chunk_ids_used={recent['chunk_ids_used']}")
+    c.patch("/api/admin/config/retrieval.top_k.text", json={"value": DEFAULT_TOP_K})
     c.patch("/api/admin/config/retrieval.top_k", json={"value": DEFAULT_TOP_K})
     check("restored: retrieve() returns 3 again", len(retrieve(query)) == DEFAULT_TOP_K)
 
@@ -66,9 +72,13 @@ def main():
           r.status_code == 200 and r.json()["source"] == "provider_configs" and r.json()["config"]["confidence_threshold"] == 0.5)
     from generation.generate import get_confidence_threshold
     check("get_confidence_threshold() sees it immediately", get_confidence_threshold() == 0.5)
-    # threshold 0.5 > any fused score -> everything takes the shortcut
+    check("the global provider threshold does NOT leak into the text channel (own row)",
+          c.post("/api/chat", json={"query": query, "user_attributes": FULL_USER}).json()["type"] == "answer")
+    # threshold 0.5 > any fused score -> everything takes the shortcut (text channel's own row)
+    c.patch("/api/admin/config/generation.confidence_threshold.text", json={"value": 0.5})
     r = c.post("/api/chat", json={"query": query, "user_attributes": FULL_USER})
-    check("threshold change alters behavior (shortcut now fires)", r.json()["type"] == "refusal_shortcut", r.json()["type"])
+    check("text channel threshold change alters behavior (shortcut now fires)", r.json()["type"] == "refusal_shortcut", r.json()["type"])
+    c.patch("/api/admin/config/generation.confidence_threshold.text", json={"value": 0.02})
     c.patch("/api/admin/config/generation.confidence_threshold", json={"value": 0.02})
     for key, bad in [("retrieval.top_k", 0), ("retrieval.candidate_n", "abc"), ("retrieval.rrf_k", 2.5),
                      ("retrieval.top_k", True), ("generation.confidence_threshold", 1.5),

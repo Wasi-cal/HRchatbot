@@ -16,6 +16,8 @@ from pydantic import BaseModel
 
 from access_control.extract_applicability import extract_and_store_for_document
 from config.runtime import set_app_config, set_provider_setting
+from config.prompts import SLOTS, refresh_prompt_cache
+from config.topics import invalidate_topics
 from generation.generate import get_client, get_generation_model
 from ingestion.pipeline import process_document
 from vectorstore.db import get_pool
@@ -98,6 +100,8 @@ def upload_document(file: UploadFile = File(...)):
             logger.exception("load failed for %s", filename)
             raise HTTPException(500, f"Loading into the vector store failed: {exc}")
 
+        invalidate_topics()  # the active document set may have changed (inserted / superseded)
+
         # applicability extraction - skipped for an unchanged re-upload
         # (the active document, and its tags, are untouched).
         extraction_errors = [str(e) for e in stats["errors"]]
@@ -173,7 +177,8 @@ def restrict_document(document_id: UUID, body: RestrictRequest):
         cur.execute(_DOCUMENT_SELECT + " WHERE d.id = %s", (document_id,))
         row = cur.fetchone()
         conn.commit()
-        return row
+    invalidate_topics()  # restricted documents are not advertised as topics
+    return row
 
 
 # --------------------------------------------------------------------------
@@ -200,6 +205,9 @@ def usage_summary(
                    count(*) FILTER (WHERE response_type = 'answer') AS answer,
                    count(*) FILTER (WHERE response_type = 'clarification') AS clarification,
                    count(*) FILTER (WHERE response_type = 'refusal_shortcut') AS refusal_shortcut,
+                   count(*) FILTER (WHERE response_type = 'smalltalk') AS smalltalk,
+                   count(*) FILTER (WHERE contextualized) AS contextualized,
+                   count(*) FILTER (WHERE advisory) AS advisory,
                    avg(retrieval_time_ms) AS avg_retrieval_time_ms,
                    avg(ttft_ms) AS avg_ttft_ms,
                    avg(total_generation_time_ms) AS avg_total_generation_time_ms
@@ -220,12 +228,15 @@ def usage_summary(
             "answer": r["answer"],
             "clarification": r["clarification"],
             "refusal_shortcut": r["refusal_shortcut"],
+            "smalltalk": r["smalltalk"],
         },
         "avg_retrieval_time_ms": rnd(r["avg_retrieval_time_ms"]),
         "avg_ttft_ms": rnd(r["avg_ttft_ms"]),
         "avg_total_generation_time_ms": rnd(r["avg_total_generation_time_ms"]),
         "shortcut_rate": pct(r["refusal_shortcut"]),
         "clarification_rate": pct(r["clarification"]),
+        "contextualized_rate": pct(r["contextualized"]),
+        "advisory_rate": pct(r["advisory"]),
     }
 
 
@@ -258,13 +269,80 @@ def _non_empty_str(v):
     return v.strip()
 
 
+def _str_list(v):
+    if not isinstance(v, list) or not v or any(not isinstance(x, str) or not x.strip() for x in v):
+        raise ValueError("must be a non-empty list of non-empty strings")
+    return [x.strip().lower() for x in v]
+
+
+def _expansions(v):
+    if not isinstance(v, list) or any(
+        not isinstance(t, dict) or not isinstance(t.get("topic"), str) or not t["topic"].strip()
+        or not isinstance(t.get("triggers"), list) or not t["triggers"]
+        or not isinstance(t.get("queries"), list) or not t["queries"]
+        or any(not isinstance(x, str) or not x.strip() for x in t["triggers"] + t["queries"])
+        for t in v
+    ):
+        raise ValueError('must be a list of {"topic": str, "triggers": [str, ...], "queries": [str, ...]} objects')
+    return v
+
+
+def _bool(v):
+    if not isinstance(v, bool):
+        raise ValueError("must be true or false")
+    return v
+
+
+def _non_neg_number(v):
+    if isinstance(v, bool) or not isinstance(v, (int, float)) or v < 0:
+        raise ValueError("must be a number >= 0")
+    return float(v)
+
+
+def _default_attributes(v):
+    from access_control.user_attributes import KNOWN_TAG_TYPES
+    if not isinstance(v, dict) or any(k not in KNOWN_TAG_TYPES for k in v):
+        raise ValueError(f"must be an object with keys from {list(KNOWN_TAG_TYPES)}")
+    return {k: _non_empty_str(x) for k, x in v.items()}
+
+
 # key -> validator. app_config keys have no table prefix; provider_configs
 # keys are "<category>.<field>".
 _APP_CONFIG_VALIDATORS = {
     "retrieval.top_k": _pos_int,
     "retrieval.candidate_n": _pos_int,
     "retrieval.rrf_k": _pos_int,
+    "user.default_attributes": _default_attributes,
+    "conversation.history_messages": _pos_int,
+    "conversation.history_max_chars": _pos_int,
+    "retrieval.context.max_words_followup": _pos_int,
+    "retrieval.context.prior_user_turns": _pos_int,
+    "retrieval.context.followup_markers": _str_list,
+    "retrieval.advisory.markers": _str_list,
+    "retrieval.advisory.max_chunks_per_doc": _pos_int,
+    "retrieval.expansions": _expansions,
+    "retrieval.expansion.enabled": _bool,
+    "retrieval.expansion.weight": _non_neg_number,
+    "retrieval.expansion.candidate_n": _pos_int,
+    "retrieval.top_k.advisory.text": _pos_int,
+    "retrieval.top_k.advisory.voice": _pos_int,
 }
+# Per-channel copies of the tunables (config/channel_settings.py): "<key>.<channel>".
+for _channel in ("text", "voice"):
+    _APP_CONFIG_VALIDATORS.update({
+        f"retrieval.top_k.{_channel}": _pos_int,
+        f"retrieval.candidate_n.{_channel}": _pos_int,
+        f"retrieval.rrf_k.{_channel}": _pos_int,
+        f"user.default_attributes.{_channel}": _default_attributes,
+        f"conversation.history_messages.{_channel}": _pos_int,
+        f"conversation.history_max_chars.{_channel}": _pos_int,
+        f"retrieval.context.max_words_followup.{_channel}": _pos_int,
+        f"retrieval.context.prior_user_turns.{_channel}": _pos_int,
+        f"retrieval.advisory.max_chunks_per_doc.{_channel}": _pos_int,
+        f"retrieval.expansion.enabled.{_channel}": _bool,
+        f"generation.model.{_channel}": _non_empty_str,
+        f"generation.confidence_threshold.{_channel}": _unit_interval,
+    })
 _PROVIDER_VALIDATORS = {
     "generation.model": _non_empty_str,
     "generation.confidence_threshold": _unit_interval,
@@ -318,3 +396,94 @@ def update_config(key: str, body: ConfigUpdate):
     if not set_app_config(key, value):
         raise HTTPException(404, f"app_config row {key!r} not found (run vectorstore.setup_db)")
     return {"key": key, "value": value, "source": "app_config"}
+
+
+# --------------------------------------------------------------------------
+# Prompts (prompt_templates; see config/prompts.py). Rows are immutable: an
+# edit creates a new version and activates it, rollback re-activates an old one.
+# Prompts must never contain secrets or credentials.
+# --------------------------------------------------------------------------
+
+MAX_PROMPT_CHARS = 6000
+MAX_PROMPT_NOTE_CHARS = 200
+
+
+@router.get("/prompts")
+def list_prompts():
+    with get_pool().connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            "SELECT id, name, channel, version, content, is_active, created_at, created_by "
+            "FROM prompt_templates WHERE channel IN ('text', 'voice') ORDER BY name, channel, version DESC"
+        )
+        rows = cur.fetchall()
+    groups: dict[tuple[str, str], dict] = {}
+    for r in rows:
+        g = groups.setdefault((r["name"], r["channel"]),
+                              {"name": r["name"], "channel": r["channel"], "active_version": None, "versions": []})
+        if r["is_active"]:
+            g["active_version"] = r["version"]
+        g["versions"].append(r)
+    return list(groups.values())
+
+
+class PromptCreate(BaseModel):
+    name: str
+    channel: Literal["text", "voice"]
+    content: str
+    note: str | None = None
+
+
+def _slot_lock(conn, name: str, channel: str) -> None:
+    conn.execute("SELECT pg_advisory_xact_lock(hashtext(%s))", (f"prompt:{name}:{channel}",))
+
+
+@router.post("/prompts")
+def create_prompt_version(body: PromptCreate):
+    """Creates version max+1 for an existing (name, channel) slot and activates
+    it, atomically deactivating the previous active row."""
+    if (body.name, body.channel) not in SLOTS:
+        raise HTTPException(404, {"detail": f"Unknown prompt slot ({body.name!r}, {body.channel!r})",
+                                  "valid_slots": [{"name": n, "channel": c} for n, c in SLOTS]})
+    content = body.content.strip()
+    if not content:
+        raise HTTPException(422, "content must be non-empty")
+    if len(content) > MAX_PROMPT_CHARS:
+        raise HTTPException(422, f"content is {len(content)} chars; the maximum is {MAX_PROMPT_CHARS}")
+    note = (body.note or "").strip() or None
+    if note and len(note) > MAX_PROMPT_NOTE_CHARS:
+        raise HTTPException(422, f"note is {len(note)} chars; the maximum is {MAX_PROMPT_NOTE_CHARS}")
+
+    with get_pool().connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+        _slot_lock(conn, body.name, body.channel)
+        cur.execute("UPDATE prompt_templates SET is_active = false WHERE name = %s AND channel = %s AND is_active",
+                    (body.name, body.channel))
+        cur.execute(
+            "INSERT INTO prompt_templates (name, channel, version, content, is_active, created_by) "
+            "SELECT %s, %s, COALESCE(MAX(version), 0) + 1, %s, true, %s FROM prompt_templates "
+            "WHERE name = %s AND channel = %s "
+            "RETURNING id, name, channel, version, is_active, created_at, created_by",
+            (body.name, body.channel, content, note, body.name, body.channel),
+        )
+        row = cur.fetchone()
+        conn.commit()
+    refresh_prompt_cache()
+    return row
+
+
+@router.post("/prompts/{prompt_id}/activate")
+def activate_prompt_version(prompt_id: int):
+    """Makes an existing version the active one for its slot (rollback or re-activate)."""
+    with get_pool().connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+        cur.execute("SELECT name, channel FROM prompt_templates WHERE id = %s", (prompt_id,))
+        slot = cur.fetchone()
+        if slot is None:
+            raise HTTPException(404, "Prompt version not found")
+        _slot_lock(conn, slot["name"], slot["channel"])
+        cur.execute("UPDATE prompt_templates SET is_active = false WHERE name = %s AND channel = %s AND is_active AND id <> %s",
+                    (slot["name"], slot["channel"], prompt_id))
+        cur.execute("UPDATE prompt_templates SET is_active = true WHERE id = %s "
+                    "RETURNING id, name, channel, version, is_active, created_at, created_by", (prompt_id,))
+        row = cur.fetchone()
+        conn.commit()
+    refresh_prompt_cache()
+    return row

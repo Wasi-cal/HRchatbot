@@ -24,7 +24,8 @@ curl -s "$B/api/admin/usage/summary?days=7"
 curl -s "$B/api/admin/usage/recent?limit=50"
 ```
 
-Response `type` is `answer`, `refusal_shortcut` (low-confidence canned reply), or
+Response `type` is `answer`, `refusal_shortcut` (low-confidence canned reply), `smalltalk`
+(a pure greeting/thanks/goodbye etc., answered by `api/smalltalk.py` with no retrieval or LLM call), or
 `needs_clarification`. All include `user_attributes` - send them back on the next turn.
 There is no auth (see the security note in `api/main.py`).
 
@@ -112,3 +113,44 @@ What it showed in the first live session (Oct 2026):
 Token notes: `ttl_seconds` must be an **integer** (a float such as `60.0` is silently ignored and you get 30s). An idle session
 (`--no-mic --seconds 110`) stayed connected well past a 60s token's expiry, so a token appears to be needed only at
 handshake time; a long mic conversation hasn't been tried.
+
+## Frontend
+
+A dummy, no-auth, no-build frontend (plain HTML/CSS/JS in `frontend/`) is served by the API itself: start
+`./run_api.sh` and open **http://localhost:8000/app/** (`/` redirects there). The **User** tab has text chat (clarification
+questions and refusals are styled distinctly; resolved attributes are kept client-side) and a **Start Voice** button; the
+**Admin** tab has Documents (upload, list, restrict toggle), Usage (day window, summary, recent queries) and Config
+(editable values, validated server-side).
+
+Voice mode needs the tunnel too: the browser connects straight to Deepgram, but Deepgram's cloud then calls the think endpoint,
+so `python3 scripts/start_tunnel.py` must be running (and `DEEPGRAM_API_KEY` set on the server). The browser only ever gets a
+short-lived token from `POST /api/voice/token`; if that fails the page shows an error and never falls back to a raw key.
+Use a browser that allows the microphone for `localhost` (Chrome/Edge/Firefox/Safari all do on localhost).
+
+## Text and voice are separate
+
+Each channel is one self-contained module: `channels/text.py` (served by `/api/chat`) and `channels/voice.py` (served by
+the think endpoint in `api/voice.py`). A module owns its retrieval -> applicability check -> generation flow, small-talk
+patterns and replies, and no-match copy; neither imports the other. `channels/common.py` holds only behaviour-free
+helpers. Everything tunable is a per-channel DB row, seeded once from the previous global value and then independent:
+`retrieval.top_k|candidate_n|rrf_k.<channel>`, `generation.model.<channel>`, `generation.confidence_threshold.<channel>`,
+`user.default_attributes.<channel>`, and the prompts (`style` and `grounding_core`, per channel). The un-suffixed keys are
+only a fallback for callers that pass no channel. Each turn logs one line under `hrchatbot.text` / `hrchatbot.voice`
+(turn type, model, prompt versions, timings), and `query_logs.source` separates the two in usage views.
+`generation.generate.generate_answer(channel=...)` and `access_control.ask_and_answer` are thin routers kept for eval tooling.
+
+## Prompts
+
+The generation system prompt is stored in Postgres (`prompt_templates`) and composed per channel from that channel's own active
+`style/<channel>` and `grounding_core/<channel>` rows (`config/prompts.py`, read through the Redis
+cache, last-good copy kept in process memory, hardcoded last resort). `/api/chat` uses the `text` channel, the
+voice think endpoint the `voice` channel; each channel has its own settings (see above).
+Rows are immutable - an edit is a new version:
+
+```bash
+curl -s $B/api/admin/prompts                                    # all slots, versions, which is active
+curl -s -X POST $B/api/admin/prompts -H 'content-type: application/json' \
+  -d '{"name":"style","channel":"text","content":"...","note":"why"}'   # new version, activated
+curl -s -X POST $B/api/admin/prompts/<id>/activate              # roll back / re-activate
+```
+Never put secrets in a prompt. `query_logs.prompt_version` records the versions used per generation call.

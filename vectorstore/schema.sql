@@ -125,7 +125,7 @@ CREATE TABLE IF NOT EXISTS query_logs (
     id                          BIGSERIAL PRIMARY KEY,
     created_at                  TIMESTAMPTZ NOT NULL DEFAULT now(),
     query_text                  TEXT NOT NULL,
-    response_type               TEXT NOT NULL CHECK (response_type IN ('answer', 'clarification', 'refusal_shortcut')),
+    response_type               TEXT NOT NULL CHECK (response_type IN ('answer', 'clarification', 'refusal_shortcut', 'smalltalk')),
     answer_text                 TEXT,
     user_attributes             JSONB,
     blocking_tag_type           TEXT,     -- set when response_type = 'clarification'
@@ -145,6 +145,12 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
+-- 'smalltalk' (greetings etc. answered without retrieval/LLM, see api/smalltalk.py)
+-- was added after the table first shipped; widen the constraint on existing databases.
+ALTER TABLE query_logs DROP CONSTRAINT IF EXISTS query_logs_response_type_check;
+ALTER TABLE query_logs ADD CONSTRAINT query_logs_response_type_check
+    CHECK (response_type IN ('answer', 'clarification', 'refusal_shortcut', 'smalltalk'));
+
 -- Pipeline-level tunables, editable at runtime via /api/admin/config
 -- (read through a Redis cache, see config/runtime.py). Seeded by
 -- config/runtime.py's seed_runtime_config() with the values previously
@@ -158,3 +164,39 @@ CREATE TABLE IF NOT EXISTS app_config (
     description TEXT,
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Generation system prompts, composed per channel from that channel's two active
+-- rows: style/<text|voice> + grounding_core/<text|voice> (see config/prompts.py).
+-- The 'shared' channel value is legacy (an earlier shared grounding_core row) and unused.
+-- Rows are immutable: an edit inserts a NEW version and activates it (see
+-- /api/admin/prompts), so history is kept and rollback is just re-activating.
+-- Seeded by config/prompts.py via seed_runtime_config(), only for slots with no
+-- rows, never overwriting edits.
+-- SECRETS NEVER LIVE HERE: prompts must never contain API keys, credentials or
+-- other secrets. This table is readable via the admin API and its contents are
+-- sent to the LLM provider on every generation call.
+CREATE TABLE IF NOT EXISTS prompt_templates (
+    id          SERIAL PRIMARY KEY,
+    name        TEXT NOT NULL,
+    channel     TEXT NOT NULL CHECK (channel IN ('shared', 'text', 'voice')),
+    version     INTEGER NOT NULL CHECK (version >= 1),
+    content     TEXT NOT NULL CHECK (length(btrim(content)) > 0),
+    is_active   BOOLEAN NOT NULL DEFAULT false,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_by  TEXT,  -- free-form note: 'seed', or who/why for an admin edit
+    CONSTRAINT ux_prompt_templates_version UNIQUE (name, channel, version)
+);
+
+-- At most one active row per (name, channel).
+CREATE UNIQUE INDEX IF NOT EXISTS ux_prompt_templates_active
+    ON prompt_templates (name, channel)
+    WHERE is_active;
+
+-- Which prompt rows produced a logged generation, e.g. {"grounding_core": 1, "style": 2}.
+ALTER TABLE query_logs ADD COLUMN IF NOT EXISTS prompt_version JSONB;
+
+-- Conversation-aware turns: whether prior user messages were folded into the retrieval query
+-- (a follow-up) and whether the turn was treated as advisory (broader, multi-policy context).
+-- NULL on rows logged before these columns existed.
+ALTER TABLE query_logs ADD COLUMN IF NOT EXISTS contextualized BOOLEAN;
+ALTER TABLE query_logs ADD COLUMN IF NOT EXISTS advisory BOOLEAN;

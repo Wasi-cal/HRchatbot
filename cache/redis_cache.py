@@ -76,3 +76,17 @@ def set_cached(key: str, value, ttl: int | None = None) -> bool:
     except Exception as exc:
         _mark_down(exc)
         return False
+
+
+def delete_cached(key: str) -> bool:
+    """Drops `key` (cache invalidation). If Redis is down there is nothing
+    to invalidate that a reader could see, since it also reads as a miss."""
+    client = _get_client()
+    if client is None:
+        return False
+    try:
+        client.delete(KEY_PREFIX + key)
+        return True
+    except Exception as exc:
+        _mark_down(exc)
+        return False
