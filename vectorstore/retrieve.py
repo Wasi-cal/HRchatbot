@@ -19,6 +19,7 @@ chunk's details only so generation can say which group a rule applies to.
 from functools import lru_cache
 
 from config.channel_settings import channel_setting
+from config.labels import compute_label
 from config.runtime import get_app_config
 from vectorstore.db import get_pool
 from vectorstore.embedder import BGEM3Embedder
@@ -197,15 +198,13 @@ def rrf_fuse(dense_results, sparse_results, k: int = DEFAULT_RRF_K):
     return fused
 
 
-# One plain label per document from its applicability tags, built in the same query that fetches
-# chunk details (no extra round trip): tag values of a type joined with ", ", types joined with
-# "; ", country first then employment_type then any others - e.g. "India; full-time employee, intern".
-# NULL for a document with no tags.
-_APPLIES_TO_SQL = """
-    (SELECT string_agg(g.vals, '; ' ORDER BY g.ord, g.tag_type)
-       FROM (SELECT at.tag_type,
-                    string_agg(at.tag_value, ', ' ORDER BY at.tag_value) AS vals,
-                    CASE at.tag_type WHEN 'country' THEN 0 WHEN 'employment_type' THEN 1 ELSE 2 END AS ord
+# The document's applicability tags as {tag_type: [values]} (JSON), fetched in the SAME query as the chunk
+# details (no extra round trip). retrieve() turns them into a label with config.labels.compute_label(), which
+# shows a tag type only where the document deviates from the norm (norms come from the cache). NULL when the
+# document has no tags.
+_TAGS_SQL = """
+    (SELECT json_object_agg(g.tag_type, g.vals)
+       FROM (SELECT at.tag_type, array_agg(at.tag_value ORDER BY at.tag_value) AS vals
                FROM document_applicability da
                JOIN applicability_tags at ON at.id = da.tag_id
               WHERE da.document_id = d.id
@@ -215,13 +214,12 @@ _APPLIES_TO_SQL = """
 
 def fetch_chunk_details(conn, chunk_db_ids: list) -> dict:
     """Returns {chunk_db_id: (chunk_id, section_path, text, document_title,
-    document_id, applies_to)}. applies_to is the document's tag label (see
-    _APPLIES_TO_SQL), None when the document has no tags."""
+    document_id, tags)}. tags is the document's {tag_type: [values]} (None when it has none)."""
     if not chunk_db_ids:
         return {}
     rows = conn.execute(
         f"""
-        SELECT c.id, c.chunk_id, c.section_path, c.text, d.document_title, d.id, {_APPLIES_TO_SQL} AS applies_to
+        SELECT c.id, c.chunk_id, c.section_path, c.text, d.document_title, d.id, {_TAGS_SQL} AS tags
         FROM chunks c
         JOIN documents d ON d.id = c.document_id
         WHERE c.id = ANY(%s)
@@ -323,7 +321,7 @@ def retrieve(
 
     results = []
     for chunk_db_id, score, dr, sr in fused:
-        chunk_id, section_path, text, document_title, document_id, applies_to = details[chunk_db_id]
+        chunk_id, section_path, text, document_title, document_id, tags = details[chunk_db_id]
         results.append(
             {
                 "chunk_id": chunk_id,
@@ -331,7 +329,7 @@ def retrieve(
                 "text": text,
                 "document_title": document_title,
                 "document_id": document_id,
-                "applies_to": applies_to,
+                "applies_to": compute_label(tags),
                 "fused_score": score,
                 "dense_rank": dr,
                 "sparse_rank": sr,

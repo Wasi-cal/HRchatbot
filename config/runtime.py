@@ -15,6 +15,7 @@ credentials) are env-only and must never be stored in either table.
 """
 import logging
 import os
+import time
 
 from psycopg.types.json import Jsonb
 
@@ -116,6 +117,13 @@ DEFAULT_CATALOG_TEMPLATES = {
 }
 
 
+DEFAULT_TITLE_GENERIC_PHRASES = ["document classification", "confidential", "internal", "table of contents"]
+DEFAULT_CATALOG_STOPWORDS = [
+    "the", "a", "an", "of", "to", "do", "does", "did", "is", "are", "am", "be", "been", "i", "me", "my", "we", "our",
+    "us", "it", "its", "this", "that", "these", "those", "in", "on", "at", "for", "with", "about", "any", "some",
+    "there", "here", "please", "and", "or", "so", "if", "just", "also", "right", "now",
+]
+
 DEFAULT_APP_CONFIG = {
     "retrieval.top_k": (3, "Chunks returned by retrieve() after RRF fusion."),
     "retrieval.candidate_n": (20, "Candidates pulled from each of dense and sparse search before fusion."),
@@ -171,12 +179,20 @@ DEFAULT_APP_CONFIG = {
     "catalog.vocab": (DEFAULT_CATALOG_VOCAB, "A catalog question may contain ONLY these content words (after stopword removal and the normalize map)."),
     "catalog.nouns": (DEFAULT_CATALOG_NOUNS, "A catalog question must contain at least one of these (multi-word entries match the whole utterance)."),
     "catalog.normalize_map": (DEFAULT_CATALOG_NORMALIZE_MAP, "Informal forms expanded before matching; an empty replacement drops the word (u->you, docs->documents, rn->drop)."),
+    "catalog.stopwords": (DEFAULT_CATALOG_STOPWORDS, "Function words ignored by the catalog vocabulary test (moved here from code; same list)."),
     "catalog.max_words": (12, "A catalog question is at most this many words."),
     "catalog.text_max_titles": (12, "Titles listed in a text catalog reply before 'and N more'."),
     "catalog.voice_max_titles": (4, "Short spoken names listed in a voice catalog reply."),
     "catalog.voice_max_title_words": (5, "Titles longer than this many words are not read aloud."),
     "catalog.templates.text": (DEFAULT_CATALOG_TEMPLATES["text"], "Text catalog reply parts: main ({n},{list}), more ({k}), topics ({topics}), closing, empty. Must not end with a question or offer."),
     "catalog.templates.voice": (DEFAULT_CATALOG_TEMPLATES["voice"], "Voice catalog reply parts: main ({n},{names}), closing, empty. Must not end with a question or offer."),
+    "label.mode": ("deviation", "Group label on retrieved chunks: deviation (only types where the document differs from the norm) | always | off."),
+    "label.norm_min_share": (0.5, "A tag-value set counts as the norm for its type only if at least this share of documents with that type carry it; otherwise the type is always shown."),
+    "dup.enabled": (True, "Upload-time duplicate detection (exact fingerprint 409 and possible_duplicates)."),
+    "dup.jaccard_threshold": (0.6, "Flag a possible duplicate when the 5-word-shingle Jaccard of two documents is at least this."),
+    "dup.containment_threshold": (0.75, "...or when either document's shingles are contained in the other's at least this much."),
+    "dup.title_match": (True, "...or when the normalized titles are equal."),
+    "title.generic_phrases": (DEFAULT_TITLE_GENERIC_PHRASES, "A detected title containing one of these phrases triggers a title_warning at upload (never changed automatically)."),
     "source.markers": (DEFAULT_SOURCE_MARKERS, "Whole-utterance phrases (normalized, <= 8 words) that ask where the previous answer came from."),
     "source.templates.text": (DEFAULT_SOURCE_TEMPLATES["text"], "Text replies for a source question. Keys: one, one_with_section, many, none, not_found."),
     "source.templates.voice": (DEFAULT_SOURCE_TEMPLATES["voice"], "Voice replies for a source question (document name only). Keys: one, many, none, not_found."),
@@ -338,3 +354,25 @@ def seed_runtime_config() -> None:
             "greeting": os.environ.get("VOICE_GREETING", DEFAULT_GREETING),
         })
         conn.commit()
+
+
+# ---- in-process copy of app_config values read on every chat turn ----------------------------------------------------
+_CONFIG_MEMO: dict = {}
+CONFIG_MEMO_TTL_SECONDS = 30.0
+
+
+def memo_config(key: str, default=None):
+    """get_app_config() with a 30s in-process copy, so keys read on EVERY turn cost no Redis round trip except
+    once per TTL. Admin writes clear it (api/admin.py) so a change applies at once in the process that handled it;
+    other workers converge within the TTL."""
+    now = time.monotonic()
+    hit = _CONFIG_MEMO.get(key)
+    if hit is not None and hit[0] > now:
+        return hit[1]
+    value = get_app_config(key, default)
+    _CONFIG_MEMO[key] = (now + CONFIG_MEMO_TTL_SECONDS, value)
+    return value
+
+
+def clear_config_memo() -> None:
+    _CONFIG_MEMO.clear()

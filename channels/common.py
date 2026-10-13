@@ -177,27 +177,7 @@ def plan_turn(current: str, history: list | None, channel: str) -> TurnPlan:
                     select_expansions(current, cleaned, channel) if advisory else [])
 
 
-# ---- in-process config memo --------------------------------------------------------------------------
-
-_CONFIG_MEMO: dict = {}
-CONFIG_MEMO_TTL_SECONDS = 30.0
-
-
-def memo_config(key: str, default=None):
-    """get_app_config() with a 30s in-process copy, so keys read on EVERY turn (small-talk phrases,
-    source markers, ...) cost no Redis round trip except once per TTL. Admin writes clear it
-    (api/admin.py) so a change applies at once in the process that handled it."""
-    now = time.monotonic()
-    hit = _CONFIG_MEMO.get(key)
-    if hit is not None and hit[0] > now:
-        return hit[1]
-    value = get_app_config(key, default)
-    _CONFIG_MEMO[key] = (now + CONFIG_MEMO_TTL_SECONDS, value)
-    return value
-
-
-def clear_config_memo() -> None:
-    _CONFIG_MEMO.clear()
+from config.runtime import clear_config_memo, memo_config  # noqa: E402,F401  (kept here: channels use common.memo_config)
 
 
 # ---- text normalisation ---------------------------------------------------------------------------------

@@ -290,8 +290,11 @@ def run_call_budget():
         r = measured(lambda: client.post("/api/chat", json={"query": TAGGED_QUERY}))
         check("referral query (formerly a clarification) is answered directly: 1 generation call, 1 retrieval",
               r.json()["type"] == "answer" and calls["llm"] == 1 and calls["retrieve"] == 1, f"{r.json()['type']} llm={calls['llm']} retr={calls['retrieve']}")
-        label_seen = any("[Applies to: India; full-time employee, intern]" in m["content"] for m in calls["messages"][-1])
-        check("retrieved chunks carry the plain '[Applies to: ...]' group label into the model input", label_seen)
+        # Labels show only where a document DEVIATES from the norm (label.mode=deviation): the referral program is
+        # "full-time employee, intern" (the norm is just "full-time employee"); "India" (every document) is never shown.
+        user_msg = calls["messages"][-1][-1]["content"]
+        check("a deviating document's chunks carry the plain '[Applies to: full-time employee, intern]' label into the model input; the all-India norm is not labelled",
+              "[Applies to: full-time employee, intern]" in user_msg and "[Applies to: India" not in user_msg)
         legacy = client.post("/api/chat", json={"query": TAGGED_QUERY, "user_attributes": {"country": "India"},
                                                  "pending_clarification": {"original_query": "x", "blocking_tag_type": "country"}})
         check("legacy request fields (user_attributes, pending_clarification) are ignored, still an answer",

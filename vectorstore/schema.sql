@@ -202,3 +202,8 @@ ALTER TABLE query_logs ADD COLUMN IF NOT EXISTS prompt_version JSONB;
 -- NULL on rows logged before these columns existed.
 ALTER TABLE query_logs ADD COLUMN IF NOT EXISTS contextualized BOOLEAN;
 ALTER TABLE query_logs ADD COLUMN IF NOT EXISTS advisory BOOLEAN;
+
+-- Content fingerprint: sha256 over the ordered, normalized chunk texts (see vectorstore/duplicates.py). Used for the
+-- upload-time exact-duplicate check; backfilled idempotently by setup_db / API startup.
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS content_fingerprint TEXT;
+CREATE INDEX IF NOT EXISTS idx_documents_content_fingerprint ON documents (content_fingerprint);

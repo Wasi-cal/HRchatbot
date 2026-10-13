@@ -20,12 +20,6 @@ import re
 from channels import common
 
 SECOND_PERSON = {"you", "your", "yours"}
-# Function words that carry no content for the vocabulary test.
-STOPWORDS = {
-    "the", "a", "an", "of", "to", "do", "does", "did", "is", "are", "am", "be", "been", "i", "me", "my", "we", "our",
-    "us", "it", "its", "this", "that", "these", "those", "in", "on", "at", "for", "with", "about", "any", "some",
-    "there", "here", "please", "and", "or", "so", "if", "just", "also", "right", "now",
-}
 # An utterance starting with one of these is itself a question/command, not an answer to the bot's offer.
 QUESTION_STARTERS = {"what", "which", "list", "show", "tell", "give", "can", "do", "are", "is", "how", "where", "who", "whats"}
 # Cheap pre-filter on the RAW text: a catalog question addresses the assistant, so most turns skip every config read.
@@ -52,7 +46,8 @@ def is_catalog_question(text: str, history: list | None = None) -> bool:
     if not words or len(words) > common.memo_config("catalog.max_words", 12):
         return False
     expanded = _expand(norm, common.memo_config("catalog.normalize_map", {}) or {})
-    tokens = [t for t in expanded.split() if t not in STOPWORDS]
+    stopwords = {common.normalize(w) for w in common.memo_config("catalog.stopwords", []) or []}
+    tokens = [t for t in expanded.split() if t not in stopwords]
     vocab = {common.normalize(v) for v in common.memo_config("catalog.vocab", []) or []}
     if not tokens or any(t not in vocab and t not in SECOND_PERSON for t in tokens):
         return False

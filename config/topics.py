@@ -78,7 +78,7 @@ def _load_catalog_titles() -> list[str]:
     return sorted(titles, key=_normalize_title)
 
 
-def _memoized(key: str, loader):
+def memoized(key: str, loader):
     now = time.monotonic()
     with _memo_lock:
         hit = _memo.get(key)
@@ -90,7 +90,7 @@ def _memoized(key: str, loader):
     return value
 
 
-def _redis_cached(cache_key: str, loader) -> list[str]:
+def redis_cached(cache_key: str, loader) -> list[str]:
     cached = get_cached(cache_key)
     if cached is not MISS:
         return cached
@@ -101,12 +101,12 @@ def _redis_cached(cache_key: str, loader) -> list[str]:
 
 def get_catalog_titles() -> list[str]:
     """Cached title list for the catalog reply: in-process copy (30s) over Redis (24h) over the DB."""
-    return _memoized(CATALOG_CACHE_KEY, lambda: _redis_cached(CATALOG_CACHE_KEY, _load_catalog_titles))
+    return memoized(CATALOG_CACHE_KEY, lambda: redis_cached(CATALOG_CACHE_KEY, _load_catalog_titles))
 
 
 def get_topics_cached() -> list[str]:
     """get_topics() behind the same in-process copy (no Redis call on a hit)."""
-    return _memoized(TOPICS_CACHE_KEY, get_topics)
+    return memoized(TOPICS_CACHE_KEY, get_topics)
 
 
 def get_topics() -> list[str]:
@@ -119,7 +119,7 @@ def get_topics() -> list[str]:
 
 
 def invalidate_topics() -> None:
-    """Drops every cached document-derived list (topics and catalog titles), here and in this process's
+    """Drops the cached topic list and catalog titles, here and in this process's
     in-process copies. Call on upload, status change, title change and restrict toggle; other workers'
     in-process copies expire within MEMO_TTL_SECONDS."""
     delete_cached(TOPICS_CACHE_KEY)

@@ -393,5 +393,37 @@
     "channel": "text",
     "expected_behavior": "refusal",
     "notes": "The corpus has nothing on tax filing. Expect 'I couldn't find ... in the HR policies' - and NO suggestion to contact IT, legal, finance or any other team (the old transcript invented an IT referral). Suggesting HR is fine only if it is clearly an HR matter (it is not, so none is also fine)."
+  },
+  {
+    "id": "t1",
+    "query": "whats my leave policy",
+    "category": "transcript",
+    "channel": "text",
+    "expected_behavior": "answer",
+    "notes": "REAL TRANSCRIPT. Answer in 'You get...' form (21 earned leaves, 7 sick, the other leave types, 12 holidays, pro-rata mid-year): must NOT say 'As a full-time employee in India, you...' or otherwise assign a group or country to the user, and must not ask anything back. (Measured v5 vs v6: 1/6 assigned a group before, 0/6 after.)"
+  },
+  {
+    "id": "t2",
+    "query": "tell me everything you know about the interns",
+    "category": "transcript",
+    "channel": "text",
+    "expected_behavior": "answer",
+    "notes": "REAL TRANSCRIPT. The corpus has no intern leave rule; interns appear only in the referral bonus program (and the POSH scope clause). Expect what the policies actually say about interns (referral bonus participation conditions), third person ('interns can ...'), no invented entitlements, no claim that interns are not entitled to anything, no 'as an intern' framing."
+  },
+  {
+    "id": "t3",
+    "query": "brief me on the referral program",
+    "category": "transcript",
+    "channel": "text",
+    "expected_behavior": "answer",
+    "notes": "REAL TRANSCRIPT (wording reconstructed from the transcript description). A short summary of the referral bonus program: who is eligible (named naturally, e.g. 'full-time employees and interns' / 'permanent employees'), when the bonus is paid (after the referred candidate completes probation), conditions (referrer still employed, not on notice/PIP). Never 'As a full-time employee, you...'."
+  },
+  {
+    "id": "t4",
+    "query": "can my friend apply for a post that isnt listed on the careers page",
+    "category": "transcript",
+    "channel": "text",
+    "expected_behavior": "answer",
+    "notes": "REAL TRANSCRIPT (wording reconstructed from the transcript description). Answer only from the referral policy / handbook text about referrals for positions that are not published (if the policies say nothing, 'I couldn't find <topic> in the HR policies'); no invented rules and no suggestion to contact IT/legal/finance."
   }
 ]

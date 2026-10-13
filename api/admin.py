@@ -10,6 +10,9 @@ from pathlib import Path
 from typing import Any, Literal
 from uuid import UUID
 
+import re
+
+import psycopg
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 from psycopg.rows import dict_row
 from pydantic import BaseModel
@@ -18,9 +21,12 @@ from access_control.extract_applicability import extract_and_store_for_document
 from config.runtime import set_app_config, set_provider_setting
 from channels.common import clear_config_memo
 from config.prompts import SLOTS, refresh_prompt_cache
-from config.topics import invalidate_topics
+from config.doc_caches import invalidate_document_caches
 from generation.generate import get_client, get_generation_model
 from ingestion.pipeline import process_document
+from config.runtime import get_app_config
+from ingestion.title_checks import title_warning
+from vectorstore import duplicates as dup
 from vectorstore.db import get_pool
 from vectorstore.embedder import ensure_embedding_model_registered
 from vectorstore.load import load_document
@@ -56,7 +62,7 @@ def _document_tags(conn, document_id) -> list[dict]:
 
 
 @router.post("/documents/upload")
-def upload_document(file: UploadFile = File(...)):
+def upload_document(file: UploadFile = File(...), allow_duplicate: bool = Query(False)):
     # Basename only: the name becomes documents.source_file, which is the
     # key for supersede-on-reupload, and must not carry path components.
     filename = Path(file.filename or "").name
@@ -89,8 +95,26 @@ def upload_document(file: UploadFile = File(...)):
             raise HTTPException(422, {"detail": "No chunks could be extracted from this file",
                                        "extraction_errors": [str(e) for e in stats["errors"]]})
 
-        # embedding -> load (supersede logic lives in load_document)
+        # duplicate detection (upload-time only; never changes another document's status)
         pool = get_pool()
+        chunk_texts = [c["text"] for c in doc_json["chunks"]]
+        fingerprint_value = dup.fingerprint(chunk_texts)
+        possible_duplicates: list = []
+        if get_app_config("dup.enabled", True):
+            thresholds = dup.thresholds_from_config(get_app_config)
+            with pool.connection() as conn:
+                exact = dup.exact_duplicate_of(conn, fingerprint_value, filename)
+                if exact and not allow_duplicate:
+                    staged.unlink(missing_ok=True)
+                    raise HTTPException(409, {
+                        "detail": "This file has exactly the same content as an existing active document. "
+                                  "Upload with allow_duplicate=true to ingest it anyway.",
+                        "existing": exact,
+                    })
+                possible_duplicates = dup.candidate_matches(conn, chunk_texts, doc_json["document_title"], filename, thresholds)
+        warning = title_warning(doc_json["document_title"], get_app_config("title.generic_phrases", []) or [], staged)
+
+        # embedding -> load (supersede logic lives in load_document)
         embedder = _get_embedder()
         with pool.connection() as conn:
             model_id = ensure_embedding_model_registered(conn, embedder)
@@ -101,7 +125,11 @@ def upload_document(file: UploadFile = File(...)):
             logger.exception("load failed for %s", filename)
             raise HTTPException(500, f"Loading into the vector store failed: {exc}")
 
-        invalidate_topics()  # the active document set may have changed (inserted / superseded)
+        if loaded["status"] != "unchanged":
+            with pool.connection() as conn:
+                conn.execute("UPDATE documents SET content_fingerprint = %s WHERE id = %s", (fingerprint_value, loaded["document_id"]))
+                conn.commit()
+        invalidate_document_caches()  # the active document set may have changed (inserted / superseded)
 
         # applicability extraction - skipped for an unchanged re-upload
         # (the active document, and its tags, are untouched).
@@ -134,6 +162,8 @@ def upload_document(file: UploadFile = File(...)):
         "applicability_ambiguous": ambiguous,
         "qa_flags": stats["flag_counts"],
         "extraction_errors": extraction_errors,
+        "possible_duplicates": possible_duplicates,
+        "title_warning": warning,
     }
 
 
@@ -159,7 +189,36 @@ _DOCUMENT_SELECT = """
 def list_documents():
     with get_pool().connection() as conn, conn.cursor(row_factory=dict_row) as cur:
         cur.execute(_DOCUMENT_SELECT + " ORDER BY d.created_at DESC, d.id")
-        return cur.fetchall()
+        rows = cur.fetchall()
+    # "possible duplicate of ..." badges come from the cached scan (cache-aside, invalidated with the other
+    # document caches); a failure here must never break the listing.
+    badges: dict = {}
+    try:
+        for pair in dup.cached_scan(get_pool().connection, get_app_config):
+            for mine, other in ((pair["a"], pair["b"]), (pair["b"], pair["a"])):
+                badges.setdefault(mine["document_id"], []).append({
+                    "document_id": other["document_id"], "title": other["title"], "source_file": other["source_file"],
+                    "jaccard": pair["jaccard"], "reason": "+".join(pair["reasons"]),
+                })
+    except Exception:
+        logger.exception("duplicate badges unavailable")
+    for r in rows:
+        r["possible_duplicates"] = badges.get(str(r["id"]), []) if r["status"] == "active" else []
+    return rows
+
+
+@router.get("/documents/duplicates")
+def scan_duplicates():
+    """On-demand scan of ACTIVE documents: exact (same ordered chunk text), near (Jaccard or containment over the
+    configured thresholds) and title-match pairs, with scores and a diff summary. Reports only - it never changes a
+    document. Also refreshes the cached scan behind the documents-list badges."""
+    thresholds = dup.thresholds_from_config(get_app_config)
+    with get_pool().connection() as conn:
+        docs = dup.load_active_documents(conn)
+    pairs = dup.pairwise_scan(docs, thresholds, with_diff=True)
+    from cache.redis_cache import set_cached
+    set_cached(dup.SCAN_CACHE_KEY, [{k: v for k, v in p.items() if k != "diff"} for p in pairs], ttl=dup.SCAN_CACHE_TTL_SECONDS)
+    return {"thresholds": thresholds, "documents_scanned": len(docs), "pairs": pairs}
 
 
 class RestrictRequest(BaseModel):
@@ -178,7 +237,62 @@ def restrict_document(document_id: UUID, body: RestrictRequest):
         cur.execute(_DOCUMENT_SELECT + " WHERE d.id = %s", (document_id,))
         row = cur.fetchone()
         conn.commit()
-    invalidate_topics()  # restricted documents are not advertised as topics
+    invalidate_document_caches()  # restricted documents leave the topic / catalog lists and the label norms
+    return row
+
+
+class StatusRequest(BaseModel):
+    status: Literal["active", "superseded"]
+
+
+@router.patch("/documents/{document_id}/status")
+def set_document_status(document_id: UUID, body: StatusRequest):
+    """Marks a document superseded (its chunks stop being searchable) or active again, consistently on
+    documents.status and chunks.is_superseded. Reversible. Reactivating is refused (409) if another ACTIVE document
+    already has the same source_file."""
+    flag = body.status == "superseded"
+    try:
+        with get_pool().connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+            cur.execute("UPDATE documents SET status = %s, updated_at = now() WHERE id = %s", (body.status, document_id))
+            if cur.rowcount == 0:
+                raise HTTPException(404, "Document not found")
+            cur.execute("UPDATE chunks SET is_superseded = %s WHERE document_id = %s", (flag, document_id))
+            cur.execute(_DOCUMENT_SELECT + " WHERE d.id = %s", (document_id,))
+            row = cur.fetchone()
+            conn.commit()
+    except psycopg.errors.UniqueViolation:
+        raise HTTPException(409, "Another active document already has this source_file; supersede it first.")
+    invalidate_document_caches()  # topic / catalog lists, label norms, duplicate badges
+    return row
+
+
+MAX_TITLE_CHARS = 200
+_CONTROL = re.compile(r"[\x00-\x1f\x7f]")
+
+
+class TitleRequest(BaseModel):
+    title: str
+
+
+@router.patch("/documents/{document_id}/title")
+def set_document_title(document_id: UUID, body: TitleRequest):
+    """Edits a document's title. Plain text only: stored exactly as typed (no markup is interpreted anywhere - the
+    admin UI renders titles with textContent and chat replies are text), control characters and newlines are rejected."""
+    title = body.title.strip()
+    if not title:
+        raise HTTPException(422, "title must be non-empty")
+    if len(title) > MAX_TITLE_CHARS:
+        raise HTTPException(422, f"title is {len(title)} characters; the maximum is {MAX_TITLE_CHARS}")
+    if _CONTROL.search(title):
+        raise HTTPException(422, "title must be plain text on one line (no control characters or newlines)")
+    with get_pool().connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+        cur.execute("UPDATE documents SET document_title = %s, updated_at = now() WHERE id = %s", (title, document_id))
+        if cur.rowcount == 0:
+            raise HTTPException(404, "Document not found")
+        cur.execute(_DOCUMENT_SELECT + " WHERE d.id = %s", (document_id,))
+        row = cur.fetchone()
+        conn.commit()
+    invalidate_document_caches()  # catalog / topic lists, source-lookup titles (read live), duplicate title matches
     return row
 
 
@@ -359,6 +473,12 @@ def _str_map(v):
     return {k.strip().lower(): x.strip().lower() for k, x in v.items()}
 
 
+def _label_mode(v):
+    if v not in ("deviation", "always", "off"):
+        raise ValueError("must be one of deviation, always, off")
+    return v
+
+
 def _bool(v):
     if not isinstance(v, bool):
         raise ValueError("must be true or false")
@@ -389,6 +509,14 @@ _APP_CONFIG_VALIDATORS = {
     "smalltalk.affirmations": _str_list,
     "smalltalk.offer_markers": _str_list,
     "source.markers": _str_list,
+    "label.mode": _label_mode,
+    "label.norm_min_share": _unit_interval,
+    "dup.enabled": _bool,
+    "dup.jaccard_threshold": _unit_interval,
+    "dup.containment_threshold": _unit_interval,
+    "dup.title_match": _bool,
+    "title.generic_phrases": _str_list,
+    "catalog.stopwords": _str_list,
     "catalog.enabled": _bool,
     "catalog.vocab": _str_list,
     "catalog.nouns": _str_list,
