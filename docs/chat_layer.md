@@ -95,6 +95,7 @@ with `PATCH /api/admin/config/{key}` and validated server-side; reads are cache-
 | key | seed | meaning |
 |---|---|---|
 | `source.markers` | `["source", "the source", "whats the source", "what is the source", "w…` | Whole-utterance phrases (normalized, <= 8 words) that ask where the previous answer came from. |
+| `source.filler_words` | `["okay", "ok", "so", "and", "but", "well", "hmm", "um", "uh", "oh", "also", "please", "pls", "plz", "hey", "btw", "then", "alright", "now"]` | Words ignored at either end of an utterance when matching source questions ('okay whats the source of that', 'which document please'). |
 | `source.templates.text` | `{"one": "That came from the {title}.", "one_with_section": "That came…` | Text replies for a source question. Keys: one, one_with_section, many, none, not_found. |
 | `source.templates.voice` | `{"one": "That's from the {title} policy.", "many": "That drew on the …` | Voice replies for a source question (document name only). Keys: one, many, none, not_found. |
 

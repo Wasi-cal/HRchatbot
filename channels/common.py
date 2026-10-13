@@ -293,12 +293,37 @@ SOURCE_MAX_WORDS = 8
 REFUSAL_PREFIX = "i couldn't find"
 
 
+def expand_informal(normalized: str, mapping: dict) -> str:
+    """Apply an informal-form map (u -> you, docs -> documents, rn -> dropped ...) to a NORMALIZED string, longest
+    keys first, on word boundaries; an empty replacement drops the word. Shared by the catalog and source matchers."""
+    for key in sorted(mapping, key=len, reverse=True):
+        k = normalize(key)
+        if k:
+            normalized = re.sub(rf"(?<![a-z0-9]){re.escape(k)}(?![a-z0-9])", f" {mapping[key]} ", normalized)
+    return " ".join(normalized.split())
+
+
+def _source_form(text: str, mapping: dict) -> str:
+    return expand_informal(normalize(text), mapping)
+
+
 def is_source_question(text: str) -> bool:
-    """Whole-utterance match (<= 8 words) against source.markers."""
+    """Whole-utterance match (<= 8 words) against source.markers, tolerant of filler words at either END
+    (source.filler_words: "okay whats the source of that", "so where is this from", "which document please") and of
+    informal forms (catalog.normalize_map: "where did u get that")."""
     norm = normalize(text)
     if not norm or len(norm.split()) > SOURCE_MAX_WORDS:
         return False
-    return norm in {normalize(m) for m in memo_config("source.markers", []) or []}
+    mapping = memo_config("catalog.normalize_map", {}) or {}
+    fillers = {normalize(w) for w in memo_config("source.filler_words", []) or []}
+    words = _source_form(text, mapping).split()
+    while words and words[0] in fillers:
+        words.pop(0)
+    while words and words[-1] in fillers:
+        words.pop()
+    if not words:
+        return False
+    return " ".join(words) in {_source_form(m, mapping) for m in memo_config("source.markers", []) or []}
 
 
 def previous_exchange(history: list[dict]) -> tuple[int, int] | None:

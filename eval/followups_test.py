@@ -183,6 +183,11 @@ def test_source(client):
                   "which document", "reference", "where is that mentioned", "source"):
             check(f"[{name}] {u!r} with a previous answer is a source lookup", ch.source_reply(u, h) is not None)
             check(f"[{name}] {u!r} with no history falls through (None)", ch.source_reply(u, []) is None)
+        for u in ("okay whats the source of that", "ok where did u get that", "so where is this from", "whats the source of that please", "and which document", "Okay, what's the source of that?"):
+            check(f"[{name}] with filler words / informal forms {u!r} is still a source lookup", ch.source_reply(u, h) is not None)
+        for u in ("so which document do i submit for joining", "okay where is the office", "and what is the source of the referral bonus formula", "well reference check policy please"):
+            check(f"[{name}] a real question with filler words {u!r} is NOT a source lookup", ch.source_reply(u, h) is None)
+        check(f"[{name}] fillers alone are not a source question", ch.source_reply("okay so please", h) is None)
         for u in ("what is the source of the referral bonus formula and who approves it", "where is the office", "reference check policy"):
             check(f"[{name}] real question {u!r} is NOT a source lookup", ch.source_reply(u, h) is None)
         s = ch.source_reply("whats the source of this", h)

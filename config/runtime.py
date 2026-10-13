@@ -194,6 +194,10 @@ DEFAULT_APP_CONFIG = {
     "dup.title_match": (True, "...or when the normalized titles are equal."),
     "title.generic_phrases": (DEFAULT_TITLE_GENERIC_PHRASES, "A detected title containing one of these phrases triggers a title_warning at upload (never changed automatically)."),
     "source.markers": (DEFAULT_SOURCE_MARKERS, "Whole-utterance phrases (normalized, <= 8 words) that ask where the previous answer came from."),
+    "source.filler_words": (
+        ["okay", "ok", "so", "and", "but", "well", "hmm", "um", "uh", "oh", "also", "please", "pls", "plz", "hey", "btw", "then", "alright", "now"],
+        "Words ignored at either end of an utterance when matching source questions ('okay whats the source of that', 'which document please').",
+    ),
     "source.templates.text": (DEFAULT_SOURCE_TEMPLATES["text"], "Text replies for a source question. Keys: one, one_with_section, many, none, not_found."),
     "source.templates.voice": (DEFAULT_SOURCE_TEMPLATES["voice"], "Voice replies for a source question (document name only). Keys: one, many, none, not_found."),
     "retrieval.advisory.max_chunks_per_doc": (4, "Per-document cap on chunks in an advisory turn's context, applied after RRF fusion."),

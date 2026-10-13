@@ -26,16 +26,6 @@ QUESTION_STARTERS = {"what", "which", "list", "show", "tell", "give", "can", "do
 _ADDRESSES_ASSISTANT = re.compile(r"\b(you|your|yours|u|ur)\b", re.IGNORECASE)
 
 
-def _expand(normalized: str, mapping: dict) -> str:
-    """Apply the normalize map to a normalized string, longest keys first, on word boundaries. An empty
-    replacement drops the word."""
-    for key in sorted(mapping, key=len, reverse=True):
-        k = common.normalize(key)
-        if k:
-            normalized = re.sub(rf"(?<![a-z0-9]){re.escape(k)}(?![a-z0-9])", f" {mapping[key]} ", normalized)
-    return " ".join(normalized.split())
-
-
 def is_catalog_question(text: str, history: list | None = None) -> bool:
     if not _ADDRESSES_ASSISTANT.search(text):
         return False
@@ -45,7 +35,7 @@ def is_catalog_question(text: str, history: list | None = None) -> bool:
     words = norm.split()
     if not words or len(words) > common.memo_config("catalog.max_words", 12):
         return False
-    expanded = _expand(norm, common.memo_config("catalog.normalize_map", {}) or {})
+    expanded = common.expand_informal(norm, common.memo_config("catalog.normalize_map", {}) or {})
     stopwords = {common.normalize(w) for w in common.memo_config("catalog.stopwords", []) or []}
     tokens = [t for t in expanded.split() if t not in stopwords]
     vocab = {common.normalize(v) for v in common.memo_config("catalog.vocab", []) or []}

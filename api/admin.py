@@ -509,6 +509,7 @@ _APP_CONFIG_VALIDATORS = {
     "smalltalk.affirmations": _str_list,
     "smalltalk.offer_markers": _str_list,
     "source.markers": _str_list,
+    "source.filler_words": _str_list,
     "label.mode": _label_mode,
     "label.norm_min_share": _unit_interval,
     "dup.enabled": _bool,

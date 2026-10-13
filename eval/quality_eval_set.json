@@ -425,5 +425,23 @@
     "channel": "text",
     "expected_behavior": "answer",
     "notes": "REAL TRANSCRIPT (wording reconstructed from the transcript description). Answer only from the referral policy / handbook text about referrals for positions that are not published (if the policies say nothing, 'I couldn't find <topic> in the HR policies'); no invented rules and no suggestion to contact IT/legal/finance."
+  },
+  {
+    "id": "f10",
+    "query": "okay whats the source of that",
+    "category": "source_lookup",
+    "channel": "text",
+    "history": [
+      {
+            "role": "user",
+            "content": "how many leaves do i get"
+      },
+      {
+            "role": "assistant",
+            "content": "You get 21 earned leaves every calendar year, which runs from January 1 to December 31. If your employment starts mid-year the entitlement is pro-rated. You also get 12 public holidays."
+      }
+],
+    "expected_behavior": "source_lookup",
+    "notes": "REAL TRANSCRIPT. The leading 'okay' used to stop the source matcher (whole-utterance match), so the question went to the model, which answered 'I couldn't find the source details ... in the HR policies'. Filler words at either end are now ignored (source.filler_words): expect 'That came from the Employee Handbook.' (0 LLM calls, 1 retrieval). A following bare 'why' is NOT deterministic - it goes through the normal pipeline."
   }
 ]
