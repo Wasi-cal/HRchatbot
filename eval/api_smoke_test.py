@@ -3,7 +3,7 @@
 
     python3 -m eval.api_smoke_test [--base-url http://localhost:8000] [--upload "hr docs/Travel Policy_Ver1.0.pdf"]
 
-Exercises: normal answer, clarification + resolution, shortcut refusal,
+Exercises: normal answer, the formerly clarification-triggering query (now answered), shortcut refusal,
 document upload, document list, restrict toggle, usage summary/recent.
 Query-dependent steps depend on the loaded corpus; steps that can't
 trigger their scenario print SKIP/WARN instead of failing hard.
@@ -31,9 +31,7 @@ def main():
     ap.add_argument("--base-url", default="http://localhost:8000")
     ap.add_argument("--upload", default="hr docs/Travel Policy_Ver1.0.pdf")
     ap.add_argument("--answer-query", default="What is the parental leave policy?")
-    ap.add_argument("--clarify-query", default="How many days of leave do I get?")
-    ap.add_argument("--clarify-replies", default='{"country": "I work in India", "employment_type": "I\'m a full-time employee"}',
-                    help="JSON map of blocking_tag_type -> natural-language reply")
+    ap.add_argument("--former-clarify-query", default="How many days of leave do I get?")
     ap.add_argument("--shortcut-query", default="best pizza topping")
     args = ap.parse_args()
     c = httpx.Client(base_url=args.base_url, timeout=300)
@@ -41,35 +39,19 @@ def main():
 
     before = c.get("/api/admin/usage/summary", params={"days": 0}).json()["total_queries"]
 
-    print("1. Fresh query -> answer (user fully specified)")
-    r = chat(query=args.answer_query, user_attributes={"country": "India", "employment_type": "full-time employee"})
+    print("1. Fresh query -> answer")
+    r = chat(query=args.answer_query)
     print("    ", r.json())
     check("200 + type answer", r.status_code == 200 and r.json()["type"] in ("answer", "refusal_shortcut"))
 
-    print("2. Fresh query -> clarification, then resolve")
-    r = chat(query=args.clarify_query)
-    body = r.json()
-    print("    ", body)
-    if body.get("type") != "needs_clarification":
-        print("  [SKIP] query didn't trigger clarification on this corpus; pass --clarify-query")
-    else:
-        reply = json.loads(args.clarify_replies).get(body["blocking_tag_type"], "I'm not sure")
-        r2 = chat(query=reply, user_attributes=body.get("user_attributes"),
-                  pending_clarification={"original_query": body["original_query"],
-                                         "blocking_tag_type": body["blocking_tag_type"]})
-        print("    ", r2.json())
-        resolved = r2.json()["type"] in ("answer", "refusal_shortcut") or (
-            r2.json()["type"] == "needs_clarification" and r2.json()["blocking_tag_type"] != body["blocking_tag_type"])
-        check("reply resolved (answer, or moved on to a different attribute)", resolved)
-        check("merged attributes echoed", bool((r2.json().get("user_attributes") or {}).get(body["blocking_tag_type"])))
-        r3 = chat(query="banana purple 42", user_attributes=body.get("user_attributes"),
-                  pending_clarification={"original_query": body["original_query"],
-                                         "blocking_tag_type": body["blocking_tag_type"]})
-        print("    unusable reply ->", r3.json())
-        check("unusable reply re-asks", r3.json()["type"] == "needs_clarification")
+    print("2. A query that used to trigger a clarifying question is just answered")
+    r = chat(query=args.former_clarify_query)
+    print("    ", r.json())
+    check("answered directly (answer or refusal_shortcut), never a clarification",
+          r.status_code == 200 and r.json()["type"] in ("answer", "refusal_shortcut") and "user_attributes" not in r.json())
 
     print("3. Shortcut refusal")
-    r = chat(query=args.shortcut_query, user_attributes={"country": "India", "employment_type": "full-time employee"})
+    r = chat(query=args.shortcut_query)
     print("    ", r.json())
     if r.json()["type"] == "refusal_shortcut":
         check("type refusal_shortcut", True)

@@ -12,22 +12,18 @@ this endpoint is deliberately tolerant:
     "stream": false explicitly (the docs say the agent consumes SSE).
 Verify against a real Deepgram session before relying on those guesses.
 
-The endpoint is STATELESS: everything - whether this turn answers a
-clarifying question, which question, and which attributes were already
-resolved - is re-derived from the message history Deepgram sends.
-Clarifying questions are recognised by a fixed spoken lead-in plus one of
-a closed set of per-attribute question wordings (no hidden token: TTS
-would read it aloud).
+The endpoint is STATELESS: every turn is derived from the message history
+Deepgram sends. A turn is: small-talk match, else retrieve once + generate
+once and stream (channels/voice.py); a "where is this from" turn is a templated source lookup. There is no clarifying question, no
+applicability filtering and no per-user attributes - see
+docs/applicability_layer_removed.md.
 """
-import hashlib
 import json
 import logging
 import os
-import re
 import secrets
 import time
 import uuid
-from concurrent.futures import ThreadPoolExecutor
 
 import httpx
 from dotenv import dotenv_values
@@ -35,62 +31,17 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict
 
-from access_control.resolve_clarification import resolve_clarification
 from channels import voice as voice_channel
 from api.query_log import log_query
 from api.voice_settings import ENV_PATH_DEFAULT, build_agent_settings
-from cache.redis_cache import MISS, get_cached, set_cached
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/voice", tags=["voice"])
 
-CLARIFY_LEAD_IN = "Quick check before I answer - "
-
-# Closed set of spoken wordings per attribute, lowercase. Index 0 is the
-# first ask; later indexes are slight rephrasings used when a reply
-# wasn't usable. Matching (see parse_clarification) is by suffix, so none
-# may be a suffix of another variant.
-QUESTION_VARIANTS = {
-    "country": ["which country are you based in?", "which country do you work from?"],
-    "employment_type": [
-        "are you a full-time employee or a contractor?",
-        "just to confirm, are you a full-time employee, or a contractor?",
-    ],
-}
-_GENERIC_ASK_RE = re.compile(r"(?:could you tell me your|what is your) ([a-z ]+)\?$")
-_GENERIC_TEMPLATES = ["could you tell me your {}?", "what is your {}?"]
-
 APOLOGY = "Sorry, I ran into a problem looking that up. Please try again in a moment."
 
 THINK_ENDPOINT_SECRET = os.environ.get("THINK_ENDPOINT_SECRET")
-
-
-def _variants(tag_type: str) -> list[str]:
-    return QUESTION_VARIANTS.get(tag_type) or [t.format(tag_type.replace("_", " ")) for t in _GENERIC_TEMPLATES]
-
-
-def clarifying_question(tag_type: str, variant: int = 0) -> str:
-    variants = _variants(tag_type)
-    return CLARIFY_LEAD_IN + variants[variant % len(variants)]
-
-
-def parse_clarification(text: str) -> tuple[str, int] | None:
-    """If `text` is one of our clarifying questions, returns
-    (blocking_tag_type, variant_index); else None."""
-    text = text.strip()
-    if not text.startswith(CLARIFY_LEAD_IN):
-        return None
-    rest = text[len(CLARIFY_LEAD_IN):].strip().lower()
-    for tag_type, variants in QUESTION_VARIANTS.items():
-        for i, v in enumerate(variants):
-            if rest.endswith(v):
-                return tag_type, i
-    m = _GENERIC_ASK_RE.search(rest)
-    if m:
-        tag_type = m.group(1).strip().replace(" ", "_")
-        return tag_type, 0 if rest.startswith("could") else 1
-    return None
 
 
 # --------------------------------------------------------------------------
@@ -115,96 +66,15 @@ def _turns(messages: list[dict]) -> list[tuple[str, str]]:
     return turns
 
 
-def _clarif_at(turns, i):
-    return parse_clarification(turns[i][1]) if 0 <= i < len(turns) and turns[i][0] == "assistant" else None
-
-
-def _original_query_index(turns, a: int) -> int | None:
-    """Index of the original blocked query for the clarifying question at index a: the
-    user message before it - walking back past earlier clarification replies, since one
-    query can trigger several clarifications in a row."""
-    u = a - 1
-    if u < 0 or turns[u][0] != "user":
-        return None
-    while _clarif_at(turns, u - 1):
-        u -= 2
-        if u < 0 or turns[u][0] != "user":
-            return None
-    return u
-
-
-def _original_query(turns, a: int) -> str | None:
-    u = _original_query_index(turns, a)
-    return None if u is None else turns[u][1]
-
-
-def conversation_history(turns, end: int) -> list[dict]:
-    """Prior chat turns for the answer, from Deepgram's messages: everything before index
-    `end` (the user turn being answered), minus plumbing - the synthetic leading
-    {"role": "user", "content": "-"} and the greeting that follows it, and every
-    clarifying question with the reply to it. Caps and sanitising happen later
-    (channels/common.py clean_history)."""
+def conversation_history(turns) -> list[dict]:
+    """Prior chat turns for the answer, from Deepgram's messages: everything before the
+    final user turn (the one being answered), minus the synthetic leading
+    {"role": "user", "content": "-"} and the greeting that follows it. Caps and
+    sanitising happen later (channels/common.py clean_history)."""
     start = 0
     if turns and turns[0] == ("user", "-"):
         start = 2 if len(turns) > 1 and turns[1][0] == "assistant" else 1
-    history = []
-    i = start
-    while i < end:
-        role, text = turns[i]
-        if role == "assistant" and parse_clarification(text):
-            i += 2  # skip the question and the user's reply to it
-            continue
-        history.append({"role": role, "content": text})
-        i += 1
-    return history
-
-
-NEGATIVE_TTL_SECONDS = 300
-
-
-def _resolve_value(tag_type: str, reply: str, original: str | None) -> str | None:
-    """Classification of one clarification reply, memoized in Redis with
-    no expiry: a given (attribute, reply text) always classifies the same
-    way, and Redis (unlike a per-process dict) is shared across workers
-    and survives restarts. If Redis is down this just recomputes."""
-    key = "clarif:" + hashlib.sha256(f"{tag_type}\0{reply}".encode()).hexdigest()
-    cached = get_cached(key)
-    if cached is not MISS:
-        return cached
-    merged = resolve_clarification(original or "", tag_type, reply, {})
-    value = merged.get(tag_type) if merged else None
-    # Only successful classifications are permanent. resolve_clarification()
-    # also returns None when the LLM call itself failed, and caching that
-    # forever would poison the pair, so "no usable value" gets a short TTL.
-    set_cached(key, value, ttl=None if value else NEGATIVE_TTL_SECONDS)
-    return value
-
-
-def attributes_from_history(turns) -> dict:
-    """Replays past clarification Q&A pairs (excluding the current, final
-    user turn) to recover attributes already resolved this session. A
-    pair counts as resolved unless the assistant immediately re-asked the
-    same attribute. Unlike a stored session, this re-runs the (cached)
-    extraction per past pair - cheap, and keeps the endpoint stateless."""
-    last = len(turns) - 1
-    pairs = []
-    for a in range(len(turns) - 2):  # need a reply at a+1 < last
-        parsed = _clarif_at(turns, a)
-        if not parsed or turns[a + 1][0] != "user" or a + 1 >= last:
-            continue
-        nxt = _clarif_at(turns, a + 2)
-        if nxt and nxt[0] == parsed[0]:
-            continue  # re-asked: the reply was unusable
-        pairs.append((parsed[0], turns[a + 1][1], _original_query(turns, a)))
-
-    attrs = {}
-    if pairs:
-        with ThreadPoolExecutor(max_workers=len(pairs)) as ex:
-            values = list(ex.map(lambda p: _resolve_value(*p), pairs))
-        for (tag_type, _r, _o), value in zip(pairs, values):
-            if value:
-                attrs[tag_type] = value
-    return attrs
+    return [{"role": role, "content": text} for role, text in turns[start:-1]]
 
 
 # --------------------------------------------------------------------------
@@ -213,48 +83,29 @@ def attributes_from_history(turns) -> dict:
 
 def _turn_pieces(turns, record: dict):
     """Generator of text pieces to speak for the final user turn. Fills
-    `record` with what to log (query, attributes, outcome)."""
+    `record` with what to log (query, outcome)."""
     current = turns[-1][1]
-    pending = _clarif_at(turns, len(turns) - 2)
+    history = conversation_history(turns)
 
-    # Small talk first: before any history replay, retrieval, DB read or LLM
-    # work. Bypassed when the previous assistant turn was a clarifying question.
-    category = voice_channel.smalltalk_match(current, after_clarification=pending is not None)
+    # Small talk first: before any retrieval, DB read or LLM work. (A bare "yes" after the agent's
+    # question or offer is not small talk: it falls through so the offer is followed up.)
+    category = voice_channel.smalltalk_match(current, history)
     if category:
         text = voice_channel.smalltalk_reply(category)
         record.update(query_text=current, response_type="smalltalk", pieces=[text], contextualized=False, advisory=False)
         yield text
         return
 
-    attrs = {**voice_channel.default_attributes(), **attributes_from_history(turns)}
-    record["user_attributes"] = attrs
+    # "Where is this from": 0 LLM calls, one re-retrieval of the previous answer's turn.
+    source = voice_channel.source_reply(current, history)
+    if source:
+        record.update(query_text=current, response_type="source_lookup", pieces=[source["text"]],
+                      chunk_ids_used=source["chunk_ids"], timing=source["timing"], contextualized=False, advisory=False)
+        yield source["text"]
+        return
 
-    query = current
-    original_index = _original_query_index(turns, len(turns) - 2) if pending else None
-    original = None if original_index is None else turns[original_index][1]
-    # The user turn being answered is the original blocked query after a clarification
-    # round, else the final turn; history is everything before it (minus plumbing).
-    history = conversation_history(turns, original_index if (pending and original) else len(turns) - 1)
-    if pending and original:
-        tag_type, prev_variant = pending
-        merged = resolve_clarification(original, tag_type, current, attrs)
-        if merged is None:
-            # Unusable reply: ask again, worded differently.
-            record.update(query_text=original, response_type="clarification", blocking_tag_type=tag_type,
-                          contextualized=False, advisory=False)
-            yield clarifying_question(tag_type, prev_variant + 1)
-            return
-        attrs = {**voice_channel.default_attributes(), **merged}
-        record["user_attributes"] = attrs
-        query = original
-    record["query_text"] = query
-
-    for event in voice_channel.answer_stream(query, attrs, history=history):
-        if event["type"] == "needs_clarification":
-            record.update(response_type="clarification", blocking_tag_type=event["blocking_tag_type"],
-                          contextualized=event.get("contextualized"), advisory=event.get("advisory"))
-            yield clarifying_question(event["blocking_tag_type"])
-            return
+    record["query_text"] = current
+    for event in voice_channel.answer_stream(current, history=history):
         if event["type"] == "token":
             record.setdefault("pieces", []).append(event["text"])
             yield event["text"]
@@ -284,11 +135,8 @@ def _logged_pieces(turns):
     finally:
         if record.get("query_text") and record.get("response_type"):
             pieces = record.pop("pieces", None)
-            if record["response_type"] == "clarification":
-                record["answer_text"] = None
-            elif pieces:
+            if pieces:
                 record["answer_text"] = "".join(pieces)
-            record.pop("pieces", None)
             log_query(source="voice", **record)
 
 

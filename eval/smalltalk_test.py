@@ -9,7 +9,7 @@ the OpenAI client and retrieve(), so the per-turn budget is asserted:
     small-talk turn            0 LLM calls, 0 retrieval calls
     retrieval-shortcut turn    0 LLM calls
     normal answer turn         exactly 1 LLM call (the generation call)
-    clarification-reply turn   <= 2 LLM calls (1 resolve_clarification + 1 generation)
+    (no clarification turns any more: the referral query is a normal 1-call answer)
 
 Usage:
     python3 -m eval.smalltalk_test
@@ -110,9 +110,6 @@ def test_matcher():
             check(f"[{name}] falls through (not small talk) {text!r}", ch.smalltalk_match(text) is None, f"got {ch.smalltalk_match(text)}")
         check(f"[{name}] empty / punctuation-only input does not match", ch.smalltalk_match("") is None and ch.smalltalk_match("?!") is None)
         check(f"[{name}] over max words never matches", ch.smalltalk_match("hi " * 7) is None)
-        for text in ("ok", "wassup", "thanks", "full time", "India"):
-            check(f"[{name}] bypassed after a clarifying question: {text!r}",
-                  ch.smalltalk_match(text, after_clarification=True) is None)
     check("normalize: lowercase, no apostrophes, collapsed whitespace",
           common.normalize("  What\u2019s   UP?! ") == "whats up", common.normalize("  What\u2019s   UP?! "))
 
@@ -234,7 +231,7 @@ def test_call_budget():
                   "hello what is the referral bonus"):
             (r, llm, retr, ms) = measured(lambda q=q: client.post("/api/chat", json={"query": q}))
             check(f"API falls through to normal pipeline: {q!r}",
-                  r.json().get("type") in ("answer", "refusal_shortcut", "needs_clarification") and retr >= 1,
+                  r.json().get("type") in ("answer", "refusal_shortcut") and retr >= 1,
                   f"{r.json().get('type')} retr={retr}")
 
         # retrieval shortcut
@@ -258,34 +255,13 @@ def test_call_budget():
         check("normal answer: type answer", r.json().get("type") == "answer", str(r.json()))
         check("normal answer: exactly 1 LLM call (the generation call)", llm == 1, f"llm={llm}")
 
-        # clarification ask + resolution
+        # the former clarification-triggering query is simply answered now
         q = "will I get paid extra for recommending a friend for a job here"
         (r, llm, retr, ms) = measured(lambda: client.post("/api/chat", json={"query": q}))
-        ask = r.json()
-        record("text  clarification ask", llm, retr, ms)
-        check("clarification ask: 0 LLM calls", ask.get("type") == "needs_clarification" and llm == 0, f"{ask.get('type')} llm={llm}")
-        if ask.get("type") == "needs_clarification":
-            pending = {"original_query": ask["original_query"], "blocking_tag_type": ask["blocking_tag_type"]}
-            (r, llm, retr, ms) = measured(lambda: client.post("/api/chat", json={
-                "query": "full time", "user_attributes": ask["user_attributes"], "pending_clarification": pending}))
-            record("text  clarification reply", llm, retr, ms)
-            check("clarification reply: resolves and answers", r.json().get("type") in ("answer", "refusal_shortcut"), str(r.json()))
-            check("clarification reply: <= 2 LLM calls (1 resolve + 1 generation = pre-change baseline)", llm <= 2, f"llm={llm}")
-
-            # a reply that looks like small talk must be handled as a clarification reply
-            (r, llm, retr, ms) = measured(lambda: client.post("/api/chat", json={
-                "query": "ok", "user_attributes": ask["user_attributes"], "pending_clarification": pending}))
-            check("'ok' after a clarifying question is NOT small talk",
-                  r.json().get("type") != "smalltalk", str(r.json()))
-
-            # voice: same bypass, derived from history
-            from api.voice import clarifying_question
-            hist = [{"role": "user", "content": q},
-                    {"role": "assistant", "content": clarifying_question(ask["blocking_tag_type"])}]
-            code, text = voice_turn(client, voice_messages("ok", history=hist[:0]) [:2] + hist + [{"role": "user", "content": "ok"}])
-            row = last_log_row()
-            check("voice: 'ok' after a clarifying question is NOT logged as smalltalk",
-                  code == 200 and row[1] != "smalltalk", str(row))
+        record("text  referral query (was clarif.)", llm, retr, ms)
+        check("referral query: answered directly, exactly 1 LLM call, retrieval once",
+              r.json().get("type") == "answer" and llm == 1 and retr == 1, f"{r.json().get('type')} llm={llm} retr={retr}")
+        check("no turn type is a clarification any more", r.json().get("type") != "needs_clarification")
 
     print("\n    turn type                          LLM  retr      ms")
     for label, llm, retr, ms in rows:

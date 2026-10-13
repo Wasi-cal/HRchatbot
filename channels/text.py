@@ -9,11 +9,9 @@ import logging
 import time
 
 from channels import common
-from config.channel_settings import channel_setting
 from config.prompts import get_system_prompt
 from config.topics import topic_phrase
 from generation.generate import get_client, get_confidence_threshold, get_generation_model
-from vectorstore.db import get_pool
 from vectorstore.retrieve import retrieve
 
 CHANNEL = "text"
@@ -22,11 +20,6 @@ logger = logging.getLogger("hrchatbot.text")
 # --------------------------------------------------------------------------
 # Copy
 # --------------------------------------------------------------------------
-
-CLARIFYING_QUESTIONS = {
-    "country": "Which country are you based in?",
-    "employment_type": "Are you a full-time employee or a contractor?",
-}
 
 NO_MATCH_BASE = "I couldn't find anything on that in the HR policies I have."
 
@@ -44,32 +37,6 @@ def no_match_response() -> str:
 # --------------------------------------------------------------------------
 # Small talk (deterministic; no retrieval, no DB, no LLM - see channels/common.py)
 # --------------------------------------------------------------------------
-_PATTERNS = {
-    "greeting": rf"{common.GREETING_WORD}(?: {common.GREETING_WORD})?{common.ADDRESS}",  # "hey whats up", "hi there"
-    "how_are_you": (
-        common.LEAD + r"(?:how are you(?: doing| today)?|how r u|how do you do|hows it going|how is it going|"
-        r"how are things|hows everything|how you doing|you good|are you ok(?:ay)?)" + common.ADDRESS
-    ),
-    "thanks": (
-        r"(?:(?:ok|okay|cool|great|alright) )?(?:thanks|thank you|thx|ty|cheers|much appreciated|"
-        r"appreciate it|many thanks)(?: (?:a lot|so much|very much|a ton))?" + common.ADDRESS
-    ),
-    "goodbye": (
-        r"(?:bye(?: bye)?|goodbye|see you(?: later| soon)?|see ya|later|good night|take care|"
-        r"talk later|ttyl|cya|catch you later)" + common.ADDRESS
-    ),
-    "capabilities": (
-        common.LEAD + r"(?:who are you|what are you|what is your name|whats your name|what can you do(?: for me)?|"
-        r"what do you do|what can you help(?: me)? with|how can you help(?: me)?|what can i ask(?: you)?|"
-        r"what do you know|help|help me)"
-    ),
-    "ack": (
-        r"(?:ok(?:ay)?|k|kk|cool|got it|alright|all right|understood|i see|noted|great|nice|awesome|"
-        r"perfect|makes sense|sounds good)(?: (?:cool|great|got it))?"
-    ),
-    "are_you_there": r"(?:are you there|you there|anyone there|is anyone there)" + common.ADDRESS,
-}
-
 _RESPONSES = {
     "greeting": [
         "Hi there! What would you like to know about company policy?",
@@ -111,17 +78,18 @@ _CAPABILITIES_FALLBACK = [
     "I'm the HR assistant. I can answer questions about company HR policies. What would you like to know?",
 ]
 
-_matcher = common.SmalltalkMatcher(_PATTERNS)
+_matcher = common.PhraseMatcher(CHANNEL)
 _picker = common.ReplyPicker()
 GREETING, HOW_ARE_YOU, THANKS, GOODBYE, CAPABILITIES, ACK, ARE_YOU_THERE = (
     "greeting", "how_are_you", "thanks", "goodbye", "capabilities", "ack", "are_you_there",
 )
 
 
-def smalltalk_match(text: str, *, after_clarification: bool = False) -> str | None:
-    """Small-talk category for a pure small-talk utterance, else None. Callers pass
-    after_clarification=True when the previous assistant turn was a clarifying question."""
-    return _matcher.match(text, after_clarification=after_clarification)
+def smalltalk_match(text: str, history: list | None = None) -> str | None:
+    """Small-talk category for a pure small-talk utterance, else None. Phrase sets are editable in
+    app_config (smalltalk.phrases.text). history is the RAW prior messages: a bare affirmation after an
+    assistant question or offer is not small talk (it goes through the normal pipeline)."""
+    return common.smalltalk_category(_matcher, text, history)
 
 
 def smalltalk_reply(category: str) -> str:
@@ -140,31 +108,69 @@ def smalltalk_reply(category: str) -> str:
 
 
 # --------------------------------------------------------------------------
-# Settings
+# Source lookup ("where is this from"): deterministic, 0 LLM calls, 1 retrieval
 # --------------------------------------------------------------------------
 
-def default_attributes() -> dict:
-    """Attributes assumed for this channel when the caller supplies none
-    (app_config user.default_attributes.text)."""
-    return channel_setting("user.default_attributes", CHANNEL, {}) or {}
+def source_reply(query: str, history: list | None) -> dict | None:
+    """If query is a source question (source.markers) AND the history has an earlier assistant answer,
+    recompute the retrieval of the exchange it refers to and name the documents; else None (the caller
+    falls through to the normal pipeline). Returns {"text", "chunk_ids", "timing"}.
+
+    The previous exchange is the last assistant message and the user message before it (skipping earlier
+    source questions). Its retrieval is rebuilt by the same functions a normal turn uses
+    (common.plan_turn over only the history that PRECEDED it, then _retrieve()). If that answer was
+    small talk or a refusal there is no document to name and a templated "didn't come from a policy
+    document" line is returned instead."""
+    if not common.is_source_question(query):
+        return None
+    cleaned = common.clean_history(history, CHANNEL)
+    exchange = common.previous_exchange(cleaned)
+    if exchange is None:
+        return None
+    user_index, assistant_index = exchange
+    previous_query, previous_answer = cleaned[user_index]["content"], cleaned[assistant_index]["content"]
+    templates = common.memo_config("source.templates.text", {}) or {}
+    started = time.monotonic()
+    if (smalltalk_match(previous_query) or previous_answer.lower().startswith(common.REFUSAL_PREFIX)
+            or previous_answer.startswith(NO_MATCH_BASE)):
+        text = _template(templates, "none")
+        chunk_ids: list = []
+    else:
+        plan = common.plan_turn(previous_query, cleaned[:user_index], CHANNEL)
+        results = _retrieve(plan)
+        text = common.format_source_reply(results, templates, spoken=False)
+        chunk_ids = [r["chunk_id"] for r in results]
+    logger.info("turn type=source_lookup chunks=%d", len(chunk_ids))
+    return {"text": text, "chunk_ids": chunk_ids, "timing": {"retrieval_time_ms": (time.monotonic() - started) * 1000}}
+
+
+def _template(templates: dict, key: str) -> str:
+    from config.runtime import DEFAULT_SOURCE_TEMPLATES
+
+    return templates.get(key) or DEFAULT_SOURCE_TEMPLATES[CHANNEL][key]
 
 
 # --------------------------------------------------------------------------
 # Pipeline
 # --------------------------------------------------------------------------
 
-def generate_stream(
+def _retrieve(plan: common.TurnPlan, top_k: int | None = None, candidate_n: int | None = None, k: int | None = None):
+    """THE retrieval of a turn: the planned (follow-up-contextualised) query with this channel's depth, advisory
+    breadth and expansions. A normal turn and a source lookup both call exactly this, so the retrieval a
+    source lookup recomputes cannot drift from the one the answer was built on."""
+    return retrieve(plan.retrieval_query, top_k=top_k, candidate_n=candidate_n, k=k,
+                    channel=CHANNEL, advisory=plan.advisory, expansions=plan.expansions)
+
+
+def answer_stream(
     query: str,
     top_k: int | None = None,
     candidate_n: int | None = None,
     k: int | None = None,
     confidence_threshold: float | None = None,
-    user_attributes: dict | None = None,
     history: list | None = None,
-    _plan: common.TurnPlan | None = None,
 ):
-    """Retrieves grounding chunks for query, then streams a generated answer. A
-    generator yielding dict events:
+    """One turn: retrieve ONCE, generate ONCE, stream. A generator yielding dict events:
 
         {"type": "token", "text": str}
             One streamed piece of the answer, in order.
@@ -181,13 +187,11 @@ def generate_stream(
     resolves for THIS channel; an explicit argument wins. history (prior
     user/assistant messages, untrusted) is sanitised, may widen the retrieval query for
     follow-ups, and is sent to the model as prior chat turns (see channels/common.py)."""
-    plan = _plan or common.plan_turn(query, history, CHANNEL)
+    plan = common.plan_turn(query, history, CHANNEL)
     threshold = get_confidence_threshold(CHANNEL) if confidence_threshold is None else confidence_threshold
 
     retrieval_start = time.monotonic()
-    results = retrieve(plan.retrieval_query, top_k=top_k, candidate_n=candidate_n, k=k,
-                       user_attributes=user_attributes, channel=CHANNEL, advisory=plan.advisory,
-                       expansions=plan.expansions)
+    results = _retrieve(plan, top_k, candidate_n, k)
     retrieval_time_ms = (time.monotonic() - retrieval_start) * 1000
 
     top_score = results[0]["fused_score"] if results else 0.0
@@ -234,64 +238,19 @@ def generate_stream(
     }
 
 
-def answer_stream(
-    query: str,
-    user_attributes: dict | None = None,
-    top_k: int | None = None,
-    candidate_n: int | None = None,
-    k: int | None = None,
-    confidence_threshold: float | None = None,
-    history: list | None = None,
-):
-    """generate_stream() preceded by the applicability check: yields a single
-    {"type": "needs_clarification", "question", "blocking_tag_type"} event when the
-    user's answer would change which documents apply, else generate_stream()'s events."""
-    attributes = common.with_default_attributes(user_attributes, CHANNEL)
-    plan = common.plan_turn(query, history, CHANNEL)
-
-    # Unfiltered probe: the SAME context selection generation will use (same query, depth and
-    # diversity cap), just without attribute filtering - so only chunks that could actually
-    # reach generation are checked, and a broader advisory context is checked no wider than
-    # the context it produces. Same query text => the embedding is computed once per turn.
-    candidates = retrieve(plan.retrieval_query, top_k=top_k, candidate_n=candidate_n, k=k,
-                          channel=CHANNEL, advisory=plan.advisory, expansions=plan.expansions)
-    with get_pool().connection() as conn:
-        blocking = common.detect_blocking_tag_types(conn, candidates, attributes)
-    if blocking:
-        tag_type = blocking[0]
-        logger.info("turn type=clarification blocking_tag_type=%s", tag_type)
-        yield {
-            "type": "needs_clarification",
-            "question": CLARIFYING_QUESTIONS.get(tag_type, f"Could you tell me your {tag_type.replace('_', ' ')}?"),
-            "blocking_tag_type": tag_type,
-            "contextualized": plan.contextualized,
-            "advisory": plan.advisory,
-        }
-        return
-
-    yield from generate_stream(
-        query, top_k=top_k, candidate_n=candidate_n, k=k,
-        confidence_threshold=confidence_threshold, user_attributes=attributes, history=history, _plan=plan,
-    )
-
-
 def answer(
     query: str,
-    user_attributes: dict | None = None,
     top_k: int | None = None,
     candidate_n: int | None = None,
     k: int | None = None,
     confidence_threshold: float | None = None,
     history: list | None = None,
 ) -> dict:
-    """Non-streaming answer_stream(). Returns either
-    {"type": "needs_clarification", "question", "blocking_tag_type"} or
-    {"type": "answer", "answer", "shortcut", "timing", "chunk_ids", "prompt_version", "contextualized", "advisory"}."""
+    """Non-streaming answer_stream(): {"type": "answer", "answer", "shortcut", "timing",
+    "chunk_ids", "prompt_version", "contextualized", "advisory"}."""
     final_event = None
-    for event in answer_stream(query, user_attributes, top_k=top_k, candidate_n=candidate_n, k=k,
+    for event in answer_stream(query, top_k=top_k, candidate_n=candidate_n, k=k,
                                confidence_threshold=confidence_threshold, history=history):
-        if event["type"] == "needs_clarification":
-            return event
         if event["type"] == "done":
             final_event = event
     return {

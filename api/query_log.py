@@ -1,4 +1,7 @@
-"""Fire-and-forget query logging. Never raises into the caller."""
+"""Fire-and-forget query logging. Never raises into the caller.
+
+The query_logs columns user_attributes and blocking_tag_type are no longer written (the
+applicability layer is unwired); they stay in the table, nullable, so historical rows remain readable."""
 import logging
 
 from psycopg.types.json import Jsonb
@@ -13,8 +16,6 @@ def log_query(
     query_text: str,
     response_type: str,
     answer_text: str | None = None,
-    user_attributes: dict | None = None,
-    blocking_tag_type: str | None = None,
     shortcut_fired: bool | None = None,
     timing: dict | None = None,
     chunk_ids_used: list | None = None,
@@ -29,16 +30,13 @@ def log_query(
             conn.execute(
                 """
                 INSERT INTO query_logs (
-                    query_text, response_type, answer_text, user_attributes,
-                    blocking_tag_type, shortcut_fired, retrieval_time_ms,
+                    query_text, response_type, answer_text, shortcut_fired, retrieval_time_ms,
                     ttft_ms, total_generation_time_ms, chunk_ids_used, source, prompt_version,
                     contextualized, advisory
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
-                    query_text, response_type, answer_text,
-                    Jsonb(user_attributes) if user_attributes is not None else None,
-                    blocking_tag_type, shortcut_fired,
+                    query_text, response_type, answer_text, shortcut_fired,
                     timing.get("retrieval_time_ms"),
                     timing.get("time_to_first_token_ms"),
                     timing.get("total_generation_time_ms"),

@@ -23,9 +23,9 @@ Sections, in order:
       case (a real, on-topic chunk gets retrieved but doesn't actually
       contain the answer) must still produce a refusal, not a
       confident-sounding guess.
-  (c) Access control: the 4 real-data scenarios + control from the
-      retired eval_access_control.py, each as a real assertion instead
-      of a printed comparison for a human to eyeball.
+  (c) No applicability filtering / clarification: retrieval is identical with or
+      without user attributes, no turn ever becomes a clarifying question, restricted
+      documents are never used (toggled and restored here).
   (d) Shape/import sanity: asserts the exact field count/keys of shared
       internals (fetch_chunk_details, retrieve()'s result dicts,
       generate_answer()'s "done" event, ask_and_answer()'s result
@@ -162,63 +162,150 @@ def run_generation_regression():
           indicates_uncertainty(event["answer"]), f"answer={event['answer']!r}")
 
 
-# --- (c) Access control scenarios ------------------------------------------
+# --- (c) No applicability filtering / clarification -------------------------
+# (Replaces the former access-control scenarios: the layer is unwired, see
+# docs/applicability_layer_removed.md. Last version with them: commit fd317af.)
 
-def run_access_control_regression():
-    print("\n=== (c) Access control scenarios (real corpus data) ===")
+def run_unfiltered_regression():
+    print("\n=== (c) No applicability filtering or clarification ===")
+    attr_sets = [None, {}, {"country": "India", "employment_type": "full-time employee"},
+                 {"country": "United States", "employment_type": "contractor"}]
+    for query in (TAGGED_QUERY, UNTAGGED_QUERY, "how many leaves do interns get"):
+        baseline = [(r["chunk_id"], r["fused_score"]) for r in retrieve(query, top_k=5)]
+        same = all([(r["chunk_id"], r["fused_score"]) for r in retrieve(query, top_k=5, user_attributes=a)] == baseline
+                   for a in attr_sets)
+        check(f"retrieval identical with and without any attributes: {query!r}", same, f"baseline={baseline}")
+        for a in attr_sets:
+            result = ask_and_answer(query, user_attributes=a)
+            check(f"ask_and_answer({query[:30]!r}..., attributes={a}) is an answer, never a clarification",
+                  result["type"] == "answer", f"got {result.get('type')}")
+    unfiltered = {r["chunk_id"] for r in retrieve(TAGGED_QUERY, top_k=5, user_attributes={"country": "United States"})}
+    check("tagged (India-only) content is still retrieved for a non-India attribute (nothing is filtered)",
+          bool(unfiltered & TAGGED_CHUNK_IDS), f"ids={unfiltered}")
 
-    # (a) No user_attributes at all -> candidate pool touches tagged
-    # content, nothing known about the user -> clarification. Country is
-    # never asked: every document is India-only, and ask_and_answer()
-    # fills country from app_config 'user.default_attributes' (India), so
-    # the only blocking attribute left is employment_type.
-    result = ask_and_answer(TAGGED_QUERY, user_attributes=None)
-    check("scenario (a) no attributes -> needs_clarification",
-          result["type"] == "needs_clarification", f"got {result}")
-    check("scenario (a) blocks on 'employment_type', never 'country'",
-          result.get("blocking_tag_type") == "employment_type", f"got {result}")
+    # Restricted documents are the ONLY thing hidden: toggle, confirm never used, restore.
+    pool = get_pool()
+    with pool.connection() as conn:
+        ids = [r[0] for r in conn.execute(
+            "SELECT d.id FROM documents d WHERE d.status = 'active' AND d.document_title ILIKE '%REFERRAL BONUS%'").fetchall()]
+        was = {r[0]: r[1] for r in conn.execute("SELECT id, is_restricted FROM documents WHERE id = ANY(%s)", (ids,)).fetchall()}
+    check("found the referral documents to restrict", len(ids) >= 1, str(ids))
+    try:
+        with pool.connection() as conn:
+            conn.execute("UPDATE documents SET is_restricted = true WHERE id = ANY(%s)", (ids,))
+            conn.commit()
+        results = retrieve(TAGGED_QUERY, top_k=10)
+        check("restricted documents never appear in retrieve()", not any(str(r["document_id"]) in map(str, ids) for r in results),
+              str([(r["chunk_id"]) for r in results]))
+        result = ask_and_answer(TAGGED_QUERY)
+        check("restricted documents are never used for an answer", not (set(result.get("chunk_ids", [])) & TAGGED_CHUNK_IDS),
+              str(result.get("chunk_ids")))
+    finally:
+        with pool.connection() as conn:
+            for doc_id, flag in was.items():
+                conn.execute("UPDATE documents SET is_restricted = %s WHERE id = %s", (flag, doc_id))
+            conn.commit()
+    back = {r["document_id"] for r in retrieve(TAGGED_QUERY, top_k=10)}
+    check("restored: the referral documents are retrievable again", any(str(d) in map(str, ids) for d in back), str(back))
 
-    # (b) country known, employment_type unknown -> clarification,
-    # blocking on "employment_type".
-    result = ask_and_answer(TAGGED_QUERY, user_attributes={"country": "India", "employment_type": None})
-    check("scenario (b) missing employment_type -> needs_clarification",
-          result["type"] == "needs_clarification", f"got {result}")
-    check("scenario (b) blocks on 'employment_type'",
-          result.get("blocking_tag_type") == "employment_type", f"got {result}")
 
-    # (c) both known and matching -> real answer, tagged chunk included
-    # in the filtered candidate pool.
-    attrs_match = {"country": "India", "employment_type": "full-time employee"}
-    result = ask_and_answer(TAGGED_QUERY, user_attributes=attrs_match)
-    check("scenario (c) matching attributes -> answer (not clarification)",
-          result["type"] == "answer", f"got {result}")
-    filtered_ids = {r["chunk_id"] for r in retrieve(TAGGED_QUERY, top_k=5, user_attributes=attrs_match)}
-    check("scenario (c) tagged chunk included when attributes match",
-          bool(filtered_ids & TAGGED_CHUNK_IDS), f"filtered_ids={filtered_ids}")
+# --- (e) Per-turn LLM / retrieval / embedding calls, through the real endpoints -------
 
-    # (d) country known but wrong -> tagged chunks excluded from the
-    # filtered candidate pool, and the fallback answer refuses rather
-    # than answering from irrelevant leftover context.
-    attrs_mismatch = {"country": "United States", "employment_type": "full-time employee"}
-    unfiltered_ids = {r["chunk_id"] for r in retrieve(TAGGED_QUERY, top_k=5)}
-    filtered_ids = {r["chunk_id"] for r in retrieve(TAGGED_QUERY, top_k=5, user_attributes=attrs_mismatch)}
-    check("scenario (d) tagged chunks present unfiltered",
-          bool(unfiltered_ids & TAGGED_CHUNK_IDS), f"unfiltered_ids={unfiltered_ids}")
-    check("scenario (d) tagged chunks excluded once filtered on mismatched country",
-          not (filtered_ids & TAGGED_CHUNK_IDS), f"filtered_ids={filtered_ids}")
-    result = ask_and_answer(TAGGED_QUERY, user_attributes=attrs_mismatch)
-    check("scenario (d) result type is 'answer' (attributes fully known, no clarification needed)",
-          result["type"] == "answer", f"got {result}")
-    check("scenario (d) answer indicates refusal (irrelevant fallback context)",
-          indicates_uncertainty(result.get("answer", "")), f"answer={result.get('answer')!r}")
+def run_call_budget():
+    print("\n=== (e) Per-turn calls: normal turn = 1 retrieval, 1 embedding, 1 generation ===")
+    import os
 
-    # Control: untagged content, user_attributes must have zero effect.
-    unfiltered_ids = {r["chunk_id"] for r in retrieve(UNTAGGED_QUERY, top_k=5)}
-    filtered_ids = {r["chunk_id"] for r in retrieve(
-        UNTAGGED_QUERY, top_k=5, user_attributes={"country": "United States", "employment_type": "contractor"}
-    )}
-    check("control: untagged query unaffected by user_attributes",
-          unfiltered_ids == filtered_ids, f"unfiltered={unfiltered_ids} filtered={filtered_ids}")
+    from fastapi.testclient import TestClient
+
+    import channels.text as text_ch
+    import channels.voice as voice_ch
+    import generation.generate as gen_mod
+    import vectorstore.retrieve as retrieve_mod
+    from api.main import app
+
+    calls = {"llm": 0, "retrieve": 0, "embed": 0, "messages": []}
+    client_llm = gen_mod.get_client()
+    original_create = client_llm.chat.completions.create
+
+    def counted_create(*a, **k):
+        calls["llm"] += 1
+        calls["messages"].append(k.get("messages"))
+        return original_create(*a, **k)
+
+    client_llm.chat.completions.create = counted_create
+    embedder = retrieve_mod._get_embedder()
+    original_embed = embedder.embed
+
+    def counted_embed(*a, **k):
+        calls["embed"] += 1
+        return original_embed(*a, **k)
+
+    embedder.embed = counted_embed
+    for mod in (text_ch, voice_ch):
+        orig_retrieve = mod.retrieve
+
+        def counted_retrieve(*a, _o=orig_retrieve, **k):
+            calls["retrieve"] += 1
+            return _o(*a, **k)
+
+        mod.retrieve = counted_retrieve
+
+    def measured(fn):
+        calls.update(llm=0, retrieve=0, embed=0, messages=[])
+        retrieve_mod.embed_query.cache_clear()
+        retrieve_mod.embed_queries.cache_clear()
+        return fn()
+
+    def voice_turn(client, text):
+        headers = {"Authorization": f"Bearer {os.environ['THINK_ENDPOINT_SECRET']}"} if os.environ.get("THINK_ENDPOINT_SECRET") else {}
+        msgs = [{"role": "user", "content": "-"}, {"role": "assistant", "content": "Hi, I'm the HR assistant."},
+                {"role": "user", "content": text}]
+        r = client.post("/api/voice/v1/chat/completions", json={"messages": msgs, "stream": True}, headers=headers)
+        out = ""
+        for line in r.text.splitlines():
+            if line.startswith("data: ") and line != "data: [DONE]":
+                for choice in json.loads(line[6:])["choices"]:
+                    out += choice["delta"].get("content") or ""
+        return out
+
+    with get_pool().connection() as conn:
+        first_id = conn.execute("SELECT coalesce(max(id), 0) FROM query_logs").fetchone()[0]
+
+    with TestClient(app) as client:
+        client.post("/api/chat", json={"query": "warm up: what is the leave policy"})
+        r = measured(lambda: client.post("/api/chat", json={"query": "how many days of earned leave do I get"}))
+        check("text normal turn: answer, exactly 1 generation call, no other LLM call",
+              r.json()["type"] == "answer" and calls["llm"] == 1, f"{r.json()['type']} llm={calls['llm']}")
+        check("text normal turn: retrieval runs once, one embedding call", calls["retrieve"] == 1 and calls["embed"] == 1,
+              f"retrieve={calls['retrieve']} embed={calls['embed']}")
+        text_v = measured(lambda: voice_turn(client, "how many days of earned leave do I get"))
+        check("voice normal turn: spoken answer, exactly 1 generation call", bool(text_v) and calls["llm"] == 1, f"llm={calls['llm']}")
+        check("voice normal turn: retrieval runs once, one embedding call", calls["retrieve"] == 1 and calls["embed"] == 1,
+              f"retrieve={calls['retrieve']} embed={calls['embed']}")
+        r = measured(lambda: client.post("/api/chat", json={"query": "what is the weather forecast for tomorrow"}))
+        check("shortcut turn: 0 LLM calls, retrieval once", r.json()["type"] == "refusal_shortcut" and calls["llm"] == 0 and calls["retrieve"] == 1,
+              f"{r.json()['type']} llm={calls['llm']} retrieve={calls['retrieve']}")
+
+        # The old clarification-triggering query answers directly, on both channels, with and without legacy fields.
+        r = measured(lambda: client.post("/api/chat", json={"query": TAGGED_QUERY}))
+        check("referral query (formerly a clarification) is answered directly: 1 generation call, 1 retrieval",
+              r.json()["type"] == "answer" and calls["llm"] == 1 and calls["retrieve"] == 1, f"{r.json()['type']} llm={calls['llm']} retr={calls['retrieve']}")
+        label_seen = any("[Applies to: India; full-time employee, intern]" in m["content"] for m in calls["messages"][-1])
+        check("retrieved chunks carry the plain '[Applies to: ...]' group label into the model input", label_seen)
+        legacy = client.post("/api/chat", json={"query": TAGGED_QUERY, "user_attributes": {"country": "India"},
+                                                 "pending_clarification": {"original_query": "x", "blocking_tag_type": "country"}})
+        check("legacy request fields (user_attributes, pending_clarification) are ignored, still an answer",
+              legacy.status_code == 200 and legacy.json()["type"] == "answer" and "user_attributes" not in legacy.json(), legacy.text[:200])
+        spoken = measured(lambda: voice_turn(client, TAGGED_QUERY))
+        check("voice endpoint never emits the clarification phrase or question",
+              "quick check before i answer" not in spoken.lower() and "full-time employee or a contractor" not in spoken.lower(), spoken)
+        check("voice referral turn: 1 generation call, 1 retrieval", calls["llm"] == 1 and calls["retrieve"] == 1, f"llm={calls['llm']} retr={calls['retrieve']}")
+
+    with get_pool().connection() as conn:
+        n = conn.execute("SELECT count(*) FROM query_logs WHERE id > %s AND response_type = 'clarification'", (first_id,)).fetchone()[0]
+        cols = conn.execute("SELECT count(*) FROM query_logs WHERE id > %s AND (blocking_tag_type IS NOT NULL OR user_attributes IS NOT NULL)", (first_id,)).fetchone()[0]
+    check("no query_logs row written by this run has response_type 'clarification'", n == 0, str(n))
+    check("blocking_tag_type / user_attributes are no longer written", cols == 0, str(cols))
 
 
 # --- (d) Shape/import sanity ------------------------------------------------
@@ -238,12 +325,12 @@ def run_shape_sanity():
             "SELECT id FROM chunks WHERE chunk_id = %s", (results[0]["chunk_id"],)
         ).fetchone()
         details = fetch_chunk_details(conn, [row[0]])
-        check("fetch_chunk_details() returns exactly one 5-field tuple per chunk_db_id",
-              len(details) == 1 and len(next(iter(details.values()))) == 5,
+        check("fetch_chunk_details() returns exactly one 6-field tuple per chunk_db_id (incl. the applies_to label)",
+              len(details) == 1 and len(next(iter(details.values()))) == 6,
               f"got {details}")
 
     expected_retrieve_keys = {
-        "chunk_id", "section_path", "text", "document_title", "document_id",
+        "chunk_id", "section_path", "text", "document_title", "document_id", "applies_to",
         "fused_score", "dense_rank", "sparse_rank",
     }
     check("retrieve() result dicts have the expected keys",
@@ -253,17 +340,9 @@ def run_shape_sanity():
     check("generate_answer()'s 'done' event has the expected keys",
           set(event.keys()) == {"type", "answer", "shortcut", "timing", "chunk_ids", "prompt_version", "contextualized", "advisory"}, f"got {set(event.keys())}")
 
-    # UNTAGGED_QUERY, not "PIP objective" - PIP is now real-tagged
-    # (country=India, employment_type=full-time employee), so it would
-    # return needs_clarification here rather than an "answer" shape.
     answer_result = ask_and_answer(UNTAGGED_QUERY, user_attributes=None)
     check("ask_and_answer() 'answer' result has the expected keys",
           set(answer_result.keys()) == {"type", "answer", "shortcut", "timing", "chunk_ids", "prompt_version", "contextualized", "advisory"}, f"got {set(answer_result.keys())}")
-
-    clarification_result = ask_and_answer(TAGGED_QUERY, user_attributes=None)
-    check("ask_and_answer() 'needs_clarification' result has the expected keys",
-          set(clarification_result.keys()) == {"type", "question", "blocking_tag_type", "contextualized", "advisory"},
-          f"got {set(clarification_result.keys())}")
 
 
 def main():
@@ -273,8 +352,9 @@ def main():
 
     run_retrieval_regression()
     run_generation_regression()
-    run_access_control_regression()
+    run_unfiltered_regression()
     run_shape_sanity()
+    run_call_budget()
     close_pool()
 
     passed = sum(1 for _, ok, _ in _results if ok)

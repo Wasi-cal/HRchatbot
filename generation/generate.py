@@ -84,14 +84,15 @@ def generate_answer(
     history: list | None = None,
 ):
     """Compatibility router: yields the same events as the channel module's
-    generate_stream() ("token" events, then one "done" event; see channels/text.py).
+    answer_stream() ("token" events, then one "done" event; see channels/text.py).
+    user_attributes is accepted and ignored (nothing is filtered by who is asking).
     Exists so eval tooling has one entry point; the API calls the channel
     modules directly."""
     from channels import get_channel  # lazy: channels import this module
 
-    yield from get_channel(channel).generate_stream(
+    yield from get_channel(channel).answer_stream(
         query, top_k=top_k, candidate_n=candidate_n, k=k,
-        confidence_threshold=confidence_threshold, user_attributes=user_attributes, history=history,
+        confidence_threshold=confidence_threshold, history=history,
     )
 
 

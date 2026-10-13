@@ -11,10 +11,10 @@ B=http://localhost:8000
 # fresh query
 curl -s $B/api/chat -H 'content-type: application/json' \
   -d '{"query":"How many days of leave do I get?"}'
-# -> {"type":"needs_clarification","blocking_tag_type":"country","original_query":...}
-# resolve it (send back original_query + blocking_tag_type, and any user_attributes returned)
+# -> {"type":"answer","text":"...","timing":{...}}   (nothing is asked back; see docs/applicability_layer_removed.md)
+# follow-ups: send the prior visible turns (the server caps and truncates them)
 curl -s $B/api/chat -H 'content-type: application/json' \
-  -d '{"query":"I work in India","pending_clarification":{"original_query":"How many days of leave do I get?","blocking_tag_type":"country"}}'
+  -d '{"query":"and sick leave?","history":[{"role":"user","content":"How many days of leave do I get?"},{"role":"assistant","content":"..."}]}'
 # upload / list / restrict
 curl -s -F file=@"hr docs/Travel Policy_Ver1.0.pdf" $B/api/admin/documents/upload
 curl -s $B/api/admin/documents
@@ -25,8 +25,15 @@ curl -s "$B/api/admin/usage/recent?limit=50"
 ```
 
 Response `type` is `answer`, `refusal_shortcut` (low-confidence canned reply), `smalltalk`
-(a pure greeting/thanks/goodbye etc., answered by `api/smalltalk.py` with no retrieval or LLM call), or
-`needs_clarification`. All include `user_attributes` - send them back on the next turn.
+(a pure greeting/thanks/goodbye etc., answered with no retrieval or LLM call), or `source_lookup` ("where is this from" after an
+answer: a templated reply naming up to 3 documents from a deterministic re-retrieval of the previous turn, 0 LLM calls; only when the
+history has an earlier assistant answer). Small-talk phrases (`smalltalk.phrases.<channel>`), the affirmations that are NOT small talk after
+a question/offer (`smalltalk.affirmations`, `smalltalk.offer_markers`), the source phrases (`source.markers`) and the source reply templates
+(`source.templates.<channel>`) are editable in `app_config` (a 30s in-process copy; admin edits apply at once in the serving process).
+Answers come from
+everything that is not restricted: there is no per-user filtering and no clarifying question (the old
+`user_attributes` / `pending_clarification` request fields are ignored). A turn is: small-talk match, else retrieve once
+and generate once.
 There is no auth (see the security note in `api/main.py`).
 
 ## Voice (Deepgram Voice Agent, bring-your-own-LLM)
@@ -59,9 +66,9 @@ back, and the endpoint rejects calls without it. Model/voice/greeting live in `p
 
 Test without Deepgram or audio: `python3 -m eval.voice_think_test` (simulates Deepgram's calls with a full message history).
 
-How it works: the endpoint is stateless and re-derives everything from the history. A clarifying question is
-spoken as `"Quick check before I answer - <question>"` using a fixed wording per attribute (no hidden token,
-since TTS would read it out); the next user turn is then treated as the reply. Country defaults to India.
+How it works: the endpoint is stateless and derives everything from the history Deepgram sends (minus the synthetic
+`-` turn and the greeting). A turn is: small-talk match, else retrieve once and generate once, streamed. There are no
+clarifying questions any more.
 The request body Deepgram sends isn't fully documented, so the endpoint reads only `messages` and
 should be checked against a real session. Voice turns are logged with `source = 'voice'`
 (`/api/admin/usage/summary?source=voice` filters on it).
@@ -107,7 +114,7 @@ What it showed in the first live session (Oct 2026):
 - Body is exactly `{"model", "messages", "stream": true, "stream_options": {"include_usage": true}}`: **`stream` is sent
   explicitly as `true`**, no `tools`/system message (we configure no prompt or functions).
 - `messages` is the full history, starting with a synthetic `{"role":"user","content":"-"}` followed by the greeting, then the
-  real turns. Our spoken clarifying questions come back verbatim, so history-based clarification detection works.
+  real turns (this is what the conversation history for follow-ups is built from).
 - Deepgram sends our `authorization` header from `think.endpoint.headers`.
 
 Token notes: `ttl_seconds` must be an **integer** (a float such as `60.0` is silently ignored and you get 30s). An idle session
@@ -117,8 +124,8 @@ handshake time; a long mic conversation hasn't been tried.
 ## Frontend
 
 A dummy, no-auth, no-build frontend (plain HTML/CSS/JS in `frontend/`) is served by the API itself: start
-`./run_api.sh` and open **http://localhost:8000/app/** (`/` redirects there). The **User** tab has text chat (clarification
-questions and refusals are styled distinctly; resolved attributes are kept client-side) and a **Start Voice** button; the
+`./run_api.sh` and open **http://localhost:8000/app/** (`/` redirects there). The **User** tab has text chat (refusals are styled distinctly; the last few messages are sent as history)
+and a **Start Voice** button; the
 **Admin** tab has Documents (upload, list, restrict toggle), Usage (day window, summary, recent queries) and Config
 (editable values, validated server-side).
 
@@ -130,11 +137,11 @@ Use a browser that allows the microphone for `localhost` (Chrome/Edge/Firefox/Sa
 ## Text and voice are separate
 
 Each channel is one self-contained module: `channels/text.py` (served by `/api/chat`) and `channels/voice.py` (served by
-the think endpoint in `api/voice.py`). A module owns its retrieval -> applicability check -> generation flow, small-talk
+the think endpoint in `api/voice.py`). A module owns its retrieve -> generate flow, small-talk
 patterns and replies, and no-match copy; neither imports the other. `channels/common.py` holds only behaviour-free
 helpers. Everything tunable is a per-channel DB row, seeded once from the previous global value and then independent:
 `retrieval.top_k|candidate_n|rrf_k.<channel>`, `generation.model.<channel>`, `generation.confidence_threshold.<channel>`,
-`user.default_attributes.<channel>`, and the prompts (`style` and `grounding_core`, per channel). The un-suffixed keys are
+and the prompts (`style` and `grounding_core`, per channel). The un-suffixed keys are
 only a fallback for callers that pass no channel. Each turn logs one line under `hrchatbot.text` / `hrchatbot.voice`
 (turn type, model, prompt versions, timings), and `query_logs.source` separates the two in usage views.
 `generation.generate.generate_answer(channel=...)` and `access_control.ask_and_answer` are thin routers kept for eval tooling.

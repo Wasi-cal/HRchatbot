@@ -29,6 +29,63 @@ CACHE_TTL_SECONDS = 30
 # Defaults: used to seed rows and as a last-resort fallback if a read fails.
 # The retrieval values must equal vectorstore/retrieve.py's DEFAULT_* (checked
 # by eval/config_test.py).
+# ---- small talk and source questions (editable JSON, see channels/common.py) -------------------------------
+# Phrases are NORMALIZED (lowercase, no punctuation or apostrophes). A turn is small talk only when the WHOLE
+# utterance is one of a category's phrases (optionally with a trailing address word like "there"/"bot", or
+# a leading greeting for how_are_you / capabilities / greeting).
+_SMALLTALK_COMMON = {
+    "greeting": ["hi", "hii", "hello", "helloo", "hey", "heyy", "heya", "hiya", "yo", "sup", "wassup", "wazzup",
+                 "whats up", "whatsup", "howdy", "greetings", "good morning", "good afternoon", "good evening", "good day"],
+    "how_are_you": ["how are you", "how are you doing", "how are you today", "how r u", "how do you do", "hows it going",
+                    "how is it going", "how are things", "hows everything", "how you doing", "you good", "are you ok",
+                    "are you okay"],
+    "thanks": ["thanks", "thank you", "thx", "ty", "cheers", "much appreciated", "appreciate it", "many thanks",
+               "thanks a lot", "thanks so much", "thanks very much", "thanks a ton", "thank you so much",
+               "thank you very much", "thank you a lot", "ok thanks", "okay thanks", "cool thanks", "great thanks",
+               "alright thanks", "perfect thanks", "got it thanks", "ok thank you", "okay thank you", "cool thank you",
+               "great thank you", "alright thank you", "perfect thank you", "got it thank you", "yes thank you",
+               "yes thanks", "yes thank you so much"],
+    "goodbye": ["bye", "bye bye", "goodbye", "see you", "see you later", "see you soon", "see ya", "later", "good night",
+                "take care", "talk later", "ttyl", "cya", "catch you later"],
+    "capabilities": ["who are you", "what are you", "what is your name", "whats your name", "what can you do",
+                     "what can you do for me", "what do you do", "what can you help with", "what can you help me with",
+                     "how can you help", "how can you help me", "what can i ask", "what can i ask you",
+                     "what do you know", "help", "help me"],
+    "ack": ["ok", "okay", "k", "kk", "cool", "got it", "alright", "all right", "understood", "i see", "noted", "great",
+            "nice", "awesome", "perfect", "makes sense", "sounds good", "ok cool", "okay cool", "ok great", "ok got it",
+            "cool great", "cool got it", "great got it", "yes", "yeah", "yep", "yup", "yea", "sure", "yessir", "yes sir"],
+    "are_you_there": ["are you there", "you there", "anyone there", "is anyone there"],
+}
+DEFAULT_SMALLTALK_PHRASES = {
+    "text": _SMALLTALK_COMMON,
+    # Voice-only phrasings: people check the line is live before they ask.
+    "voice": {**_SMALLTALK_COMMON, "are_you_there": _SMALLTALK_COMMON["are_you_there"] + [
+        "are you listening", "can you hear me", "hello hello", "testing", "test", "mic check", "is this thing on"]},
+}
+DEFAULT_SOURCE_MARKERS = [
+    "source", "the source", "whats the source", "what is the source", "whats the source of this",
+    "whats the source of that", "what is the source of this", "what is the source of that", "source of this",
+    "source of that", "where is this from", "where is that from", "where did you get that", "where did you get this",
+    "where did that come from", "where did this come from", "which policy is this", "which policy is that",
+    "which document", "which document is this", "which document is that", "reference", "where is that mentioned",
+    "where is this mentioned",
+]
+DEFAULT_SOURCE_TEMPLATES = {
+    "text": {
+        "one": "That came from the {title}.",
+        "one_with_section": "That came from the {title}, in the section {section}.",
+        "many": "That drew on the {titles}.",
+        "none": "That answer didn't come from a policy document.",
+        "not_found": "I couldn't work out which document that came from.",
+    },
+    "voice": {
+        "one": "That's from the {title} policy.",
+        "many": "That drew on the {titles} policies.",
+        "none": "That answer didn't come from a policy document.",
+        "not_found": "I couldn't work out which document that came from.",
+    },
+}
+
 DEFAULT_APP_CONFIG = {
     "retrieval.top_k": (3, "Chunks returned by retrieve() after RRF fusion."),
     "retrieval.candidate_n": (20, "Candidates pulled from each of dense and sparse search before fusion."),
@@ -70,13 +127,22 @@ DEFAULT_APP_CONFIG = {
     "retrieval.expansion.candidate_n": (2, "Candidates pulled per expansion query (dense and sparse each): only its top hits should steer the context."),
     # 4, not 2: in this corpus leave, work-from-home and comp-off all live inside ONE document (the Employee
     # Handbook), so a cap of 2 cannot hold the leave rule AND both alternatives (measured; see the report).
+    "smalltalk.phrases.text": (DEFAULT_SMALLTALK_PHRASES["text"], "Text channel small-talk phrases by category (normalized; whole-utterance match). Editable."),
+    "smalltalk.phrases.voice": (DEFAULT_SMALLTALK_PHRASES["voice"], "Voice channel small-talk phrases by category (normalized; whole-utterance match). Editable."),
+    "smalltalk.affirmations": (
+        ["yes", "yeah", "yep", "yup", "yea", "sure", "ok", "okay", "yessir", "yes sir", "yes thank you", "yes thanks", "yes please"],
+        "Affirmation phrases: NOT small talk when the previous assistant turn ended with a question or made an offer - they go through the normal pipeline so the offer is followed up.",
+    ),
+    "smalltalk.offer_markers": (
+        ["would you like", "want me to", "i can also"],
+        "Phrases that mark an assistant message as an offer (a message ending in '?' also counts).",
+    ),
+    "source.markers": (DEFAULT_SOURCE_MARKERS, "Whole-utterance phrases (normalized, <= 8 words) that ask where the previous answer came from."),
+    "source.templates.text": (DEFAULT_SOURCE_TEMPLATES["text"], "Text replies for a source question. Keys: one, one_with_section, many, none, not_found."),
+    "source.templates.voice": (DEFAULT_SOURCE_TEMPLATES["voice"], "Voice replies for a source question (document name only). Keys: one, many, none, not_found."),
     "retrieval.advisory.max_chunks_per_doc": (4, "Per-document cap on chunks in an advisory turn's context, applied after RRF fusion."),
     "retrieval.top_k.advisory.text": (6, "Chunks retrieved for an advisory text turn."),
     "retrieval.top_k.advisory.voice": (4, "Chunks retrieved for an advisory voice turn."),
-    "user.default_attributes": (
-        {"country": "India"},
-        "Applicability attributes assumed when the caller doesn't supply them (no auth yet; all documents are India-only).",
-    ),
 }
 DEFAULT_GENERATION_MODEL = "gpt-4o-mini"
 DEFAULT_CONFIDENCE_THRESHOLD = 0.02
@@ -194,7 +260,7 @@ def _seed_channel_settings(conn) -> None:
     for channel in CHANNELS:
         for key, description in CHANNEL_SETTINGS.items():
             text = f"{description} - {channel} channel; overrides {key} for it."
-            if key.startswith(("retrieval.", "user.", "conversation.")):
+            if key.startswith(("retrieval.", "conversation.")):
                 conn.execute(
                     "INSERT INTO app_config (key, value, description) SELECT %s, value, %s FROM app_config "
                     "WHERE key = %s ON CONFLICT (key) DO NOTHING",

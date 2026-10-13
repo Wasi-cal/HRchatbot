@@ -30,7 +30,6 @@ from vectorstore.db import close_pool, get_pool  # noqa: E402
 from vectorstore.retrieve import retrieve  # noqa: E402
 
 TEST_NOTE = "prompts_test"
-ATTRS = {"country": "India", "employment_type": "full-time employee"}
 LENGTH_QUERIES = [
     "how many days of earned leave do I get and what are the rules for it",
     "what is the notice period and can it be bought out",
@@ -62,7 +61,7 @@ def install_counter():
 
 
 def final_event(query, channel):
-    for event in generate_answer(query, user_attributes=ATTRS, channel=channel):
+    for event in generate_answer(query, channel=channel):
         if event["type"] == "done":
             return event
     raise AssertionError("no done event")

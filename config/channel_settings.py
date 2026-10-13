@@ -21,7 +21,6 @@ CHANNEL_SETTINGS = {
     "retrieval.rrf_k": "Reciprocal Rank Fusion constant k",
     "generation.model": "Chat model used to generate answers",
     "generation.confidence_threshold": "Minimum top fused_score required to attempt generation",
-    "user.default_attributes": "Applicability attributes assumed when the caller supplies none",
     "conversation.history_messages": "Max prior user/assistant messages accepted per turn",
     "conversation.history_max_chars": "Each history message is truncated to this many characters",
     "retrieval.context.max_words_followup": "Utterances shorter than this many words count as follow-ups",

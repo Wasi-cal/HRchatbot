@@ -9,22 +9,12 @@ require (or want) an instruction prefix for either queries or passages,
 unlike earlier BGE v1/v1.5 models. Queries are embedded unmodified here,
 consistent with how passages are embedded in embedder.py.
 
-Access control: retrieve() takes an optional user_attributes dict (see
-access_control/user_attributes.py for the expected shape) and applies
-two kinds of hard filtering, both BEFORE dense/sparse scoring so
-excluded chunks never consume a candidate_n slot:
-  - documents.is_restricted is always excluded, unconditionally,
-    regardless of user_attributes (it's a manual-only flag - see
-    access_control's is_restricted column note in schema.sql).
-  - For each tag_type in user_attributes whose value is known (not
-    None), a chunk is excluded if its document has applicability_tags
-    of that tag_type but none of them match the user's value. A
-    document with no tags at all for a given tag_type is never
-    filtered on that tag_type (it applies to everyone).
-Passing no user_attributes at all (the default) applies only the
-is_restricted filter - since no document is flagged restricted by
-default, this keeps retrieve() fully backward compatible for existing
-callers that don't know about user_attributes.
+Visibility: every search excludes superseded chunks (is_superseded) and documents
+flagged documents.is_restricted (a manual admin toggle), BEFORE scoring so excluded
+chunks never consume a candidate_n slot. Nothing else filters results: everyone is
+answered from everything that is not restricted. Applicability tags are NOT used for
+filtering any more (see docs/applicability_layer_removed.md); they are fetched with each
+chunk's details only so generation can say which group a rule applies to.
 """
 from functools import lru_cache
 
@@ -82,28 +72,10 @@ def get_active_embedding_model_id(conn) -> int:
     return row[0]
 
 
-def _applicability_filter_sql(user_attributes: dict | None):
-    """Builds a WHERE-clause fragment (ANDed together) plus its params,
-    to be appended after a base condition in a query that already joins
-    chunks AS c and documents AS d. Always excludes is_restricted
-    documents; additionally excludes, per known user_attributes entry,
-    chunks whose document has applicability tags of that type that
-    don't include the user's value."""
-    conditions = ["NOT d.is_restricted"]
-    params: list = []
-    for tag_type, value in (user_attributes or {}).items():
-        if value is None:
-            continue
-        conditions.append(
-            "NOT ("
-            "EXISTS (SELECT 1 FROM document_applicability da JOIN applicability_tags at "
-            "ON at.id = da.tag_id WHERE da.document_id = c.document_id AND at.tag_type = %s) "
-            "AND NOT EXISTS (SELECT 1 FROM document_applicability da JOIN applicability_tags at "
-            "ON at.id = da.tag_id WHERE da.document_id = c.document_id AND at.tag_type = %s AND at.tag_value = %s)"
-            ")"
-        )
-        params.extend([tag_type, tag_type, value])
-    return " AND ".join(conditions), params
+def _visibility_filter_sql() -> str:
+    """WHERE-clause fragment for a query that already joins chunks AS c and
+    documents AS d: restricted documents are never searchable."""
+    return "NOT d.is_restricted"
 
 
 def dense_search(
@@ -111,12 +83,11 @@ def dense_search(
     query_dense,
     model_id: int,
     candidate_n: int = DEFAULT_CANDIDATE_N,
-    user_attributes: dict | None = None,
 ):
     """Cosine-similarity search via the HNSW index. Returns a list of
     (chunk_db_id, similarity) ordered by similarity descending - list
     position gives the dense rank (1-based)."""
-    filter_sql, filter_params = _applicability_filter_sql(user_attributes)
+    filter_sql = _visibility_filter_sql()
     rows = conn.execute(
         f"""
         SELECT ce.chunk_id, 1 - (ce.dense_vector <=> %s) AS similarity
@@ -127,7 +98,7 @@ def dense_search(
         ORDER BY ce.dense_vector <=> %s
         LIMIT %s
         """,
-        [query_dense, model_id, *filter_params, query_dense, candidate_n],
+        [query_dense, model_id, query_dense, candidate_n],
     ).fetchall()
     return [(chunk_db_id, float(similarity)) for chunk_db_id, similarity in rows]
 
@@ -144,13 +115,12 @@ def sparse_search(
     query_sparse: dict,
     model_id: int,
     candidate_n: int = DEFAULT_CANDIDATE_N,
-    user_attributes: dict | None = None,
 ):
     """Sparse (lexical) search computed in application code: pulls every
     active chunk's sparse_vector under the active model once, scores each
     against the query in memory, and returns the top candidate_n as
     (chunk_db_id, score) ordered by score descending."""
-    filter_sql, filter_params = _applicability_filter_sql(user_attributes)
+    filter_sql = _visibility_filter_sql()
     rows = conn.execute(
         f"""
         SELECT ce.chunk_id, ce.sparse_vector
@@ -159,7 +129,7 @@ def sparse_search(
         JOIN documents d ON d.id = c.document_id
         WHERE ce.embedding_model_id = %s AND NOT c.is_superseded AND {filter_sql}
         """,
-        [model_id, *filter_params],
+        [model_id],
     ).fetchall()
 
     scored = [
@@ -171,11 +141,10 @@ def sparse_search(
     return scored[:candidate_n]
 
 
-def sparse_search_many(conn, query_sparses: list[dict], model_id: int, limits: list[int],
-                       user_attributes: dict | None = None):
+def sparse_search_many(conn, query_sparses: list[dict], model_id: int, limits: list[int]):
     """sparse_search() for several queries over ONE fetch of the chunk sparse vectors
     (the fetch dominates its cost). limits[i] is candidate_n for query i."""
-    filter_sql, filter_params = _applicability_filter_sql(user_attributes)
+    filter_sql = _visibility_filter_sql()
     rows = conn.execute(
         f"""
         SELECT ce.chunk_id, ce.sparse_vector
@@ -184,7 +153,7 @@ def sparse_search_many(conn, query_sparses: list[dict], model_id: int, limits: l
         JOIN documents d ON d.id = c.document_id
         WHERE ce.embedding_model_id = %s AND NOT c.is_superseded AND {filter_sql}
         """,
-        [model_id, *filter_params],
+        [model_id],
     ).fetchall()
     results = []
     for query_sparse, limit in zip(query_sparses, limits):
@@ -228,16 +197,31 @@ def rrf_fuse(dense_results, sparse_results, k: int = DEFAULT_RRF_K):
     return fused
 
 
+# One plain label per document from its applicability tags, built in the same query that fetches
+# chunk details (no extra round trip): tag values of a type joined with ", ", types joined with
+# "; ", country first then employment_type then any others - e.g. "India; full-time employee, intern".
+# NULL for a document with no tags.
+_APPLIES_TO_SQL = """
+    (SELECT string_agg(g.vals, '; ' ORDER BY g.ord, g.tag_type)
+       FROM (SELECT at.tag_type,
+                    string_agg(at.tag_value, ', ' ORDER BY at.tag_value) AS vals,
+                    CASE at.tag_type WHEN 'country' THEN 0 WHEN 'employment_type' THEN 1 ELSE 2 END AS ord
+               FROM document_applicability da
+               JOIN applicability_tags at ON at.id = da.tag_id
+              WHERE da.document_id = d.id
+              GROUP BY at.tag_type) g)
+"""
+
+
 def fetch_chunk_details(conn, chunk_db_ids: list) -> dict:
     """Returns {chunk_db_id: (chunk_id, section_path, text, document_title,
-    document_id)}. document_id is included so downstream access-control
-    logic (see access_control/ask_and_answer.py) can look up a result's
-    applicability tags without a second round trip keyed on title text."""
+    document_id, applies_to)}. applies_to is the document's tag label (see
+    _APPLIES_TO_SQL), None when the document has no tags."""
     if not chunk_db_ids:
         return {}
     rows = conn.execute(
-        """
-        SELECT c.id, c.chunk_id, c.section_path, c.text, d.document_title, d.id
+        f"""
+        SELECT c.id, c.chunk_id, c.section_path, c.text, d.document_title, d.id, {_APPLIES_TO_SQL} AS applies_to
         FROM chunks c
         JOIN documents d ON d.id = c.document_id
         WHERE c.id = ANY(%s)
@@ -278,9 +262,9 @@ def retrieve(
     results, each: {chunk_id, section_path, text, document_title,
     document_id, fused_score, dense_rank, sparse_rank}.
 
-    user_attributes (see access_control/user_attributes.py): optional.
-    When omitted, only the always-on is_restricted filter applies - see
-    this module's docstring for the full filtering behavior.
+    user_attributes is accepted and IGNORED (kept so older callers don't break):
+    results are not filtered by who is asking. Restricted and superseded content
+    is always excluded - see this module's docstring.
 
     top_k / candidate_n / k default to the app_config values (None = use
     the runtime-configured value; an explicit int always wins). Each
@@ -316,18 +300,17 @@ def retrieve(
     pool = get_pool()
     with pool.connection() as conn:
         model_id = get_active_embedding_model_id(conn)
-        dense_results = dense_search(conn, query_dense, model_id, candidate_n, user_attributes)
+        dense_results = dense_search(conn, query_dense, model_id, candidate_n)
         if expansions:
             expansion_n = get_app_config("retrieval.expansion.candidate_n", 5)
-            sparse_all = sparse_search_many(conn, sparse_vecs, model_id, [candidate_n] + [expansion_n] * len(expansions),
-                                            user_attributes)
+            sparse_all = sparse_search_many(conn, sparse_vecs, model_id, [candidate_n] + [expansion_n] * len(expansions))
             sparse_results = sparse_all[0]
             expansion_lists = []
             for i, dense_vec in enumerate(dense_vecs[1:], start=1):
-                expansion_lists.append(dense_search(conn, dense_vec, model_id, expansion_n, user_attributes))
+                expansion_lists.append(dense_search(conn, dense_vec, model_id, expansion_n))
                 expansion_lists.append(sparse_all[i])
         else:
-            sparse_results = sparse_search(conn, query_sparse, model_id, candidate_n, user_attributes)
+            sparse_results = sparse_search(conn, query_sparse, model_id, candidate_n)
         fused = rrf_fuse(dense_results, sparse_results, k)
         if expansions:
             fused = add_expansion_scores(fused, expansion_lists, get_app_config("retrieval.expansion.weight", 1.0), k)
@@ -340,7 +323,7 @@ def retrieve(
 
     results = []
     for chunk_db_id, score, dr, sr in fused:
-        chunk_id, section_path, text, document_title, document_id = details[chunk_db_id]
+        chunk_id, section_path, text, document_title, document_id, applies_to = details[chunk_db_id]
         results.append(
             {
                 "chunk_id": chunk_id,
@@ -348,6 +331,7 @@ def retrieve(
                 "text": text,
                 "document_title": document_title,
                 "document_id": document_id,
+                "applies_to": applies_to,
                 "fused_score": score,
                 "dense_rank": dr,
                 "sparse_rank": sr,

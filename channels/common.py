@@ -14,44 +14,6 @@ from dataclasses import dataclass, field
 
 from config.channel_settings import channel_setting
 from config.runtime import get_app_config
-from vectorstore.db import get_pool
-
-# ---- attributes -----------------------------------------------------------------
-
-
-def with_default_attributes(user_attributes: dict | None, channel: str) -> dict:
-    """Fills attributes the caller doesn't know with the channel's
-    'user.default_attributes.<channel>' defaults (e.g. {"country": "India"} while
-    every document is India-only). Known caller values always win."""
-    defaults = channel_setting("user.default_attributes", channel, {}) or {}
-    known = {k: v for k, v in (user_attributes or {}).items() if v is not None}
-    return {**defaults, **known}
-
-
-def detect_blocking_tag_types(conn, candidate_results: list[dict], user_attributes: dict | None) -> list[str]:
-    """Given chunk results from an UNFILTERED retrieve() call and the user's known
-    attributes, returns which tag_type(s) (if any) are "blocking": a tag_type for
-    which the candidates' documents carry MORE THAN ONE distinct tag value (so the
-    user's answer would change which documents apply) but user_attributes has no
-    known (non-None) value for it. A tag_type with a single value across the
-    candidates (e.g. every document is India-only) is never asked about."""
-    user_attributes = user_attributes or {}
-    document_ids = {r["document_id"] for r in candidate_results}
-    if not document_ids:
-        return []
-    rows = conn.execute(
-        """
-        SELECT at.tag_type
-        FROM document_applicability da
-        JOIN applicability_tags at ON at.id = da.tag_id
-        WHERE da.document_id = ANY(%s)
-        GROUP BY at.tag_type
-        HAVING COUNT(DISTINCT at.tag_value) > 1
-        """,
-        (list(document_ids),),
-    ).fetchall()
-    return sorted(tag_type for (tag_type,) in rows if user_attributes.get(tag_type) is None)
-
 
 # ---- generation ---------------------------------------------------------------------
 
@@ -62,9 +24,10 @@ def build_messages(query: str, chunks: list[dict], system_prompt: str, history: 
     question. Excerpts attach to the current turn only, never to history turns."""
     blocks = []
     for i, chunk in enumerate(chunks, start=1):
+        label = f"[Applies to: {chunk['applies_to']}]\n" if chunk.get("applies_to") else ""
         blocks.append(
             f"[Excerpt {i} - internal source label, never speak this: "
-            f"{chunk['document_title']} > {chunk['section_path']}]\n{chunk['text']}"
+            f"{chunk['document_title']} > {chunk['section_path']}]\n{label}{chunk['text']}"
         )
     context = "\n\n".join(blocks)
     user_content = (
@@ -107,12 +70,24 @@ def stream_completion(client, model: str, messages: list[dict]):
 _CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
 
+def _truncate(content: str, max_chars: int, keep_tail: bool) -> str:
+    if len(content) <= max_chars:
+        return content
+    if not keep_tail:
+        return content[:max_chars]
+    separator = " ... "
+    tail = max_chars // 3
+    return content[: max_chars - tail - len(separator)] + separator + content[-tail:]
+
+
 def clean_history(history: list | None, channel: str) -> list[dict]:
     """Server-side sanitisation of client/Deepgram-supplied history, which is
     UNTRUSTED: only user/assistant roles with string content survive, control
     characters are dropped, the list is capped to the last
     conversation.history_messages messages and each is truncated to
-    conversation.history_max_chars characters."""
+    conversation.history_max_chars characters. An over-long ASSISTANT message keeps its
+    head and its tail (an offer or a question usually closes it, and "yes" is answered
+    against that), still within the character cap."""
     if not history:
         return []
     max_messages = channel_setting("conversation.history_messages", channel, 6)
@@ -126,7 +101,7 @@ def clean_history(history: list | None, channel: str) -> list[dict]:
             continue
         content = _CONTROL_CHARS.sub("", content).strip()
         if content:
-            kept.append({"role": message["role"], "content": content[:max_chars]})
+            kept.append({"role": message["role"], "content": _truncate(content, max_chars, keep_tail=message["role"] == "assistant")})
     return kept[-max_messages:]
 
 
@@ -202,18 +177,34 @@ def plan_turn(current: str, history: list | None, channel: str) -> TurnPlan:
                     select_expansions(current, cleaned, channel) if advisory else [])
 
 
-# ---- small-talk machinery -----------------------------------------------------------
+# ---- in-process config memo --------------------------------------------------------------------------
 
-# Regex building blocks a channel's pattern sets can compose.
-ADDRESS = r"(?: (?:there|bot|assistant|team|everyone|all|buddy))?"
-GREETING_WORD = (
-    r"(?:hi+|hello+|hey+|heya|hiya|yo|sup|wassup|wazzup|whats up|whatsup|howdy|greetings|"
-    r"good (?:morning|afternoon|evening|day))"
-)
-LEAD = rf"(?:{GREETING_WORD}{ADDRESS} )?"  # optional greeting before how-are-you / capabilities
+_CONFIG_MEMO: dict = {}
+CONFIG_MEMO_TTL_SECONDS = 30.0
 
-_APOSTROPHES = re.compile(r"['’`]")
+
+def memo_config(key: str, default=None):
+    """get_app_config() with a 30s in-process copy, so keys read on EVERY turn (small-talk phrases,
+    source markers, ...) cost no Redis round trip except once per TTL. Admin writes clear it
+    (api/admin.py) so a change applies at once in the process that handled it."""
+    now = time.monotonic()
+    hit = _CONFIG_MEMO.get(key)
+    if hit is not None and hit[0] > now:
+        return hit[1]
+    value = get_app_config(key, default)
+    _CONFIG_MEMO[key] = (now + CONFIG_MEMO_TTL_SECONDS, value)
+    return value
+
+
+def clear_config_memo() -> None:
+    _CONFIG_MEMO.clear()
+
+
+# ---- text normalisation ---------------------------------------------------------------------------------
+
+_APOSTROPHES = re.compile(r"['\u2019`]")
 _NON_WORD = re.compile(r"[^a-z0-9]+")
+_REPEATS = re.compile(r"(.)\1{2,}")
 
 
 def normalize(text: str) -> str:
@@ -222,28 +213,83 @@ def normalize(text: str) -> str:
     return _NON_WORD.sub(" ", _APOSTROPHES.sub("", text.lower())).strip()
 
 
-class SmalltalkMatcher:
-    """Whole-utterance matcher over a channel's pattern sets: category -> regex
-    source. An utterance matches only if all of it (<= max_words words) is a pure
-    small-talk phrase, so a real question is never swallowed."""
+# ---- small talk: phrase sets live in app_config (smalltalk.phrases.<channel>) ----------------------------
 
-    def __init__(self, patterns: dict[str, str], max_words: int = 6):
-        self.max_words = max_words
-        self._compiled = {cat: re.compile(rf"^{pat}$") for cat, pat in patterns.items()}
+SMALLTALK_ADDRESS_WORDS = {"there", "bot", "assistant", "team", "everyone", "all", "buddy"}
+_LEADABLE = {"greeting", "how_are_you", "capabilities"}  # categories that may follow a leading greeting
 
-    def match(self, text: str, *, after_clarification: bool = False) -> str | None:
-        """Category for a pure small-talk utterance, else None. With
-        after_clarification=True (the previous assistant turn was a clarifying
-        question) never matches, so a short reply like "ok" is not misread."""
-        if after_clarification:
+
+class PhraseMatcher:
+    """Whole-utterance small-talk matcher over the channel's phrase sets (category -> list of normalized
+    phrases, from app_config via the memo). A turn matches only if ALL of it (<= max_words words, after
+    collapsing runs of 3+ repeated letters: "heyyyy" -> "heyy") is one phrase, optionally with a trailing
+    address word ("hi there") or, for greeting / how_are_you / capabilities, a leading greeting ("hi how
+    are you"). A real question is never swallowed."""
+
+    def __init__(self, channel: str, max_words: int = 6):
+        self.channel, self.max_words = channel, max_words
+        self._source = None
+        self._index: dict[str, str] = {}
+        self._greetings: set[str] = set()
+
+    def _refresh(self) -> None:
+        phrases = memo_config(f"smalltalk.phrases.{self.channel}", {}) or {}
+        if phrases is self._source:
+            return
+        index: dict[str, str] = {}
+        for category, items in phrases.items():
+            for phrase in items:
+                index.setdefault(_REPEATS.sub(r"\1\1", normalize(phrase)), category)
+        self._index, self._greetings, self._source = index, {p for p, c in index.items() if c == "greeting"}, phrases
+
+    def match(self, text: str) -> str | None:
+        norm = _REPEATS.sub(r"\1\1", normalize(text))
+        words = norm.split()
+        if not words or len(words) > self.max_words:
             return None
-        norm = normalize(text)
-        if not norm or len(norm.split()) > self.max_words:
-            return None
-        for category, pattern in self._compiled.items():
-            if pattern.match(norm):
-                return category
+        self._refresh()
+        candidates = [norm]
+        if len(words) > 1 and words[-1] in SMALLTALK_ADDRESS_WORDS:
+            candidates.append(" ".join(words[:-1]))
+        for base in candidates:
+            if base in self._index:
+                return self._index[base]
+            parts = base.split()
+            for i in range(1, len(parts)):
+                lead, rest = " ".join(parts[:i]), " ".join(parts[i:])
+                if lead in self._greetings and self._index.get(rest) in _LEADABLE:
+                    return self._index[rest]
         return None
+
+
+def is_affirmation(text: str) -> bool:
+    """A bare yes-like utterance (smalltalk.affirmations)."""
+    norm = _REPEATS.sub(r"\1\1", normalize(text))
+    return norm in {_REPEATS.sub(r"\1\1", normalize(a)) for a in memo_config("smalltalk.affirmations", []) or []}
+
+
+def previous_turn_invites_reply(history: list | None) -> bool:
+    """True when the LAST history message is an assistant message that ends with a question mark or
+    contains an offer (smalltalk.offer_markers: "would you like", "want me to", "i can also"). Uses the
+    raw, untruncated history so the end of a long answer is seen."""
+    if not history:
+        return False
+    last = history[-1]
+    if not isinstance(last, dict) or last.get("role") != "assistant" or not isinstance(last.get("content"), str):
+        return False
+    text = last["content"].strip().lower().replace("\u2019", "'")
+    if text.rstrip(" \t\n\"')*_\u201d").endswith("?"):
+        return True
+    return any(m.lower() in text for m in memo_config("smalltalk.offer_markers", []) or [])
+
+
+def smalltalk_category(matcher: PhraseMatcher, text: str, history: list | None) -> str | None:
+    """matcher.match(), except that a bare affirmation after an assistant question or offer is NOT small
+    talk: it goes through the normal pipeline (with history) so the offer is followed up."""
+    category = matcher.match(text)
+    if category and is_affirmation(text) and previous_turn_invites_reply(history):
+        return None
+    return category
 
 
 class ReplyPicker:
@@ -259,3 +305,85 @@ class ReplyPicker:
             idx = random.choice(choices)
             self._last[category] = idx
         return options[idx]
+
+
+# ---- source questions ("where is this from") ---------------------------------------------------------------
+
+SOURCE_MAX_WORDS = 8
+REFUSAL_PREFIX = "i couldn't find"
+
+
+def is_source_question(text: str) -> bool:
+    """Whole-utterance match (<= 8 words) against source.markers."""
+    norm = normalize(text)
+    if not norm or len(norm.split()) > SOURCE_MAX_WORDS:
+        return False
+    return norm in {normalize(m) for m in memo_config("source.markers", []) or []}
+
+
+def previous_exchange(history: list[dict]) -> tuple[int, int] | None:
+    """(user_index, assistant_index) of the most recent answered exchange in CLEANED history: the last
+    assistant message and the user message before it. An exchange that was itself a source question is
+    skipped, so asking "source?" twice still refers to the real answer. None when there is no
+    assistant message to refer to."""
+    end = len(history) - 1
+    while end >= 0:
+        a = next((i for i in range(end, -1, -1) if history[i]["role"] == "assistant"), None)
+        if a is None:
+            return None
+        u = next((i for i in range(a - 1, -1, -1) if history[i]["role"] == "user"), None)
+        if u is None:
+            return None
+        if is_source_question(history[u]["content"]):
+            end = u - 1
+            continue
+        return u, a
+    return None
+
+
+def display_title(title: str) -> str:
+    """Readable form of a document title for a reply (the stored title is never changed): an ALL-CAPS
+    title is title-cased."""
+    return title.title() if title.isupper() else title
+
+
+def _join_and(items: list[str]) -> str:
+    return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
+
+
+def _leaf_section(section_path: str | None, title: str) -> str | None:
+    leaf = (section_path or "").split(" > ")[-1].strip()
+    return leaf if leaf and leaf != title else None
+
+
+def format_source_reply(results: list[dict], templates: dict, spoken: bool) -> str:
+    """Templated reply naming up to 3 distinct documents in rank order. Text may add the section name for a
+    single document when every retrieved chunk of it sits in the same section; voice names the document
+    only. `spoken` titles are lowercased the way config/topics.py does for topic names. A template that
+    fails to format falls back to the seeded default, so a bad edit cannot break a turn."""
+    from config.runtime import DEFAULT_SOURCE_TEMPLATES
+    from config.topics import clean_title
+
+    channel_defaults = DEFAULT_SOURCE_TEMPLATES["voice" if spoken else "text"]
+
+    def render(key: str, **fields) -> str:
+        try:
+            return templates[key].format(**fields)
+        except (KeyError, IndexError, ValueError):
+            return channel_defaults[key].format(**fields)
+
+    docs: list[dict] = []
+    for r in results:
+        if all(d["document_id"] != r["document_id"] for d in docs):
+            docs.append({"document_id": r["document_id"], "title": r["document_title"], "sections": []})
+        next(d for d in docs if d["document_id"] == r["document_id"])["sections"].append(_leaf_section(r["section_path"], r["document_title"]))
+    docs = docs[:3]
+    if not docs:
+        return render("not_found")
+    names = [(clean_title(d["title"]) or display_title(d["title"])) if spoken else display_title(d["title"]) for d in docs]
+    if len(docs) > 1:
+        return render("many", titles=_join_and(names))
+    sections = set(docs[0]["sections"])
+    if not spoken and "one_with_section" in templates and len(sections) == 1 and None not in sections:
+        return render("one_with_section", title=names[0], section=next(iter(sections)))
+    return render("one", title=names[0])

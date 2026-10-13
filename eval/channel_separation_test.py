@@ -23,7 +23,6 @@ from vectorstore.db import close_pool, get_pool  # noqa: E402
 from vectorstore.retrieve import retrieve  # noqa: E402
 
 NOTE = "channel_separation_test"
-ATTRS = {"country": "India", "employment_type": "full-time employee"}
 _results = []
 
 
@@ -53,9 +52,11 @@ def test_code():
     voice_api = imports_of(ROOT / "api/voice.py")
     check("api/voice.py uses only the voice channel", "channels.text" not in voice_api and "channels.voice" in voice_api or "channels.voice" in " ".join(voice_api))
     check("each channel has its own copy, patterns and replies (distinct objects)",
-          text_ch._RESPONSES is not voice_ch._RESPONSES and text_ch._PATTERNS is not voice_ch._PATTERNS
+          text_ch._RESPONSES is not voice_ch._RESPONSES
           and text_ch._matcher is not voice_ch._matcher and text_ch._picker is not voice_ch._picker)
     check("each channel logs under its own logger", (text_ch.logger.name, voice_ch.logger.name) == ("hrchatbot.text", "hrchatbot.voice"))
+    check("phrase sets are separate app_config rows per channel (smalltalk.phrases.text / .voice)",
+          get_app_config("smalltalk.phrases.text") != get_app_config("smalltalk.phrases.voice"))
     check("voice-only phrasing is voice-only ('can you hear me')",
           voice_ch.smalltalk_match("can you hear me") is not None and text_ch.smalltalk_match("can you hear me") is None)
     check("no-match copy is channel-specific", text_ch.NO_MATCH_BASE != voice_ch.NO_MATCH_BASE)
@@ -79,14 +80,14 @@ def test_settings():
 
         # confidence threshold: voice 0.99 -> voice refuses everything; text still answers
         set_app_config("generation.confidence_threshold.voice", 0.99)
-        v_ev = list(voice_ch.generate_stream("how many days of earned leave do I get", user_attributes=ATTRS))[-1]
-        t_ev = list(text_ch.generate_stream("how many days of earned leave do I get", user_attributes=ATTRS))[-1]
+        v_ev = list(voice_ch.answer_stream("how many days of earned leave do I get"))[-1]
+        t_ev = list(text_ch.answer_stream("how many days of earned leave do I get"))[-1]
         check("voice threshold 0.99: voice takes the retrieval shortcut", v_ev["shortcut"] is True)
         check("...while text, with its own threshold, still generates an answer", t_ev["shortcut"] is False)
         set_app_config("generation.confidence_threshold.voice", orig["generation.confidence_threshold.voice"])
         set_app_config("generation.confidence_threshold.text", 0.99)
-        v_ev = list(voice_ch.generate_stream("how many days of earned leave do I get", user_attributes=ATTRS))[-1]
-        t_ev = list(text_ch.generate_stream("how many days of earned leave do I get", user_attributes=ATTRS))[-1]
+        v_ev = list(voice_ch.answer_stream("how many days of earned leave do I get"))[-1]
+        t_ev = list(text_ch.answer_stream("how many days of earned leave do I get"))[-1]
         check("text threshold 0.99: text refuses, voice still answers", t_ev["shortcut"] is True and v_ev["shortcut"] is False)
     finally:
         for k, v in orig.items():
@@ -95,11 +96,8 @@ def test_settings():
     check("every channel setting exists for both channels",
           all(get_app_config(f"{k}.{c}") is not None
               for k in ("retrieval.top_k", "retrieval.candidate_n", "retrieval.rrf_k", "generation.model",
-                        "generation.confidence_threshold", "user.default_attributes")
+                        "generation.confidence_threshold")
               for c in ("text", "voice")))
-    check("each channel resolves its own default attributes",
-          text_ch.default_attributes() == get_app_config("user.default_attributes.text")
-          and voice_ch.default_attributes() == get_app_config("user.default_attributes.voice"))
 
 
 def test_prompts():
@@ -140,8 +138,8 @@ def test_compat_routers():
     from access_control.ask_and_answer import ask_and_answer
     from generation.generate import generate_answer
     for ch in ("text", "voice"):
-        done = [e for e in generate_answer("how many days of earned leave do I get", user_attributes=ATTRS, channel=ch) if e["type"] == "done"][0]
-        r = ask_and_answer("how many days of earned leave do I get", ATTRS, channel=ch)
+        done = [e for e in generate_answer("how many days of earned leave do I get", channel=ch) if e["type"] == "done"][0]
+        r = ask_and_answer("how many days of earned leave do I get", channel=ch)
         check(f"generate_answer / ask_and_answer route channel={ch!r}",
               done["prompt_version"] == prompts_mod.get_system_prompt(ch)[1] and r["type"] == "answer"
               and r["prompt_version"] == prompts_mod.get_system_prompt(ch)[1], str(done["prompt_version"]))

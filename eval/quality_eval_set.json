@@ -5,8 +5,7 @@
     "category": "paraphrase",
     "channel": "text",
     "expected_behavior": "answer",
-    "user_attributes": {"country": "India"},
-    "notes": "No keyword overlap with the source WFH policy wording. country supplied so the applicability gate doesn't block on the incidental India tag before generation even runs - this case is testing retrieval+generation quality, not access control."
+    "notes": "No keyword overlap with the source WFH policy wording. Tests retrieval + generation quality."
   },
   {
     "id": "p2",
@@ -14,7 +13,6 @@
     "category": "paraphrase",
     "channel": "text",
     "expected_behavior": "answer",
-    "user_attributes": {"country": "India"},
     "notes": "Paraphrase of maternity/paternity leave with no keyword overlap. Historically the model has declined here rather than citing the corpus's actual maternity-leave table - worth re-checking whether that's still the case."
   },
   {
@@ -23,7 +21,6 @@
     "category": "paraphrase",
     "channel": "text",
     "expected_behavior": "answer",
-    "user_attributes": {"country": "India"},
     "notes": "Paraphrase of the notice-period policy."
   },
   {
@@ -32,8 +29,7 @@
     "category": "paraphrase",
     "channel": "text",
     "expected_behavior": "answer",
-    "user_attributes": {"country": "India", "employment_type": "full-time employee"},
-    "notes": "Paraphrase of the referral bonus policy. Touches the real-tagged referral policy document, so both attributes are supplied to reach generation."
+    "notes": "Paraphrase of the referral bonus policy. The referral document is tagged India + full-time employee / intern; expect a direct answer (it used to trigger a clarifying question) that says who the rule applies to."
   },
   {
     "id": "e1",
@@ -41,7 +37,6 @@
     "category": "exact_term",
     "channel": "text",
     "expected_behavior": "answer",
-    "user_attributes": {"country": "India"},
     "notes": "Exact-term/acronym query verified present verbatim in the corpus (POSH Policy > 1.10 REDRESSAL MECHANISM)."
   },
   {
@@ -50,7 +45,6 @@
     "category": "exact_term",
     "channel": "text",
     "expected_behavior": "answer",
-    "user_attributes": {"country": "India", "employment_type": "full-time employee"},
     "notes": "Exact-term query against the PIP Process policy, which is real-tagged country=India + employment_type=full-time employee."
   },
   {
@@ -59,7 +53,6 @@
     "category": "exact_term",
     "channel": "text",
     "expected_behavior": "answer",
-    "user_attributes": {"country": "India"},
     "notes": "Exact-term query against the Employee Handbook's separation policy section."
   },
   {
@@ -68,8 +61,7 @@
     "category": "out_of_corpus",
     "channel": "text",
     "expected_behavior": "refusal",
-    "user_attributes": {"country": "India"},
-    "notes": "Nothing in this HR corpus could plausibly answer this. Takes the low-confidence shortcut in generate_answer() (fused_score below threshold) - see eval/run_regression.py for the shortcut=True assertion. country supplied only to avoid an incidental clarification on the (irrelevant) top candidate's country tag."
+    "notes": "Nothing in this HR corpus could plausibly answer this. Takes the low-confidence shortcut in generate_answer() (fused_score below threshold) - see eval/run_regression.py for the shortcut=True assertion."
   },
   {
     "id": "o2",
@@ -77,8 +69,7 @@
     "category": "out_of_corpus",
     "channel": "text",
     "expected_behavior": "refusal",
-    "user_attributes": {"country": "India", "employment_type": "full-time employee"},
-    "notes": "Same as o1 - also takes the low-confidence shortcut. Needs both attributes (not just country): its irrelevant top candidates happen to include a real-tagged Travel Policy chunk, so employment_type is also blocking unless supplied."
+    "notes": "Same as o1 - also takes the low-confidence shortcut."
   },
   {
     "id": "o3",
@@ -86,7 +77,6 @@
     "category": "out_of_corpus",
     "channel": "text",
     "expected_behavior": "refusal",
-    "user_attributes": {"country": "India"},
     "notes": "Known threshold edge case: this query's top fused_score sits just ABOVE the confidence threshold (see generation/generate.py's docstring for the RRF-floor math), so it does NOT take the internal shortcut - it reaches real generation, and the model must refuse via its own grounding instructions instead. A regression on this specific case would mean the shortcut's threshold or the system prompt's refusal behavior drifted."
   },
   {
@@ -95,7 +85,6 @@
     "category": "known_edge_case",
     "channel": "text",
     "expected_behavior": "refusal",
-    "user_attributes": {"country": "India"},
     "notes": "Discovered edge case: retrieval confidently returns a real, on-topic chunk (BGV_Policy_Ver1_0_0005, the BGV policy's own OBJECTIVE section) with a normal-looking fused_score - but that chunk does not actually contain disclaimer wording. Correct behavior is refusal despite a confident-looking retrieval, proving the model is grounded in actual chunk content rather than topical proximity."
   },
   {
@@ -103,26 +92,24 @@
     "query": "will I get paid extra for recommending a friend for a job here",
     "category": "known_edge_case",
     "channel": "text",
-    "expected_behavior": "refusal",
-    "user_attributes": {"country": "United States", "employment_type": "full-time employee"},
-    "notes": "Discovered edge case: both attributes are known (so no clarification is triggered), but country=United States doesn't match the referral policy's country=India tag. Both real-tagged referral-policy duplicates get excluded by hard filtering; the filtered fallback candidates score low enough that generate_answer()'s low-confidence shortcut fires (shortcut=True) rather than reaching a real generation call - either way, the black-box result is a correct refusal instead of an answer synthesized from irrelevant fallback content."
+    "expected_behavior": "answer",
+    "notes": "Formerly a known edge case that needed user attributes (country=United States excluded the India-tagged referral policy, so the filtered fallback refused). Nothing is filtered by who is asking any more: expect the referral bonus answer, saying who it applies to (full-time employees and interns in India), never a clarifying question."
   },
   {
     "id": "a1",
     "query": "when do I get confirmed as a permanent employee",
-    "category": "applicability_ambiguous",
+    "category": "formerly_clarification",
     "channel": "text",
-    "expected_behavior": "clarification",
-    "user_attributes": {"country": "India", "employment_type": null},
-    "notes": "NEW query, not tested in earlier tasks. Covers the gap where employment_type (not country) is the blocking attribute: Confirmation Policy is real-tagged employment_type=full-time employee only, with no country tag at all, so with country already known this is the one dimension left unresolved. Expect the clarifying question to ask specifically about employment type."
+    "expected_behavior": "answer",
+    "notes": "Formerly expected a clarifying question about employment type (Confirmation Policy is tagged full-time employee only). Now: expect a direct answer about when an employee is confirmed, who the rule applies to, and no question back to the user."
   },
   {
     "id": "a2",
     "query": "how many vacation days do I get per year",
-    "category": "applicability_ambiguous",
+    "category": "formerly_clarification",
     "channel": "text",
-    "expected_behavior": "clarification",
-    "notes": "NEW query, not tested in earlier tasks (user_attributes omitted -> defaults to None). Retrieves from the real-tagged Employee Handbook (country=India); with nothing known about the user, this should trigger the clarifying-question path in general, not just on the previously-tested referral-bonus query."
+    "expected_behavior": "answer",
+    "notes": "Formerly expected a clarifying question about the user's country/employment type. Now: expect a direct answer from the Employee Handbook leave policy (earned leave 21 days, sick leave 7, etc.), noting group differences if any, and no question back to the user."
   },
   {
     "id": "s1",
@@ -191,5 +178,188 @@
     ],
     "expected_behavior": "answer",
     "notes": "Voice version of the transcript turn whose old answer misused the location/employment-type hedge (\"That can depend on your specific situation...\"). Expect 2-3 spoken sentences leading with the single best option (WFH with manager approval or comp-off), at most one more, an offer to go through the others, no hedge, no markdown or symbols."
+  },
+  {
+    "id": "g1",
+    "query": "how many leaves do interns get",
+    "category": "group_question",
+    "channel": "text",
+    "expected_behavior": "answer",
+    "notes": "The corpus has NO intern leave rule (only the referral policy and the POSH scope clause mention interns); the Handbook's 21 days are for full-time, permanent employees. Expect an honest 'I couldn't find leave for interns in the HR policies' (optionally noting the full-time rule), HR suggested because it is an HR matter, no invented intern entitlement, no clarifying question, and 'excerpts/context' never mentioned."
+  },
+  {
+    "id": "g2",
+    "query": "what is the notice period for contractors",
+    "category": "group_question",
+    "channel": "text",
+    "expected_behavior": "answer",
+    "notes": "No contractor notice rule in the corpus (the Handbook notice period is for confirmed employees). Expect 'I couldn't find the notice period for contractors in the HR policies', HR suggested, no clarifying question, no assertion that contractors have no notice period."
+  },
+  {
+    "id": "g3",
+    "query": "whats my leave policy",
+    "category": "group_question",
+    "channel": "voice",
+    "expected_behavior": "answer",
+    "notes": "Must answer directly in 2-3 spoken sentences and must NOT ask which group/country the user is in. If the retrieved rules differ by group the main rule is given with a brief note on the other group's rule, phrased naturally (never reading an '[Applies to ...]' label aloud)."
+  },
+  {
+    "id": "r1",
+    "query": "will I get paid extra for recommending a friend for a job here",
+    "category": "restricted_document",
+    "channel": "text",
+    "restrict_document_title": "REFERRAL BONUS",
+    "expected_behavior": "answer",
+    "notes": "The runner marks the two REFERRAL BONUS documents is_restricted for this case only and restores them afterwards, then prints which documents the context came from and flags any restricted one automatically (a structural check). Expect that check to PASS. The answer may still mention a referral bonus: the Employee Handbook has its own section 6 Employee Referral Policy, which is NOT restricted and may legitimately be used - what must never appear is content only the restricted documents contain (e.g. the detailed bonus tables / eligibility annexes of the referral program documents)."
+  },
+  {
+    "id": "f1",
+    "query": "how many leaves do i get",
+    "category": "transcript_group_inference",
+    "channel": "text",
+    "history": [
+      {
+            "role": "user",
+            "content": "tell me everything you know about the interns"
+      },
+      {
+            "role": "assistant",
+            "content": "Interns at Calfus are part of a fixed-period internship program. They can take part in the referral bonus program as long as they are still employed and not on a notice period or a performance improvement plan when the bonus is paid."
+      }
+],
+    "expected_behavior": "answer",
+    "notes": "REAL TRANSCRIPT (a). The user asked about interns, then 'how many leaves do i get' WITHOUT saying they are an intern. Expect the standard employee rule (21 leaves a year, 12 holidays, pro-rata mid-year) with NO 'As an intern...' framing, no claim that interns are not entitled / typically don't get leave, and no general-knowledge remarks about interns. The corpus has no intern leave content. Run several times: the old prompt produced the intern framing in about 1 of 3 runs."
+  },
+  {
+    "id": "f2",
+    "query": "i am an intern",
+    "category": "transcript_group_stated",
+    "channel": "text",
+    "history": [
+      {
+            "role": "user",
+            "content": "tell me everything you know about the interns"
+      },
+      {
+            "role": "assistant",
+            "content": "Interns at Calfus are part of a fixed-period internship program. They can take part in the referral bonus program as long as they are still employed and not on a notice period or a performance improvement plan when the bonus is paid."
+      },
+      {
+            "role": "user",
+            "content": "how many leaves do i get"
+      },
+      {
+            "role": "assistant",
+            "content": "You get 21 leaves every calendar year, plus 12 holidays. If you started mid-year it is pro-rated."
+      }
+],
+    "expected_behavior": "answer",
+    "notes": "Continuation of f1: the user now explicitly says they are an intern. Expect 'I couldn't find leave for interns in the HR policies' (optionally adding the standard employee rule as the only one found) and a suggestion to speak to HR/manager. No 'not entitled', 'differs' or invented intern entitlement."
+  },
+  {
+    "id": "f3",
+    "query": "i need to go to my hometown for a week and i have only 3 leaves left",
+    "category": "leave_counting",
+    "channel": "text",
+    "expected_behavior": "answer",
+    "notes": "REAL TRANSCRIPT (b). Run it at least twice: both runs must state the assumption in a few words (e.g. 'assuming a five-day working week') and give the same unpaid-day count (2: a week is 5 working days, minus 3 leaves). Earlier answers said 4 once and 2 another time. Never mix calendar and working days."
+  },
+  {
+    "id": "f4",
+    "query": "i need to go to my hometown for a week and i have only 3 leaves left",
+    "category": "leave_counting",
+    "channel": "voice",
+    "expected_behavior": "answer",
+    "notes": "Voice version of f3: 2-3 spoken sentences, the assumption stated briefly, 'two' unpaid days, same number on every run, no markdown or symbols."
+  },
+  {
+    "id": "f5",
+    "query": "whats the source of this/",
+    "category": "source_lookup",
+    "channel": "text",
+    "history": [
+      {
+            "role": "user",
+            "content": "will I get paid extra for recommending a friend for a job here"
+      },
+      {
+            "role": "assistant",
+            "content": "Yes. A referral bonus is paid once the person you referred completes their probation and shows satisfactory performance, as long as you are still employed and not serving a notice period."
+      }
+],
+    "expected_behavior": "source_lookup",
+    "notes": "REAL TRANSCRIPT (c). After a referral-program answer. Expect a templated line naming the document(s) the answer drew on (e.g. 'That drew on the Calfus Crew: Referral Bonus Program - India and Employee Handbook.'), not 'I couldn't find information about the source'. 0 LLM calls."
+  },
+  {
+    "id": "f6",
+    "query": "where is this from",
+    "category": "source_lookup",
+    "channel": "voice",
+    "history": [
+      {
+            "role": "user",
+            "content": "will I get paid extra for recommending a friend for a job here"
+      },
+      {
+            "role": "assistant",
+            "content": "Yes. A referral bonus is paid once the person you referred completes their probation and shows satisfactory performance, as long as you are still employed and not serving a notice period."
+      }
+],
+    "expected_behavior": "source_lookup",
+    "notes": "Voice version of f5. Expect 'That drew on the referral bonus program and employee handbook policies.' (document names only, no section path). 0 LLM calls."
+  },
+  {
+    "id": "f7",
+    "query": "yes",
+    "category": "affirmation_after_offer",
+    "channel": "text",
+    "history": [
+      {
+            "role": "user",
+            "content": "will I get paid extra for recommending a friend for a job here"
+      },
+      {
+            "role": "assistant",
+            "content": "Yes, a referral bonus is paid after the referred candidate completes probation. Would you like the eligibility details?"
+      }
+],
+    "expected_behavior": "answer",
+    "notes": "The bot's last message ended with an offer ('Would you like the eligibility details?'). A bare 'yes' must NOT be small talk: it goes through retrieval + generation with the history, and the reply should follow up the offer (the referral eligibility details)."
+  },
+  {
+    "id": "f8",
+    "query": "yes thank you",
+    "category": "smalltalk_ack",
+    "channel": "text",
+    "history": [
+      {
+            "role": "user",
+            "content": "how many days of earned leave do i get"
+      },
+      {
+            "role": "assistant",
+            "content": "You get 21 days of earned leave each calendar year."
+      }
+],
+    "expected_behavior": "smalltalk",
+    "notes": "REAL TRANSCRIPT (d). After a statement (no question/offer) this must be small talk (0 LLM, 0 retrieval calls) - a short friendly acknowledgement, no policy lookup."
+  },
+  {
+    "id": "f9",
+    "query": "yessir",
+    "category": "smalltalk_ack",
+    "channel": "text",
+    "history": [
+      {
+            "role": "user",
+            "content": "how many days of earned leave do i get"
+      },
+      {
+            "role": "assistant",
+            "content": "You get 21 days of earned leave each calendar year."
+      }
+],
+    "expected_behavior": "smalltalk",
+    "notes": "REAL TRANSCRIPT (d). After a statement this must be small talk (0 LLM, 0 retrieval calls). After an offer it would instead be followed up (see f7)."
   }
 ]

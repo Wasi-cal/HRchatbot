@@ -10,20 +10,17 @@ api/voice.py - and reads the SSE stream the way Deepgram would. The
 history is built from the endpoint's own previous replies, exactly as a
 real session would accumulate it. Scenarios:
   1. fresh query
-  2. clarification-triggering query + resolving reply
-  3. unusable reply -> same question re-asked, reworded
-  4. later query in the same conversation does NOT re-ask a resolved attribute
-Needs a query that triggers a clarification on the loaded corpus
-(--clarify-query); with default country=India that means an
-employment_type-gated topic.
+  2. a query that used to trigger a clarifying question is answered directly
+     (the clarification layer is unwired: docs/applicability_layer_removed.md)
+  3. a follow-up in the same conversation is answered too, and the endpoint
+     never says the old clarification phrase
+  4. non-streaming request, auth shape, turn logging
 """
 import argparse
 import json
 import sys
 
 import httpx
-
-from api.voice import CLARIFY_LEAD_IN, parse_clarification
 
 failures = 0
 
@@ -66,49 +63,27 @@ def main():
     ap.add_argument("--base-url", default="http://localhost:8000")
     ap.add_argument("--secret", default=None, help="THINK_ENDPOINT_SECRET if the server enforces one")
     ap.add_argument("--fresh-query", default="How many days of leave do I get?")
-    ap.add_argument("--clarify-query", default="What is the domestic travel policy?")
-    ap.add_argument("--replies", default='{"employment_type": "I\'m a full-time employee", "country": "I work in India"}')
+    ap.add_argument("--former-clarify-query", default="What is the domestic travel policy?")
     args = ap.parse_args()
     client = httpx.Client(base_url=args.base_url, timeout=120)
-    replies = json.loads(args.replies)
-
-    print("0. Marker round-trip (offline)")
-    for tag in ("country", "employment_type"):
-        for i in (0, 1):
-            from api.voice import clarifying_question
-            check(f"{tag} variant {i} parses back", parse_clarification(clarifying_question(tag, i)) == (tag, i))
-    check("normal answer is not a clarification", parse_clarification("You get twenty days of leave.") is None)
 
     print("1. Fresh query")
     conv = Conversation(client, args.secret)
     t = conv.say(args.fresh_query)
     check("got a spoken reply", bool(t.strip()))
 
-    print("2. Clarification-triggering query + resolving reply")
+    print("2. A query that used to trigger a clarifying question")
     conv = Conversation(client, args.secret)
-    q = conv.say(args.clarify_query)
-    parsed = parse_clarification(q)
-    if not parsed:
-        print("  [SKIP] query triggered no clarification on this corpus; pass --clarify-query"); sys.exit(1)
-    tag, _ = parsed
-    check("starts with the fixed lead-in", q.startswith(CLARIFY_LEAD_IN), f"tag={tag}")
+    q = conv.say(args.former_clarify_query)
+    check("answered directly, no clarification phrase",
+          bool(q.strip()) and "quick check before i answer" not in q.lower() and "full-time employee or a contractor" not in q.lower(), q[:80])
 
-    print("3. Unusable reply -> re-ask")
-    again = conv.say("banana purple forty two")
-    p2 = parse_clarification(again)
-    check("same attribute asked again", p2 is not None and p2[0] == tag)
-    check("reworded, not identical", again != q)
+    print("3. Follow-up in the same conversation")
+    later = conv.say("and what about the referral bonus?")
+    check("answered, never the old clarification phrase",
+          bool(later.strip()) and "quick check before i answer" not in later.lower(), later[:80])
 
-    ans = conv.say(replies.get(tag, "I'm not sure how to say"))
-    check("resolving reply gets a real answer (no new lead-in for same tag)",
-          not (parse_clarification(ans) and parse_clarification(ans)[0] == tag), ans[:80])
-
-    print("4. Later clarification-worthy query, same conversation")
-    later = conv.say(args.clarify_query)
-    pl = parse_clarification(later)
-    check("does not re-ask the resolved attribute", not (pl and pl[0] == tag), later[:80])
-
-    print("5. Non-streaming request + auth")
+    print("4. Non-streaming request + auth")
     r = client.post("/api/voice/v1/chat/completions", json={"messages": conv.messages[:2] + [
         {"role": "user", "content": args.fresh_query}], "stream": False},
         headers=conv.headers)
@@ -119,6 +94,7 @@ def main():
 
     rows = client.get("/api/admin/usage/recent", params={"limit": 20}).json()
     check("turns logged with source=voice", any(x["source"] == "voice" for x in rows))
+    check("no new turn is a clarification", all(x["response_type"] != "clarification" for x in rows[:6]))
 
     print(f"\n{'ALL PASSED' if not failures else f'{failures} FAILED'}")
     sys.exit(1 if failures else 0)

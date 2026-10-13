@@ -16,6 +16,7 @@ from pydantic import BaseModel
 
 from access_control.extract_applicability import extract_and_store_for_document
 from config.runtime import set_app_config, set_provider_setting
+from channels.common import clear_config_memo
 from config.prompts import SLOTS, refresh_prompt_cache
 from config.topics import invalidate_topics
 from generation.generate import get_client, get_generation_model
@@ -206,6 +207,7 @@ def usage_summary(
                    count(*) FILTER (WHERE response_type = 'clarification') AS clarification,
                    count(*) FILTER (WHERE response_type = 'refusal_shortcut') AS refusal_shortcut,
                    count(*) FILTER (WHERE response_type = 'smalltalk') AS smalltalk,
+                   count(*) FILTER (WHERE response_type = 'source_lookup') AS source_lookup,
                    count(*) FILTER (WHERE contextualized) AS contextualized,
                    count(*) FILTER (WHERE advisory) AS advisory,
                    avg(retrieval_time_ms) AS avg_retrieval_time_ms,
@@ -229,6 +231,7 @@ def usage_summary(
             "clarification": r["clarification"],
             "refusal_shortcut": r["refusal_shortcut"],
             "smalltalk": r["smalltalk"],
+            "source_lookup": r["source_lookup"],
         },
         "avg_retrieval_time_ms": rnd(r["avg_retrieval_time_ms"]),
         "avg_ttft_ms": rnd(r["avg_ttft_ms"]),
@@ -287,6 +290,37 @@ def _expansions(v):
     return v
 
 
+_SMALLTALK_CATEGORIES = ("greeting", "how_are_you", "thanks", "goodbye", "capabilities", "ack", "are_you_there")
+
+
+def _smalltalk_phrases(v):
+    if not isinstance(v, dict) or not v or any(k not in _SMALLTALK_CATEGORIES for k in v):
+        raise ValueError(f"must be an object with keys from {list(_SMALLTALK_CATEGORIES)}")
+    out = {}
+    for category, phrases in v.items():
+        if not isinstance(phrases, list) or not phrases or any(not isinstance(p, str) or not p.strip() for p in phrases):
+            raise ValueError(f"{category!r} must be a non-empty list of non-empty strings")
+        out[category] = [p.strip().lower() for p in phrases]
+    return out
+
+
+_SOURCE_FIELDS = {"one": {"title"}, "one_with_section": {"title", "section"}, "many": {"titles"}, "none": set(), "not_found": set()}
+
+
+def _source_templates(v):
+    import string
+
+    if not isinstance(v, dict) or any(k not in _SOURCE_FIELDS for k in v) or any(k not in v for k in ("one", "many", "none", "not_found")):
+        raise ValueError(f"must be an object with keys one, many, none, not_found (and optionally one_with_section)")
+    for key, template in v.items():
+        if not isinstance(template, str) or not template.strip():
+            raise ValueError(f"{key!r} must be a non-empty string")
+        fields = {f for _, f, _, _ in string.Formatter().parse(template) if f is not None}
+        if not fields <= _SOURCE_FIELDS[key]:
+            raise ValueError(f"{key!r} may only use the placeholders {sorted(_SOURCE_FIELDS[key])}, found {sorted(fields)}")
+    return {k: t.strip() for k, t in v.items()}
+
+
 def _bool(v):
     if not isinstance(v, bool):
         raise ValueError("must be true or false")
@@ -299,20 +333,12 @@ def _non_neg_number(v):
     return float(v)
 
 
-def _default_attributes(v):
-    from access_control.user_attributes import KNOWN_TAG_TYPES
-    if not isinstance(v, dict) or any(k not in KNOWN_TAG_TYPES for k in v):
-        raise ValueError(f"must be an object with keys from {list(KNOWN_TAG_TYPES)}")
-    return {k: _non_empty_str(x) for k, x in v.items()}
-
-
 # key -> validator. app_config keys have no table prefix; provider_configs
 # keys are "<category>.<field>".
 _APP_CONFIG_VALIDATORS = {
     "retrieval.top_k": _pos_int,
     "retrieval.candidate_n": _pos_int,
     "retrieval.rrf_k": _pos_int,
-    "user.default_attributes": _default_attributes,
     "conversation.history_messages": _pos_int,
     "conversation.history_max_chars": _pos_int,
     "retrieval.context.max_words_followup": _pos_int,
@@ -320,6 +346,13 @@ _APP_CONFIG_VALIDATORS = {
     "retrieval.context.followup_markers": _str_list,
     "retrieval.advisory.markers": _str_list,
     "retrieval.advisory.max_chunks_per_doc": _pos_int,
+    "smalltalk.phrases.text": _smalltalk_phrases,
+    "smalltalk.phrases.voice": _smalltalk_phrases,
+    "smalltalk.affirmations": _str_list,
+    "smalltalk.offer_markers": _str_list,
+    "source.markers": _str_list,
+    "source.templates.text": _source_templates,
+    "source.templates.voice": _source_templates,
     "retrieval.expansions": _expansions,
     "retrieval.expansion.enabled": _bool,
     "retrieval.expansion.weight": _non_neg_number,
@@ -333,7 +366,6 @@ for _channel in ("text", "voice"):
         f"retrieval.top_k.{_channel}": _pos_int,
         f"retrieval.candidate_n.{_channel}": _pos_int,
         f"retrieval.rrf_k.{_channel}": _pos_int,
-        f"user.default_attributes.{_channel}": _default_attributes,
         f"conversation.history_messages.{_channel}": _pos_int,
         f"conversation.history_max_chars.{_channel}": _pos_int,
         f"retrieval.context.max_words_followup.{_channel}": _pos_int,
@@ -395,6 +427,7 @@ def update_config(key: str, body: ConfigUpdate):
         return {"key": key, "value": value, "source": "provider_configs", "config": updated}
     if not set_app_config(key, value):
         raise HTTPException(404, f"app_config row {key!r} not found (run vectorstore.setup_db)")
+    clear_config_memo()  # channels/common.py keeps a 30s in-process copy of a few config keys
     return {"key": key, "value": value, "source": "app_config"}
 
 

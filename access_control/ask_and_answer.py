@@ -1,14 +1,15 @@
-"""Compatibility router for eval tooling and the clarification helpers.
+"""Compatibility router for eval tooling.
 
 The pipelines are NOT here: text and voice are fully separate modules
-(channels/text.py, channels/voice.py), each owning its retrieval ->
-applicability check -> generation flow. ask_and_answer(channel=...) only
-dispatches to them; api/chat.py and api/voice.py call the channel modules
-directly.
+(channels/text.py, channels/voice.py), each owning its retrieve -> generate flow.
+ask_and_answer(channel=...) only dispatches to them; api/chat.py and api/voice.py
+call the channel modules directly.
+
+There is no applicability check or clarifying question any more: every turn
+retrieves once and generates once (see docs/applicability_layer_removed.md).
+user_attributes is accepted and ignored so older callers keep working.
 """
 from channels import get_channel
-from channels.common import detect_blocking_tag_types  # noqa: F401  (re-export)
-from channels.text import CLARIFYING_QUESTIONS  # noqa: F401  (resolve_clarification uses the question wording)
 
 
 def ask_and_answer_stream(
@@ -23,7 +24,7 @@ def ask_and_answer_stream(
 ):
     """Streaming core of ask_and_answer(): see channels/text.py answer_stream()."""
     yield from get_channel(channel).answer_stream(
-        query, user_attributes, top_k=top_k, candidate_n=candidate_n, k=k,
+        query, top_k=top_k, candidate_n=candidate_n, k=k,
         confidence_threshold=confidence_threshold, history=history,
     )
 
@@ -38,9 +39,9 @@ def ask_and_answer(
     channel: str = "text",
     history: list | None = None,
 ) -> dict:
-    """Returns {"type": "needs_clarification", ...} or {"type": "answer", ...}: see
+    """Returns {"type": "answer", "answer", "shortcut", "timing", "chunk_ids", ...}: see
     channels/text.py answer()."""
     return get_channel(channel).answer(
-        query, user_attributes, top_k=top_k, candidate_n=candidate_n, k=k,
+        query, top_k=top_k, candidate_n=candidate_n, k=k,
         confidence_threshold=confidence_threshold, history=history,
     )

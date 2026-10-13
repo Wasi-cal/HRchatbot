@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Tests for conversation-aware retrieval and advisory behaviour on both channels:
 history plumbing, follow-up query building, advisory detection / breadth / expansions,
-clarification interplay, prompts, logging, and the per-turn LLM / embedding budgets.
+prompts, logging, and the per-turn LLM / embedding budgets.
 
     python3 -m eval.advisory_test
 
@@ -36,7 +36,6 @@ T1 = "whats my leave policy"
 T2 = "i need to go to my hometown for a week but i only have 3 leaves left"
 T3 = "is there anything else that i can do regarding that as i dont want LOP"
 WFH_OR_COMP = ("Calfus_India_Employee_Handbook_v4_0022", "Calfus_India_Employee_Handbook_v4_0024", "Calfus_India_Employee_Handbook_v4_0025")
-FULL_ATTRS = {"country": "India", "employment_type": "full-time employee"}
 ALT_RE = re.compile(r"work(?:ing)? from home|\bwfh\b|comp[- ]?off|compensatory", re.IGNORECASE)
 HEDGE_RE = re.compile(r"depends? on your (?:location|employment)|location or employment type", re.IGNORECASE)
 
@@ -108,13 +107,13 @@ def test_history():
     check("control characters stripped", common.clean_history([{"role": "user", "content": "a\x00b\x07c"}], "text")[0]["content"] == "abc")
     check("None / empty history -> []", common.clean_history(None, "text") == [] and common.clean_history([], "voice") == [])
     check("voice history derivation skips the synthetic '-' and the greeting",
-          conversation_history([("user", "-"), ("assistant", "Hi, I'm the HR assistant."), ("user", T1), ("assistant", "a1"), ("user", T2)], 4)
+          conversation_history([("user", "-"), ("assistant", "Hi, I'm the HR assistant."), ("user", T1), ("assistant", "a1"), ("user", T2)])
           == [{"role": "user", "content": T1}, {"role": "assistant", "content": "a1"}])
-    from api.voice import clarifying_question
-    q = clarifying_question("employment_type")
-    check("voice history drops the clarifying question and the reply to it, keeps the original question and its answer",
-          conversation_history([("user", "-"), ("assistant", "hi"), ("user", "bonus?"), ("assistant", q), ("user", "full time"), ("assistant", "a"), ("user", "next")], 6)
-          == [{"role": "user", "content": "bonus?"}, {"role": "assistant", "content": "a"}])
+    check("voice history is everything before the final user turn when there is no synthetic opener",
+          conversation_history([("user", T1), ("assistant", "a1"), ("user", T2)])
+          == [{"role": "user", "content": T1}, {"role": "assistant", "content": "a1"}])
+    check("voice history with only the opener and the question is empty",
+          conversation_history([("user", "-"), ("assistant", "hi"), ("user", T1)]) == [])
 
 
 # ---- (b) follow-up queries, advisory detection, expansions ------------------------------------
@@ -231,7 +230,7 @@ def test_budgets_and_model_input(client):
     check("contextualized follow-up: exactly 1 LLM call, 1 embedding call, logged contextualized",
           calls["llm"] == 1 and calls["embed"] == 1 and last_log()[3] is True and last_log()[4] is False, f"{calls['llm']} {calls['embed']} {last_log()[3:5]}")
 
-    r = run("advisory (transcript turn 3)", lambda: client.post("/api/chat", json={"query": T3, "history": H, "user_attributes": FULL_ATTRS}))
+    r = run("advisory (transcript turn 3)", lambda: client.post("/api/chat", json={"query": T3, "history": H}))
     check("advisory turn: exactly 1 LLM call", r.json()["type"] == "answer" and calls["llm"] == 1, f"{calls['llm']} {r.json()['type']}")
     check("advisory turn with expansions: exactly ONE embedding call (one batched encode of main + 3 expansions)",
           calls["embed"] == 1 and len(calls["embed_texts"][0]) == 4, f"{calls['embed']} {[len(t) for t in calls['embed_texts']]}")
@@ -253,14 +252,9 @@ def test_budgets_and_model_input(client):
     check("small-talk logged contextualized=False advisory=False", last_log()[3:5] == (False, False))
 
     q = "will I get paid extra for recommending a friend for a job here"
-    r = run("clarification ask", lambda: client.post("/api/chat", json={"query": q}))
-    ask = r.json()
-    check("clarification ask: 0 LLM calls, 1 embedding call", ask["type"] == "needs_clarification" and calls["llm"] == 0 and calls["embed"] == 1, f"{ask['type']} {calls['llm']} {calls['embed']}")
-    if ask["type"] == "needs_clarification":
-        pending = {"original_query": ask["original_query"], "blocking_tag_type": ask["blocking_tag_type"]}
-        r = run("clarification reply", lambda: client.post("/api/chat", json={
-            "query": "full time", "user_attributes": ask["user_attributes"], "pending_clarification": pending, "history": H}))
-        check("clarification-resolution turn: <= 2 LLM calls (1 resolve + 1 generation, unchanged)", calls["llm"] <= 2, f"{calls['llm']}")
+    r = run("referral query (was clarif.)", lambda: client.post("/api/chat", json={"query": q}))
+    check("the former clarification query is answered: 1 LLM call, 1 embedding call, never a clarification",
+          r.json()["type"] == "answer" and calls["llm"] == 1 and calls["embed"] == 1, f"{r.json()['type']} {calls['llm']} {calls['embed']}")
     print("\n    turn                              LLM  embed      ms")
     for label, llm, emb, ms in rows:
         print(f"    {label:32s} {llm:4d} {emb:6d} {ms:7.0f}")
@@ -297,23 +291,18 @@ def voice_turn(client, messages):
 def test_transcript(client):
     print("\n=== (f) The transcript as a real conversation, both channels ===")
     report = {}
-    for attrs_label, attrs in (("attributes unset", None), ("attributes set", FULL_ATTRS)):
-        hist = []
-        for n, q in enumerate((T1, T2, T3), start=1):
-            body = {"query": q, "history": hist[-6:]}
-            if attrs:
-                body["user_attributes"] = attrs
-            r = client.post("/api/chat", json=body).json()
-            row = last_log()
-            if attrs is None:
-                report[("text", n)] = (r, row)
-            check(f"[text, {attrs_label}] turn {n}: answered, not clarified", r["type"] in ("answer", "refusal_shortcut"), str(r.get("type")))
-            hist += [{"role": "user", "content": q}, {"role": "assistant", "content": r.get("text", "")}]
-            if n == 3:
-                check(f"[text, {attrs_label}] turn 3: advisory + contextualized", row[3] is True and row[4] is True, str(row[3:5]))
-                check(f"[text, {attrs_label}] turn 3: context contains the WFH / comp-off chunks", bool(set(row[5]) & set(WFH_OR_COMP)), str(row[5]))
-                check(f"[text, {attrs_label}] turn 3: answer offers a grounded alternative (WFH / comp-off)", ALT_RE.search(r["text"]) is not None, r["text"][:200])
-                check(f"[text, {attrs_label}] turn 3: no location/employment-type hedge", HEDGE_RE.search(r["text"]) is None, r["text"][:200])
+    hist = []
+    for n, q in enumerate((T1, T2, T3), start=1):
+        r = client.post("/api/chat", json={"query": q, "history": hist[-6:]}).json()
+        row = last_log()
+        report[("text", n)] = (r, row)
+        check(f"[text] turn {n}: answered, never a clarification", r["type"] in ("answer", "refusal_shortcut"), str(r.get("type")))
+        hist += [{"role": "user", "content": q}, {"role": "assistant", "content": r.get("text", "")}]
+        if n == 3:
+            check("[text] turn 3: advisory + contextualized", row[3] is True and row[4] is True, str(row[3:5]))
+            check("[text] turn 3: context contains the WFH / comp-off chunks", bool(set(row[5]) & set(WFH_OR_COMP)), str(row[5]))
+            check("[text] turn 3: answer offers a grounded alternative (WFH / comp-off)", ALT_RE.search(r["text"]) is not None, r["text"][:200])
+            check("[text] turn 3: no location/employment-type hedge", HEDGE_RE.search(r["text"]) is None, r["text"][:200])
     pairs = []
     for n, q in enumerate((T1, T2, T3), start=1):
         text = voice_turn(client, voice_messages(pairs, q))
