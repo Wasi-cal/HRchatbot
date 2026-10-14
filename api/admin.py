@@ -495,6 +495,12 @@ def _fallback_message(v):
     return v.strip()
 
 
+def _turn_reminder(v):
+    if not isinstance(v, str) or len(v.split()) > 40 or len(v) > 400:
+        raise ValueError("must be a string of at most 40 words (empty turns the reminder off)")
+    return v.strip()
+
+
 def _stt_version(v):
     if v not in ("v1", "v2"):
         raise ValueError('must be "v1" or "v2" (Deepgram: Flux models use v2, every other model v1)')
@@ -563,6 +569,10 @@ _APP_CONFIG_VALIDATORS = {
     "retrieval.advisory.markers": _str_list,
     "retrieval.context.affirmation_user_weight": _non_neg_number,
     "prompts.max_chars": _pos_int,
+    "prompts.turn_reminder": _turn_reminder,
+    "retrieval.context.identity_markers": _str_list,
+    "retrieval.context.identity_max_words": _pos_int,
+    "retrieval.context.weights_identity": _context_weights_pair,
     "retrieval.context.dual_query.enabled": _bool,
     "retrieval.context.ctx_heavy_below_words": _nonneg_int,
     "retrieval.context.weight_standalone": _non_neg_number,
@@ -626,6 +636,8 @@ for _channel in ("text", "voice"):
     })
 _PROVIDER_VALIDATORS = {
     "generation.model": _non_empty_str,
+    "generation.temperature": _bounded(0.0, 2.0, "temperature"),
+    "generation.top_p": _bounded(0.01, 1.0, "top_p", allow_null=True),
     "generation.confidence_threshold": _unit_interval,
     "stt.model": _non_empty_str,
     # Deepgram listen settings (configure-voice-agent / voice-agent-stt-models). eot_* and eager_* are Flux (v2) only and

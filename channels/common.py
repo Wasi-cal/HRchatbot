@@ -14,7 +14,7 @@ import time
 from dataclasses import dataclass, field
 
 from config.channel_settings import channel_setting
-from config.runtime import get_app_config
+from config.runtime import get_app_config, memo_provider_config
 
 # ---- generation ---------------------------------------------------------------------
 
@@ -31,10 +31,11 @@ def build_messages(query: str, chunks: list[dict], system_prompt: str, history: 
             f"{chunk['document_title']} > {chunk['section_path']}]\n{label}{chunk['text']}"
         )
     context = "\n\n".join(blocks)
+    reminder = (memo_config("prompts.turn_reminder", "") or "").strip()  # prompts.turn_reminder: after the excerpts, before the question
     user_content = (
         "Retrieved policy excerpts (internal grounding only - never mention the "
         "excerpt labels, source titles, or section names in your answer):\n\n"
-        f"{context}\n\nEmployee question: {query}"
+        f"{context}\n\n" + (f"{reminder}\n\n" if reminder else "") + f"Employee question: {query}"
     )
     return [
         {"role": "system", "content": system_prompt},
@@ -88,7 +89,10 @@ class TurnHandle:
 
 def generation_settings(channel: str) -> dict:
     """Timeout / retry / fallback settings for a channel (app_config, read through the in-process copy)."""
+    provider = memo_provider_config("generation")
     return {
+        "temperature": provider.get("temperature"),
+        "top_p": provider.get("top_p"),
         "first_token_timeout_s": float(memo_config("generation.first_token_timeout_s", 4)),
         "request_timeout_s": float(memo_config("generation.request_timeout_s", 20)),
         "max_retries": int(memo_config(f"generation.max_retries.{channel}", 1)),
@@ -148,8 +152,9 @@ def stream_completion(client, model: str, messages: list[dict], *, channel: str 
         timer = None
         try:
             attempt_start = time.monotonic()
+            sampling = {k: cfg[k] for k in ("temperature", "top_p") if cfg.get(k) is not None}
             stream = _with_options(client, cfg).chat.completions.create(
-                model=model, messages=messages, stream=True, stream_options={"include_usage": True})
+                model=model, messages=messages, stream=True, stream_options={"include_usage": True}, **sampling)
             info["headers_ms"] = (time.monotonic() - attempt_start) * 1000
             headers = getattr(getattr(stream, "response", None), "headers", None) or {}
             info["request_id"] = headers.get("x-request-id") if hasattr(headers, "get") else None
@@ -280,17 +285,28 @@ def _offer_sentence(assistant_text: str) -> str | None:
     return sentences[-1]
 
 
+def _has_identity_marker(norm: str) -> bool:
+    """"i am ...", "as a ..." introduce who the user IS; they mark a follow-up only in a SHORT utterance
+    (retrieval.context.identity_max_words), where they refer back to the topic ("i am an intern"). In a longer
+    sentence ("I am relocating to another city, what does the policy say") they are just words of a fresh question."""
+    return (len(norm.split()) <= memo_config("retrieval.context.identity_max_words", 6)
+            and _contains_phrase(norm, memo_config("retrieval.context.identity_markers", [])))
+
+
 def _context_weights(current: str, channel: str) -> tuple[float, float]:
-    """(standalone_weight, ctx_weight) for a contextualised turn. A follow-up marker ("that", "what about", ...) shifts the
-    weights toward the contextualised query; without one (a merely SHORT utterance) toward the standalone query; an utterance of fewer than retrieval.context.ctx_heavy_below_words words counts as having a marker. Both pairs
-    are app_config (retrieval.context.weights_with_marker / weights_without_marker, each {"standalone": x, "ctx": y});
+    """(standalone_weight, ctx_weight) for a contextualised turn. A follow-up marker ("that", "what about", ...) or a very
+    short utterance (fewer than retrieval.context.ctx_heavy_below_words words) shifts the weights toward the contextualised
+    query; a short identity statement ("i am an intern") uses retrieval.context.weights_identity (equal); anything else
+    (merely SHORT, no marker) leans on the standalone query. Pairs are app_config objects {"standalone": x, "ctx": y};
     a missing key falls back to retrieval.context.weight_standalone / weight_ctx."""
     norm = normalize(current)
-    # a marker word, or a very short utterance ("for interns?", "contractors too?" - too little text to stand alone), gets the
-    # context-heavy pair
-    has_marker = (_contains_phrase(norm, memo_config("retrieval.context.followup_markers", []))
-                  or len(norm.split()) < memo_config("retrieval.context.ctx_heavy_below_words", 3))
-    key = "retrieval.context.weights_with_marker" if has_marker else "retrieval.context.weights_without_marker"
+    if (_contains_phrase(norm, memo_config("retrieval.context.followup_markers", []))
+            or len(norm.split()) < memo_config("retrieval.context.ctx_heavy_below_words", 3)):
+        key = "retrieval.context.weights_with_marker"
+    elif _has_identity_marker(norm):
+        key = "retrieval.context.weights_identity"
+    else:
+        key = "retrieval.context.weights_without_marker"
     pair = memo_config(key, {}) or {}
     standalone = pair.get("standalone", memo_config("retrieval.context.weight_standalone", 1.0))
     ctx = pair.get("ctx", memo_config("retrieval.context.weight_ctx", 1.0))
@@ -309,8 +325,9 @@ def build_retrieval_query(current: str, history: list[dict], channel: str) -> tu
         return current, False
     max_words = channel_setting("retrieval.context.max_words_followup", channel, 8)
     norm = normalize(current)
-    follow_up = len(norm.split()) < max_words or _contains_phrase(
-        norm, get_app_config("retrieval.context.followup_markers", []))
+    follow_up = (len(norm.split()) < max_words
+                 or _contains_phrase(norm, get_app_config("retrieval.context.followup_markers", []))
+                 or _has_identity_marker(norm))
     if not follow_up:
         return current, False
     n = channel_setting("retrieval.context.prior_user_turns", channel, 2)

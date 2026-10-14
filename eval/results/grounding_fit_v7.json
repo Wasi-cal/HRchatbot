@@ -1,0 +1,345 @@
+{
+  "label": "v7",
+  "prompts": {
+    "text": {
+      "grounding_core": 7,
+      "style": 3
+    },
+    "voice": {
+      "grounding_core": 7,
+      "style": 4
+    }
+  },
+  "runs": [
+    {
+      "channel": "text",
+      "run": 1,
+      "q1": "can I apply for bereavement leave for my dog",
+      "a1": "The policy does not mention compassion for pets or provide a specific bereavement leave for them. You have a few options for time off:\n\n- Earned Leave: You can use your earned leave for any personal reasons, pending manager approval.\n- Sick Leave: This leave can be used if you're unwell, requiring proof for absence.\n- Leave Without Pay: If you don't have sufficient leave balance, you may take leave without pay, which also requires manager approval.\n\nConsider discussing your situation with your manager to explore these options.",
+      "chunks1": [
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_a": false,
+      "q2": "do I need to send proof",
+      "a2": "I couldn't find what is required for proof with respect to bereavement leave in the HR policies. You may want to check with your supervisor or HR for clarification.",
+      "chunks2": [
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_b": false
+    },
+    {
+      "channel": "text",
+      "run": 2,
+      "q1": "can I apply for bereavement leave for my dog",
+      "a1": "The policy mentions bereavement leave, but it does not specify coverage for pets. You could consider using your earned leave or sick leave, but that depends on your balance. You may also discuss this situation with your manager to explore any possibilities. Would you like more details about the leave options?",
+      "chunks1": [
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_a": false,
+      "q2": "do I need to send proof",
+      "a2": "I couldn't find anything about needing to provide proof for bereavement leave in the HR policies. You may want to ask HR for clarification on that.",
+      "chunks2": [
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_b": false
+    },
+    {
+      "channel": "text",
+      "run": 3,
+      "q1": "can I apply for bereavement leave for my dog",
+      "a1": "The policy specifically mentions bereavement leave, but it does not cover pets. You can take earned leave, which is available to you, or consider leave without pay if you don't have enough leave days accrued. \n\nOptions include:\n- Earned Leave: You can use your 21 days of earned leave, which is subject to your manager's approval.\n- Leave without pay: This requires manager approval and is applicable if you lack sufficient leave balance.\n\nPlease decide how you would like to proceed.",
+      "chunks1": [
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_a": false,
+      "q2": "do I need to send proof",
+      "a2": "I couldn't find what is required for bereavement leave in the HR policies. You may want to check with HR for clarity on that.",
+      "chunks2": [
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_b": false
+    },
+    {
+      "channel": "text",
+      "run": 4,
+      "q1": "can I apply for bereavement leave for my dog",
+      "a1": "The policy mentions bereavement leave for the death of a family member, but it does not specify coverage for pets. Since the policy doesn't mention this situation, you may want to consider other types of leave like earned leave or speak to your manager or HR for guidance. Would you like to know more about the types of leave available?",
+      "chunks1": [
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_a": false,
+      "q2": "do I need to send proof",
+      "a2": "I couldn't find information about needing to provide proof for bereavement leave in the HR policies. You might want to check with HR for specific requirements.",
+      "chunks2": [
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_b": false
+    },
+    {
+      "channel": "text",
+      "run": 5,
+      "q1": "can I apply for bereavement leave for my dog",
+      "a1": "The policy mentions bereavement leave but does not specify if it applies to pets. Since the situation isn't covered, you may want to consider using your earned leave, which provides 21 days annually. You could also ask your manager for additional options or flexibility. It might be best to discuss your situation directly with them.",
+      "chunks1": [
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_a": false,
+      "q2": "do I need to send proof",
+      "a2": "I couldn't find what is required for bereavement leave in the HR policies. You may want to check with HR about any necessary documentation.",
+      "chunks2": [
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_b": false
+    },
+    {
+      "channel": "text",
+      "run": 6,
+      "q1": "can I apply for bereavement leave for my dog",
+      "a1": "The policy mentions bereavement leave, but it does not specify eligibility for the loss of a pet. It only states there are 2 days of bereavement leave available. You can consider using your earned leave or sick leave if applicable. \n\nOptions include:\n- Using earned leave, which gives you up to 21 days, with approval from your supervisor.\n- Using sick leave, which allows for 7 days, also requires supervisor approval.\n\nNext, you should talk to your supervisor about which type of leave to apply for.",
+      "chunks1": [
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_a": false,
+      "q2": "do I need to send proof",
+      "a2": "I couldn't find requirements for proof for bereavement leave in the HR policies. It’s best to check with your manager or HR for further guidance.",
+      "chunks2": [
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_b": false
+    },
+    {
+      "channel": "text",
+      "run": 7,
+      "q1": "can I apply for bereavement leave for my dog",
+      "a1": "The policy does not mention bereavement leave for pets. The available leave types include earned leave, sick leave, and bereavement leave for the death of a family member, which grants 2 days. You can consider using your earned leave, which allows for up to 21 days of leave. \n\nWould you like more information about using your earned leave?",
+      "chunks1": [
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_a": false,
+      "q2": "do I need to send proof",
+      "a2": "The policy doesn't mention if you need to provide proof for bereavement leave. You may want to check with your supervisor for any specific requirements.",
+      "chunks2": [
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_b": false
+    },
+    {
+      "channel": "text",
+      "run": 8,
+      "q1": "can I apply for bereavement leave for my dog",
+      "a1": "The policy mentions bereavement leave but does not specify coverage for pets. Since it only states bereavement leave without explicit mention for animals, the policy does not address this situation. You may want to discuss your options with your manager or HR.",
+      "chunks1": [
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_a": false,
+      "q2": "do I need to send proof",
+      "a2": "I couldn't find what is required for bereavement leave in the HR policies. You may want to speak to your manager or HR for guidance on the process.",
+      "chunks2": [
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_b": false
+    },
+    {
+      "channel": "voice",
+      "run": 1,
+      "q1": "can I apply for bereavement leave for my dog",
+      "a1": "The policy mentions bereavement leave but does not specify it covers pets. You could use your earned leave, which is twenty-one days total. Would you like to know more about applying for earned leave?",
+      "chunks1": [
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_a": false,
+      "q2": "do I need to send proof",
+      "a2": "I couldn't find if proof is required for bereavement leave in the HR policies. You might want to check with HR for clarity on that.",
+      "chunks2": [
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_b": false
+    },
+    {
+      "channel": "voice",
+      "run": 2,
+      "q1": "can I apply for bereavement leave for my dog",
+      "a1": "The policy mentions bereavement leave, but it doesn't specify coverage for pets. You may want to consider using your earned leave. Would you like more details on that?",
+      "chunks1": [
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_a": false,
+      "q2": "do I need to send proof",
+      "a2": "I couldn't find what is required for proof in the HR policies. You might want to check with HR for clarification.",
+      "chunks2": [
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_b": false
+    },
+    {
+      "channel": "voice",
+      "run": 3,
+      "q1": "can I apply for bereavement leave for my dog",
+      "a1": "The policy does not mention bereavement leave for pets. You have the option of using your earned leave instead. Want to know how to apply for that?",
+      "chunks1": [
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_a": false,
+      "q2": "do I need to send proof",
+      "a2": "I couldn't find anything about needing proof for bereavement leave in the HR policies. You may want to check with HR for any specific requirements.",
+      "chunks2": [
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_b": false
+    },
+    {
+      "channel": "voice",
+      "run": 4,
+      "q1": "can I apply for bereavement leave for my dog",
+      "a1": "The policy only mentions bereavement leave in relation to the death of immediate family members. It doesn't specifically include pets. For your situation, you can consider using earned leave or sick leave. Would you like to hear more about those options?",
+      "chunks1": [
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_a": false,
+      "q2": "do I need to send proof",
+      "a2": "I couldn't find what is required for bereavement leave in the HR policies. You might want to check with HR about that.",
+      "chunks2": [
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_b": false
+    },
+    {
+      "channel": "voice",
+      "run": 5,
+      "q1": "can I apply for bereavement leave for my dog",
+      "a1": "The policy specifically mentions bereavement leave, but it’s not clear if it applies to pets. I couldn't find anything about bereavement leave for pets in the HR policies. You might want to discuss your situation with your manager or HR.",
+      "chunks1": [
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_a": false,
+      "q2": "do I need to send proof",
+      "a2": "I couldn't find anything about needing to send proof for bereavement leave in the HR policies.",
+      "chunks2": [
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_b": false
+    },
+    {
+      "channel": "voice",
+      "run": 6,
+      "q1": "can I apply for bereavement leave for my dog",
+      "a1": "The policy doesn't mention bereavement leave for pets, so it wouldn't apply. You could consider using your earned leave instead. Want me to go through how that works?",
+      "chunks1": [
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_a": false,
+      "q2": "do I need to send proof",
+      "a2": "I couldn't find what is required for bereavement leave in the HR policies. You may want to check with HR for guidance.",
+      "chunks2": [
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_b": false
+    },
+    {
+      "channel": "voice",
+      "run": 7,
+      "q1": "can I apply for bereavement leave for my dog",
+      "a1": "The policy doesn't mention bereavement leave for pets. You might consider using earned leave instead. Would you like to know more about that option?",
+      "chunks1": [
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_a": false,
+      "q2": "do I need to send proof",
+      "a2": "I couldn't find proof requirements for bereavement leave in the HR policies. You might want to check with your manager or HR for guidance.",
+      "chunks2": [
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_b": false
+    },
+    {
+      "channel": "voice",
+      "run": 8,
+      "q1": "can I apply for bereavement leave for my dog",
+      "a1": "The policy doesn't mention bereavement leave for pets. You could consider using earned leave or unpaid leave instead. Want me to go through those options?",
+      "chunks1": [
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_a": false,
+      "q2": "do I need to send proof",
+      "a2": "I couldn't find anything about proof for bereavement leave in the HR policies.",
+      "chunks2": [
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_b": false
+    }
+  ],
+  "flagged": {
+    "a_applies_without_saying_not_mentioned": {
+      "text": 0,
+      "voice": 0
+    },
+    "b_requirement_stated_without_support": {
+      "text": 0,
+      "voice": 0
+    }
+  }
+}

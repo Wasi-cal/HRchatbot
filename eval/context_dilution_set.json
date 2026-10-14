@@ -1,5 +1,305 @@
 [
   {
+    "group": "fresh_identity",
+    "history": [
+      {
+        "role": "user",
+        "content": "My dog died."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "Yeah. I want some time off."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "I am relocating to another city, what does the policy say",
+    "expected": [
+      "Certification_Reimbursement_Policy_Ver1_0_0009"
+    ]
+  },
+  {
+    "group": "fresh_identity",
+    "history": [
+      {
+        "role": "user",
+        "content": "how many days of earned leave do i get"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "can i work from home if i am sick"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "as an employee on probation what is the notice period",
+    "expected": [
+      "Calfus_India_Employee_Handbook_v4_0032"
+    ]
+  },
+  {
+    "group": "fresh_identity",
+    "history": [
+      {
+        "role": "user",
+        "content": "what is the probation period"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "who do i report a security incident to"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "I am thinking of getting a certification, what does the company reimburse",
+    "expected": [
+      "Certification_Reimbursement_Policy_Ver1_0_0005"
+    ]
+  },
+  {
+    "group": "fresh_identity",
+    "history": [
+      {
+        "role": "user",
+        "content": "My dog died."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "Yeah. I want some time off."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "as a new joiner how do I get my referral bonus",
+    "expected": [
+      "Calfus_India_Employee_Handbook_v4_0028"
+    ]
+  },
+  {
+    "group": "fresh_identity",
+    "history": [
+      {
+        "role": "user",
+        "content": "how many days of earned leave do i get"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "can i work from home if i am sick"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "im planning to travel for work, what are the reimbursement rules",
+    "expected": [
+      "Travel_Policy_Ver1_0_0003"
+    ]
+  },
+  {
+    "group": "fresh_identity",
+    "history": [
+      {
+        "role": "user",
+        "content": "what is the probation period"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "who do i report a security incident to"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "I am facing harassment from a colleague, how do I file a complaint",
+    "expected": [
+      "POSH_Policy_2025_Ver2_0_0010"
+    ]
+  },
+  {
+    "group": "fresh_identity",
+    "history": [
+      {
+        "role": "user",
+        "content": "My dog died."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "Yeah. I want some time off."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "as an employee who works remotely what connectivity rules apply to me",
+    "expected": [
+      "Remote_Connectivity_Data_Protection_Policy_Ver1_0_0002"
+    ]
+  },
+  {
+    "group": "fresh_identity",
+    "history": [
+      {
+        "role": "user",
+        "content": "how many days of earned leave do i get"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "can i work from home if i am sick"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "what about the performance appraisal cycle, when does it happen each year",
+    "expected": [
+      "Performance_Appraisal_Promotion_Policy_Ver_1_0_0002"
+    ]
+  },
+  {
+    "group": "fresh_identity",
+    "history": [
+      {
+        "role": "user",
+        "content": "what is the probation period"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "who do i report a security incident to"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "and for people leaving the company, what is the notice period",
+    "expected": [
+      "Calfus_India_Employee_Handbook_v4_0032"
+    ]
+  },
+  {
+    "group": "fresh_identity",
+    "history": [
+      {
+        "role": "user",
+        "content": "My dog died."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "Yeah. I want some time off."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "I am a manager and want to put an employee on a PIP, what is the process",
+    "expected": [
+      "PIP_Process_Ver1_0_0003"
+    ]
+  },
+  {
+    "group": "fresh_identity",
+    "history": [
+      {
+        "role": "user",
+        "content": "how many days of earned leave do i get"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "can i work from home if i am sick"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "as a team lead how do I nominate someone for rewards and recognition",
+    "expected": [
+      "Rewards_and_Recognition_Policy_Ver1_0_0002"
+    ]
+  },
+  {
+    "group": "fresh_identity",
+    "history": [
+      {
+        "role": "user",
+        "content": "what is the probation period"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "who do i report a security incident to"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "I am worried about a data breach on my laptop, who should I tell",
+    "expected": [
+      "All_IT_Policies_0144"
+    ]
+  },
+  {
     "group": "fresh",
     "history": [
       {

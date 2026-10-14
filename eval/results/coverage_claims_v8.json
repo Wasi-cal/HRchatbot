@@ -1,0 +1,1049 @@
+{
+  "label": "v8",
+  "prompts": {
+    "text": {
+      "grounding_core": 8,
+      "style": 3
+    },
+    "voice": {
+      "grounding_core": 8,
+      "style": 4
+    }
+  },
+  "runs": [
+    {
+      "channel": "text",
+      "turn": "dog",
+      "question": "can I take bereavement leave for my dog",
+      "run": 1,
+      "answer": "I'm sorry to hear about your situation. The policy doesn't mention bereavement leave for pets. Therefore, you might consider discussing your situation with your manager or HR to explore what options may be available.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "dog",
+      "question": "can I take bereavement leave for my dog",
+      "run": 2,
+      "answer": "I couldn't find bereavement leave for pets in the HR policies. Bereavement leave is generally for the loss of a close family member. You may want to speak with your manager or HR about this situation.",
+      "a": true,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "dog",
+      "question": "can I take bereavement leave for my dog",
+      "run": 3,
+      "answer": "I'm sorry to hear about your situation. The policy doesn't mention bereavement leave for pets. You may want to speak to your manager or HR for guidance on your options.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "dog",
+      "question": "can I take bereavement leave for my dog",
+      "run": 4,
+      "answer": "The policy does not mention bereavement leave for pets. Bereavement leave is typically intended for certain family members. You can discuss your situation with your manager or HR for guidance.",
+      "a": true,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "dog",
+      "question": "can I take bereavement leave for my dog",
+      "run": 5,
+      "answer": "The policy doesn't specify bereavement leave for pets. It seems to only cover bereavement for human loss. You might want to speak to your manager or HR for any additional options or support.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "dog",
+      "question": "can I take bereavement leave for my dog",
+      "run": 6,
+      "answer": "The policy doesn't mention bereavement leave for pets. Bereavement leave is typically intended for the death of immediate family members. You could explore other leave options such as earned leave or sick leave if applicable. Please consider speaking to your manager for guidance on this matter.",
+      "a": true,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "dog",
+      "question": "can I take bereavement leave for my dog",
+      "run": 7,
+      "answer": "The policy does not mention taking bereavement leave for a pet. Bereavement leave is typically reserved for the death of close family members. I suggest speaking to HR to clarify your options.",
+      "a": true,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "dog",
+      "question": "can I take bereavement leave for my dog",
+      "run": 8,
+      "answer": "I couldn't find bereavement leave for pets in the HR policies. The policy mentions bereavement leave but does not specify coverage for pets. You may want to discuss this with your manager or HR for further clarification.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "proof_bereavement",
+      "question": "do I need to send proof for bereavement leave",
+      "run": 1,
+      "answer": "The policy does not specify that proof is required for bereavement leave. It simply states the entitlement. If you have further questions, consider reaching out to HR for clarification.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "proof_bereavement",
+      "question": "do I need to send proof for bereavement leave",
+      "run": 2,
+      "answer": "The policy doesn't specify whether proof is required for bereavement leave. I recommend checking with HR for clarification on this matter.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "proof_bereavement",
+      "question": "do I need to send proof for bereavement leave",
+      "run": 3,
+      "answer": "The policy doesn't specify whether proof is required for bereavement leave. It would be best to check with HR for any specific requirements related to this leave type.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "proof_bereavement",
+      "question": "do I need to send proof for bereavement leave",
+      "run": 4,
+      "answer": "The policy doesn't specify that proof is required for bereavement leave. However, it’s advisable to confirm this by checking with HR for any specific requirements. If you have any other questions about leave policies, feel free to ask!",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "proof_bereavement",
+      "question": "do I need to send proof for bereavement leave",
+      "run": 5,
+      "answer": "The policy doesn't specify whether proof is required for bereavement leave. You may want to check with HR for clarification on what is needed.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "proof_bereavement",
+      "question": "do I need to send proof for bereavement leave",
+      "run": 6,
+      "answer": "I couldn't find information about what is required for bereavement leave in the HR policies. You may want to check with HR for clarification on that.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "proof_bereavement",
+      "question": "do I need to send proof for bereavement leave",
+      "run": 7,
+      "answer": "The policy doesn't specify what is required for bereavement leave. You might want to check with HR for any specific requirements related to that leave type.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "proof_bereavement",
+      "question": "do I need to send proof for bereavement leave",
+      "run": 8,
+      "answer": "The policy doesn't specify whether proof is required for bereavement leave. You may want to check with HR for clarification on that.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "who_bereavement",
+      "question": "who does bereavement leave cover",
+      "run": 1,
+      "answer": "I couldn't find who bereavement leave covers in the HR policies. However, bereavement leave is 2 days. You may want to check with HR for more specific details.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "who_bereavement",
+      "question": "who does bereavement leave cover",
+      "run": 2,
+      "answer": "I couldn't find information about who bereavement leave covers in the HR policies. Bereavement leave is available for 2 days. You might want to check with HR for further clarification.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "who_bereavement",
+      "question": "who does bereavement leave cover",
+      "run": 3,
+      "answer": "I couldn't find who bereavement leave covers in the HR policies. However, the policy states that bereavement leave is for 2 days. You may wish to check with HR for specific coverage details.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "who_bereavement",
+      "question": "who does bereavement leave cover",
+      "run": 4,
+      "answer": "I couldn't find who bereavement leave covers in the HR policies. The policy states that bereavement leave is for 2 days. You may want to check with HR for specific eligibility details.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "who_bereavement",
+      "question": "who does bereavement leave cover",
+      "run": 5,
+      "answer": "I couldn't find information about who bereavement leave covers in the HR policies. You might want to check with HR for clarity on this.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "who_bereavement",
+      "question": "who does bereavement leave cover",
+      "run": 6,
+      "answer": "I couldn't find who bereavement leave covers in the HR policies. The policy states that bereavement leave is available for 2 days, but does not specify any eligibility criteria or who it applies to. Please check with HR for further clarification.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "who_bereavement",
+      "question": "who does bereavement leave cover",
+      "run": 7,
+      "answer": "I couldn't find who bereavement leave covers in the HR policies. The policy states that bereavement leave is for 2 days. You may want to check with HR for more information.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "who_bereavement",
+      "question": "who does bereavement leave cover",
+      "run": 8,
+      "answer": "I couldn't find who bereavement leave covers in the HR policies. The policy mentions that employees get 2 days of bereavement leave, but it does not specify eligibility. You may want to check with HR for more information on this.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "proof_sick",
+      "question": "do I need proof for sick leave",
+      "run": 1,
+      "answer": "Yes, you need proof for sick leave. During your notice period, you can only use sick leave with the required documentation. If you have any further questions about leave or related policies, feel free to ask!",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "proof_sick",
+      "question": "do I need proof for sick leave",
+      "run": 2,
+      "answer": "Yes, proof is required for sick leave during the notice period.",
+      "a": false,
+      "b": true,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "proof_sick",
+      "question": "do I need proof for sick leave",
+      "run": 3,
+      "answer": "Yes, you need proof for sick leave. Sick leave can be used during your notice period, but it must be supported by appropriate documentation.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "proof_sick",
+      "question": "do I need proof for sick leave",
+      "run": 4,
+      "answer": "Yes, you need proof for sick leave. It's required during the notice period when you're taking sick leave.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "proof_sick",
+      "question": "do I need proof for sick leave",
+      "run": 5,
+      "answer": "Yes, proof is required for sick leave. During the notice period, you can use your leave balance only for sick leave if you provide documentation.",
+      "a": false,
+      "b": true,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "proof_sick",
+      "question": "do I need proof for sick leave",
+      "run": 6,
+      "answer": "Yes, proof is required for sick leave. If you are using sick leave during your notice period, you need to provide this proof.",
+      "a": false,
+      "b": true,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "proof_sick",
+      "question": "do I need proof for sick leave",
+      "run": 7,
+      "answer": "Yes, you need to provide proof for sick leave. Sick leave is the only leave that can be used during your notice period, and it must be approved by your supervisor.",
+      "a": false,
+      "b": true,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "proof_sick",
+      "question": "do I need proof for sick leave",
+      "run": 8,
+      "answer": "Yes, you need to provide proof for taking sick leave.",
+      "a": false,
+      "b": true,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_bereavement",
+      "question": "how many days of bereavement leave",
+      "run": 1,
+      "answer": "You get 2 days of bereavement leave. This leave cannot be encashed or carried forward.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_bereavement",
+      "question": "how many days of bereavement leave",
+      "run": 2,
+      "answer": "You get 2 days of bereavement leave. This leave is not encashable and cannot be carried forward.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_bereavement",
+      "question": "how many days of bereavement leave",
+      "run": 3,
+      "answer": "You get 2 days of bereavement leave. This leave does not carry forward or can be encashed.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_bereavement",
+      "question": "how many days of bereavement leave",
+      "run": 4,
+      "answer": "You get 2 days of bereavement leave. This leave is not encashable or carry forwarded.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_bereavement",
+      "question": "how many days of bereavement leave",
+      "run": 5,
+      "answer": "You get 2 days of bereavement leave. This leave cannot be encashed or carried forward.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_bereavement",
+      "question": "how many days of bereavement leave",
+      "run": 6,
+      "answer": "You get 2 days of bereavement leave. This leave cannot be encashed or carried forward.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_bereavement",
+      "question": "how many days of bereavement leave",
+      "run": 7,
+      "answer": "You get 2 days of bereavement leave. This leave is not encashable and cannot be carried forward.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_bereavement",
+      "question": "how many days of bereavement leave",
+      "run": 8,
+      "answer": "You get 2 days of bereavement leave. This leave cannot be encashed or carried forward.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_sick",
+      "question": "how many sick leaves do I get",
+      "run": 1,
+      "answer": "You get 7 days of sick leave per year. It cannot be encashed or carried forward.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_sick",
+      "question": "how many sick leaves do I get",
+      "run": 2,
+      "answer": "You get 7 days of sick leave each year. This leave cannot be encashed or carried forward.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_sick",
+      "question": "how many sick leaves do I get",
+      "run": 3,
+      "answer": "You get 7 days of sick leave. This leave cannot be encashed or carried forward to the next year.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_sick",
+      "question": "how many sick leaves do I get",
+      "run": 4,
+      "answer": "You get 7 days of sick leave. This leave cannot be encashed or carried forward to the next year.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_sick",
+      "question": "how many sick leaves do I get",
+      "run": 5,
+      "answer": "You get 7 days of sick leave each year. Unused sick leave cannot be carried forward or encashed.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_sick",
+      "question": "how many sick leaves do I get",
+      "run": 6,
+      "answer": "You get 7 days of sick leave. Sick leave cannot be encashed or carried forward.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_sick",
+      "question": "how many sick leaves do I get",
+      "run": 7,
+      "answer": "You get 7 days of sick leave. Sick leave cannot be encashed or carried forward.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_sick",
+      "question": "how many sick leaves do I get",
+      "run": 8,
+      "answer": "You get 7 days of sick leave. This leave cannot be encashed or carried forward.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "dog",
+      "question": "can I take bereavement leave for my dog",
+      "run": 1,
+      "answer": "I couldn't find bereavement leave for pets in the HR policies. The policy only mentions bereavement leave for specific situations, but it doesn't specify those. You may want to discuss this with your manager or HR for guidance.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "dog",
+      "question": "can I take bereavement leave for my dog",
+      "run": 2,
+      "answer": "I couldn't find bereavement leave for a pet in the HR policies. The policy only mentions bereavement leave for certain cases. You might want to speak to HR about this.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "dog",
+      "question": "can I take bereavement leave for my dog",
+      "run": 3,
+      "answer": "The policy doesn't mention bereavement leave for pets. It only addresses situations involving family members. You might want to discuss this with your manager or HR for specific options.",
+      "a": true,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "dog",
+      "question": "can I take bereavement leave for my dog",
+      "run": 4,
+      "answer": "I couldn't find bereavement leave for pets in the HR policies. The policy mentions bereavement leave without specifying pets. You might want to speak with your manager or HR about your situation.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "dog",
+      "question": "can I take bereavement leave for my dog",
+      "run": 5,
+      "answer": "I couldn't find bereavement leave for pets in the HR policies. The policy only mentions bereavement leave related to certain family members. You might want to speak with your manager or HR for more guidance on this matter.",
+      "a": true,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "dog",
+      "question": "can I take bereavement leave for my dog",
+      "run": 6,
+      "answer": "I couldn't find bereavement leave for pets in the HR policies. Bereavement leave typically covers family members. You might want to speak with your manager or HR about this situation.",
+      "a": true,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "dog",
+      "question": "can I take bereavement leave for my dog",
+      "run": 7,
+      "answer": "I couldn't find bereavement leave for pets in the HR policies. Bereavement leave specifically applies to situations related to human loss. You might want to discuss your situation with your manager or HR for guidance.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "dog",
+      "question": "can I take bereavement leave for my dog",
+      "run": 8,
+      "answer": "I couldn't find bereavement leave for pets in the HR policies. Bereavement leave is generally meant for specific relatives or family members. You might want to speak to your manager or HR about your situation.",
+      "a": true,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "proof_bereavement",
+      "question": "do I need to send proof for bereavement leave",
+      "run": 1,
+      "answer": "I couldn't find what is required for bereavement leave in the HR policies. You might want to check with HR directly for clarification.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "proof_bereavement",
+      "question": "do I need to send proof for bereavement leave",
+      "run": 2,
+      "answer": "The policy doesn't specify any requirements for proof when taking bereavement leave.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "proof_bereavement",
+      "question": "do I need to send proof for bereavement leave",
+      "run": 3,
+      "answer": "The policy doesn’t specify if proof is required for bereavement leave. You might want to check with HR for clarification on that.",
+      "a": false,
+      "b": true,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "proof_bereavement",
+      "question": "do I need to send proof for bereavement leave",
+      "run": 4,
+      "answer": "The policy doesn't specify any requirement for proof when taking bereavement leave.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "proof_bereavement",
+      "question": "do I need to send proof for bereavement leave",
+      "run": 5,
+      "answer": "The policy doesn't mention needing to provide proof for bereavement leave.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "proof_bereavement",
+      "question": "do I need to send proof for bereavement leave",
+      "run": 6,
+      "answer": "The policy doesn't specify that you need to provide proof for bereavement leave. If you're considering taking this type of leave, it may be a good idea to check with HR for any specific requirements.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "proof_bereavement",
+      "question": "do I need to send proof for bereavement leave",
+      "run": 7,
+      "answer": "I couldn't find anything about needing proof for bereavement leave in the HR policies. You may want to check with HR for clarification.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "proof_bereavement",
+      "question": "do I need to send proof for bereavement leave",
+      "run": 8,
+      "answer": "The policy doesn’t specify if proof is required for bereavement leave, but it’s a good idea to check with HR for clarification.",
+      "a": false,
+      "b": true,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "who_bereavement",
+      "question": "who does bereavement leave cover",
+      "run": 1,
+      "answer": "I couldn't find who bereavement leave covers in the HR policies. However, I can tell you that the policy provides two days of bereavement leave.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "who_bereavement",
+      "question": "who does bereavement leave cover",
+      "run": 2,
+      "answer": "I couldn't find who bereavement leave covers in the HR policies. It states that bereavement leave is available for two days, but doesn't specify further. You might want to check with HR for clarity.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "who_bereavement",
+      "question": "who does bereavement leave cover",
+      "run": 3,
+      "answer": "I couldn't find who bereavement leave covers in the HR policies. You get two days of bereavement leave, but for more specifics, it's best to check with HR.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "who_bereavement",
+      "question": "who does bereavement leave cover",
+      "run": 4,
+      "answer": "I couldn't find who bereavement leave covers in the HR policies. The policy states that bereavement leave is for two days. You might want to check with HR for more specific details.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "who_bereavement",
+      "question": "who does bereavement leave cover",
+      "run": 5,
+      "answer": "I couldn't find who bereavement leave covers in the HR policies. You get two days of bereavement leave, but if you need specifics, it’s best to check with HR.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "who_bereavement",
+      "question": "who does bereavement leave cover",
+      "run": 6,
+      "answer": "I couldn't find who bereavement leave covers in the HR policies. You get two days of bereavement leave. To get more clarity on this, it’s best to check with HR.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "who_bereavement",
+      "question": "who does bereavement leave cover",
+      "run": 7,
+      "answer": "I couldn't find who bereavement leave covers in the HR policies. You do get two days of bereavement leave, though.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "who_bereavement",
+      "question": "who does bereavement leave cover",
+      "run": 8,
+      "answer": "I couldn't find who bereavement leave covers in the HR policies. However, bereavement leave allows for two days of leave when needed. You might want to check with HR for further clarification.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "proof_sick",
+      "question": "do I need proof for sick leave",
+      "run": 1,
+      "answer": "Yes, you need proof for sick leave during your notice period.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "proof_sick",
+      "question": "do I need proof for sick leave",
+      "run": 2,
+      "answer": "Yes, you need proof for sick leave. It’s required during your notice period.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "proof_sick",
+      "question": "do I need proof for sick leave",
+      "run": 3,
+      "answer": "Yes, you need to provide proof for sick leave.",
+      "a": false,
+      "b": true,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "proof_sick",
+      "question": "do I need proof for sick leave",
+      "run": 4,
+      "answer": "Yes, if you're taking sick leave during your notice period, you will need to provide proof.",
+      "a": false,
+      "b": true,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "proof_sick",
+      "question": "do I need proof for sick leave",
+      "run": 5,
+      "answer": "Yes, you need proof for sick leave. ",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "proof_sick",
+      "question": "do I need proof for sick leave",
+      "run": 6,
+      "answer": "Yes, you do need to provide proof for sick leave.",
+      "a": false,
+      "b": true,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "proof_sick",
+      "question": "do I need proof for sick leave",
+      "run": 7,
+      "answer": "Yes, you need to provide proof for sick leave.",
+      "a": false,
+      "b": true,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "proof_sick",
+      "question": "do I need proof for sick leave",
+      "run": 8,
+      "answer": "Yes, you need to provide proof for sick leave. It's required during the notice period if you're planning to take sick leave.",
+      "a": false,
+      "b": true,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_bereavement",
+      "question": "how many days of bereavement leave",
+      "run": 1,
+      "answer": "You get two days of bereavement leave.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_bereavement",
+      "question": "how many days of bereavement leave",
+      "run": 2,
+      "answer": "You get two days of bereavement leave.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_bereavement",
+      "question": "how many days of bereavement leave",
+      "run": 3,
+      "answer": "You get two days of bereavement leave.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_bereavement",
+      "question": "how many days of bereavement leave",
+      "run": 4,
+      "answer": "You get two days of bereavement leave.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_bereavement",
+      "question": "how many days of bereavement leave",
+      "run": 5,
+      "answer": "You get two days of bereavement leave.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_bereavement",
+      "question": "how many days of bereavement leave",
+      "run": 6,
+      "answer": "You get two days of bereavement leave.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_bereavement",
+      "question": "how many days of bereavement leave",
+      "run": 7,
+      "answer": "You get two days of bereavement leave.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_bereavement",
+      "question": "how many days of bereavement leave",
+      "run": 8,
+      "answer": "You get two days of bereavement leave.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_sick",
+      "question": "how many sick leaves do I get",
+      "run": 1,
+      "answer": "You get seven days of sick leave per year.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_sick",
+      "question": "how many sick leaves do I get",
+      "run": 2,
+      "answer": "You get seven days of sick leave each year.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_sick",
+      "question": "how many sick leaves do I get",
+      "run": 3,
+      "answer": "You get seven days of sick leave.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_sick",
+      "question": "how many sick leaves do I get",
+      "run": 4,
+      "answer": "You get seven days of sick leave each year.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_sick",
+      "question": "how many sick leaves do I get",
+      "run": 5,
+      "answer": "You get seven days of sick leave per year.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_sick",
+      "question": "how many sick leaves do I get",
+      "run": 6,
+      "answer": "You get seven days of sick leave.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_sick",
+      "question": "how many sick leaves do I get",
+      "run": 7,
+      "answer": "You get seven days of sick leave each year.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_sick",
+      "question": "how many sick leaves do I get",
+      "run": 8,
+      "answer": "You get seven days of sick leave each year.",
+      "a": false,
+      "b": false,
+      "c": false
+    }
+  ],
+  "flags_by_channel": {
+    "text": {
+      "a": 4,
+      "b": 5,
+      "c": 0
+    },
+    "voice": {
+      "a": 4,
+      "b": 7,
+      "c": 0
+    }
+  },
+  "flags_by_turn": {
+    "text/dog": {
+      "a": 4,
+      "b": 0,
+      "c": 0
+    },
+    "text/proof_bereavement": {
+      "a": 0,
+      "b": 0,
+      "c": 0
+    },
+    "text/who_bereavement": {
+      "a": 0,
+      "b": 0,
+      "c": 0
+    },
+    "text/proof_sick": {
+      "a": 0,
+      "b": 5,
+      "c": 0
+    },
+    "text/days_bereavement": {
+      "a": 0,
+      "b": 0,
+      "c": 0
+    },
+    "text/days_sick": {
+      "a": 0,
+      "b": 0,
+      "c": 0
+    },
+    "voice/dog": {
+      "a": 4,
+      "b": 0,
+      "c": 0
+    },
+    "voice/proof_bereavement": {
+      "a": 0,
+      "b": 2,
+      "c": 0
+    },
+    "voice/who_bereavement": {
+      "a": 0,
+      "b": 0,
+      "c": 0
+    },
+    "voice/proof_sick": {
+      "a": 0,
+      "b": 5,
+      "c": 0
+    },
+    "voice/days_bereavement": {
+      "a": 0,
+      "b": 0,
+      "c": 0
+    },
+    "voice/days_sick": {
+      "a": 0,
+      "b": 0,
+      "c": 0
+    }
+  }
+}

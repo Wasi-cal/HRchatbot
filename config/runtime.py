@@ -150,10 +150,10 @@ DEFAULT_APP_CONFIG = {
     "retrieval.context.prior_user_turns": (2, "How many previous user messages are prepended to a follow-up's retrieval query."),
     "retrieval.context.followup_markers": (
         ["that", "it", "this", "those", "these", "them", "there", "same", "anything else", "what else",
-         "instead", "other option", "other options", "what about", "how about", "and for", "and what", "and if",
-         "i am", "im", "as a", "as an"],
+         "instead", "other option", "other options", "what about", "how about", "and for", "and what", "and if"],
         "Words/phrases that mark an utterance as a follow-up (whole-word match on the normalized text).",
     ),
+    "prompts.turn_reminder": ("", "Optional reminder (at most 40 words) placed after the retrieved excerpts and before the question in the final user message of every generation turn. Empty = off."),
     "prompts.max_chars": (8000, "Maximum length of one prompt_templates row accepted by the admin API (grounding_core grows with every rule added)."),
     "retrieval.context.dual_query.enabled": (True, "A follow-up-contextualised turn also searches the bare utterance and fuses both (one batched encode, one retrieve call). False = the old single contextualised query."),
     "retrieval.context.ctx_heavy_below_words": (3, "An utterance with fewer words than this gets the weights_with_marker pair even without a marker word ('for interns?' cannot stand alone)."),
@@ -161,6 +161,9 @@ DEFAULT_APP_CONFIG = {
     "retrieval.context.weight_ctx": (1.0, "Fallback RRF weight of the contextualised-query lists when weights_with/without_marker lack a 'ctx' value."),
     "retrieval.context.weights_with_marker": ({"standalone": 0.5, "ctx": 1.0}, "Weights for a contextualised turn whose utterance has a follow-up marker (that, it, what else, ...): context-heavy."),
     "retrieval.context.weights_without_marker": ({"standalone": 1.0, "ctx": 0.5}, "Weights for a contextualised turn that is only SHORT (no follow-up marker): standalone-heavy, so a fresh question is not diluted."),
+    "retrieval.context.identity_markers": (["i am", "im", "as a", "as an"], "Phrases that introduce who the user is. They count as a follow-up marker only in an utterance of at most identity_max_words words."),
+    "retrieval.context.identity_max_words": (6, "Longest utterance (in words) in which an identity marker counts. Longer sentences containing 'i am' / 'as a' are fresh questions."),
+    "retrieval.context.weights_identity": ({"standalone": 0.25, "ctx": 1.0}, "Weights for a short identity statement ('i am an intern'): mostly the previous topic. Equal weights let the bare statement pull in intern-related chunks from unrelated policies (measured with followups_test)."),
     "retrieval.context.affirmation_user_weight": (1.0, "RRF weight of the last user message's results when a bare 'yes' after an offer retrieves for the offer sentence."),
     "retrieval.context.affirmation_candidate_n": (5, "Candidates pulled per list for the user-message side of that fused query."),
     "retrieval.advisory.markers": (
@@ -406,6 +409,9 @@ def seed_runtime_config() -> None:
         _seed_provider(conn, "generation", "openai", {
             "model": os.environ.get("GENERATION_MODEL_NAME", DEFAULT_GENERATION_MODEL),
             "confidence_threshold": float(os.environ.get("GENERATION_CONFIDENCE_THRESHOLD", DEFAULT_CONFIDENCE_THRESHOLD)),
+            # Sampling. 1.0 is the API default that every turn already used (nothing was ever sent), so seeding changes nothing.
+            "temperature": 1.0,
+            "top_p": None,  # null = not sent (API default 1.0)
         })
         _seed_channel_settings(conn)
         stt_defaults = {
@@ -427,6 +433,19 @@ def seed_runtime_config() -> None:
 # ---- in-process copy of app_config values read on every chat turn ----------------------------------------------------
 _CONFIG_MEMO: dict = {}
 CONFIG_MEMO_TTL_SECONDS = 30.0
+
+
+def memo_provider_config(category: str) -> dict:
+    """get_active_provider_config() with the same 30s in-process copy as memo_config(): for provider settings read on every
+    turn (generation sampling parameters), so they cost no Redis round trip except once per TTL."""
+    key = f"provider:{category}"
+    now = time.monotonic()
+    hit = _CONFIG_MEMO.get(key)
+    if hit is not None and hit[0] > now:
+        return hit[1]
+    value = get_active_provider_config(category)
+    _CONFIG_MEMO[key] = (now + CONFIG_MEMO_TTL_SECONDS, value)
+    return value
 
 
 def memo_config(key: str, default=None):

@@ -1,0 +1,345 @@
+{
+  "label": "v6",
+  "prompts": {
+    "text": {
+      "grounding_core": 6,
+      "style": 3
+    },
+    "voice": {
+      "grounding_core": 6,
+      "style": 4
+    }
+  },
+  "runs": [
+    {
+      "channel": "text",
+      "run": 1,
+      "q1": "can I apply for bereavement leave for my dog",
+      "a1": "Bereavement leave typically applies to the death of immediate family members. Unfortunately, I couldn't find a direct policy that covers the loss of pets in the HR policies. You may want to consider using earned leave instead. \n\nNext, please discuss your situation with your manager.",
+      "chunks1": [
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_a": false,
+      "q2": "do I need to send proof",
+      "a2": "You don't need to send proof for bereavement leave as it is granted automatically for two days. Just make sure to notify your supervisor and get their approval. ",
+      "chunks2": [
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_b": true
+    },
+    {
+      "channel": "text",
+      "run": 2,
+      "q1": "can I apply for bereavement leave for my dog",
+      "a1": "You can take up to 2 days of bereavement leave, but it's specifically for the death of an immediate family member. Unfortunately, pets are not included under this policy. \n\nIf you want time off, you might consider using your earned leave if you have any available. Please check with your manager for approval on any leave.",
+      "chunks1": [
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_a": false,
+      "q2": "do I need to send proof",
+      "a2": "For bereavement leave, you typically need to provide documentation, but the policy does not specify the exact requirements for proof. It's best to check with your supervisor for any specific requirements they might have.",
+      "chunks2": [
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_b": false
+    },
+    {
+      "channel": "text",
+      "run": 3,
+      "q1": "can I apply for bereavement leave for my dog",
+      "a1": "You can apply for bereavement leave, which allows for 2 days off due to the death of a family member, but it does not specifically mention pets. If your company's policy aligns with this, it generally covers immediate family only. You might also consider using earned leave if that’s available to you. Please check with your supervisor for approval and any specifics related to your situation.",
+      "chunks1": [
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_a": true,
+      "q2": "do I need to send proof",
+      "a2": "You don't need to provide proof for bereavement leave. It’s typically granted for immediate family members only, so you may want to check with your manager regarding your specific situation.",
+      "chunks2": [
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_b": true
+    },
+    {
+      "channel": "text",
+      "run": 4,
+      "q1": "can I apply for bereavement leave for my dog",
+      "a1": "You can apply for bereavement leave, which allows up to 2 days off. This applies specifically to the loss of a direct family member, so it depends on manager approval as well. \n\nYour next step is to check in with your manager to discuss your situation and apply for the leave.",
+      "chunks1": [
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_a": true,
+      "q2": "do I need to send proof",
+      "a2": "You do not need to provide proof to apply for bereavement leave. However, all leave should be approved by your supervisor. Please proceed to discuss this with them.",
+      "chunks2": [
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_b": true
+    },
+    {
+      "channel": "text",
+      "run": 5,
+      "q1": "can I apply for bereavement leave for my dog",
+      "a1": "You can apply for bereavement leave, which allows for 2 days of leave. However, this leave is typically intended for the death of an immediate family member, and the policy does not specify pets. If you feel strongly about it, you might discuss it with your supervisor, but approval will be needed based on their discretion. \n\nConsider reaching out to your manager for guidance on this.",
+      "chunks1": [
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_a": false,
+      "q2": "do I need to send proof",
+      "a2": "For bereavement leave, proof is not explicitly stated as required, but it's always a good practice to inform your supervisor about the situation. Moving forward, you can apply for the leave with your supervisor's approval.",
+      "chunks2": [
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_b": false
+    },
+    {
+      "channel": "text",
+      "run": 6,
+      "q1": "can I apply for bereavement leave for my dog",
+      "a1": "You can apply for bereavement leave, but it specifically covers the death of an immediate family member. Since the policy doesn't mention pets, this leave may not be applicable. You might consider using earned leave if available, which provides up to 21 days subject to approval. \n\nNext, check with your manager for your options.",
+      "chunks1": [
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_a": false,
+      "q2": "do I need to send proof",
+      "a2": "You do not need to provide proof for bereavement leave, as it is generally available for personal loss. Just ensure your absence is approved by your supervisor. You can proceed by discussing your leave request with them.",
+      "chunks2": [
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_b": true
+    },
+    {
+      "channel": "text",
+      "run": 7,
+      "q1": "can I apply for bereavement leave for my dog",
+      "a1": "You can apply for bereavement leave, which provides 2 days off for the death of an immediate family member. Unfortunately, bereavement leave does not extend to pets. Your options include taking earned leave if you have any available, or potentially using unpaid leave if you don't have leave days remaining. \n\nNext step: You might want to discuss your situation with your manager to see what arrangements can be made.",
+      "chunks1": [
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_a": true,
+      "q2": "do I need to send proof",
+      "a2": "You don't need to send proof for bereavement leave for your dog, as the policy doesn't specify requirements for documentation. You just need to inform your supervisor to get approval for the leave. Would you like to know how to apply for it?",
+      "chunks2": [
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_b": false
+    },
+    {
+      "channel": "text",
+      "run": 8,
+      "q1": "can I apply for bereavement leave for my dog",
+      "a1": "Bereavement leave applies specifically to the death of immediate family members. Unfortunately, it does not extend to pets. \n\nYou may consider using earned leave, which gives you 21 days, or possibly taking time off as loss of pay if you have no leaves left. I recommend discussing this with your manager.",
+      "chunks1": [
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_a": false,
+      "q2": "do I need to send proof",
+      "a2": "You don't need to send proof for bereavement leave related to your dog. However, please ensure to follow the standard leave application process and seek approval from your supervisor.",
+      "chunks2": [
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_b": true
+    },
+    {
+      "channel": "voice",
+      "run": 1,
+      "q1": "can I apply for bereavement leave for my dog",
+      "a1": "You can use bereavement leave, but it's typically for the loss of immediate family members. If you're looking for time off for your dog, you could consider earned leave. Want more details about that?",
+      "chunks1": [
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_a": true,
+      "q2": "do I need to send proof",
+      "a2": "You don't need to send proof for bereavement leave.",
+      "chunks2": [
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_b": true
+    },
+    {
+      "channel": "voice",
+      "run": 2,
+      "q1": "can I apply for bereavement leave for my dog",
+      "a1": "Bereavement leave is typically for the loss of immediate family members. I couldn't find anything in the HR policies about applying it for a pet. You might want to talk to your manager about your situation.",
+      "chunks1": [
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_a": false,
+      "q2": "do I need to send proof",
+      "a2": "No proof is needed for bereavement leave.",
+      "chunks2": [
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_b": true
+    },
+    {
+      "channel": "voice",
+      "run": 3,
+      "q1": "can I apply for bereavement leave for my dog",
+      "a1": "You get two days of bereavement leave, but it’s typically meant for close family members like a parent or sibling. If you need time off, you might also consider taking earned leave. Would you like to know how to apply for earned leave?",
+      "chunks1": [
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_a": true,
+      "q2": "do I need to send proof",
+      "a2": "You don’t need to provide proof for bereavement leave for your dog.",
+      "chunks2": [
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_b": true
+    },
+    {
+      "channel": "voice",
+      "run": 4,
+      "q1": "can I apply for bereavement leave for my dog",
+      "a1": "You can apply for bereavement leave, which is for two days. However, this leave is usually for immediate family members. You might want to speak to your manager or HR to discuss your situation.",
+      "chunks1": [
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_a": true,
+      "q2": "do I need to send proof",
+      "a2": "The policy doesn’t mention needing to provide proof for bereavement leave. You should still confirm with your manager just to be sure.",
+      "chunks2": [
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_b": false
+    },
+    {
+      "channel": "voice",
+      "run": 5,
+      "q1": "can I apply for bereavement leave for my dog",
+      "a1": "You can take bereavement leave, but it only applies for the loss of immediate family members. For a pet, you might consider using earned leave if you have days available.",
+      "chunks1": [
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_a": true,
+      "q2": "do I need to send proof",
+      "a2": "It's not specified that proof is needed for bereavement leave. You may want to check with your supervisor for any specific requirements.",
+      "chunks2": [
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_b": false
+    },
+    {
+      "channel": "voice",
+      "run": 6,
+      "q1": "can I apply for bereavement leave for my dog",
+      "a1": "Bereavement leave is typically applicable for the death of immediate family members. You might want to consider applying for earned leave instead or check if other options are available.",
+      "chunks1": [
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_a": false,
+      "q2": "do I need to send proof",
+      "a2": "No, you don't need to send proof for bereavement leave.",
+      "chunks2": [
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_b": true
+    },
+    {
+      "channel": "voice",
+      "run": 7,
+      "q1": "can I apply for bereavement leave for my dog",
+      "a1": "You can take bereavement leave, but it’s typically for the loss of an immediate family member. You could consider using earned leave instead, assuming you have it available. Would you like to know more about that option?",
+      "chunks1": [
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_a": true,
+      "q2": "do I need to send proof",
+      "a2": "For bereavement leave, you don't need to send proof.",
+      "chunks2": [
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_b": true
+    },
+    {
+      "channel": "voice",
+      "run": 8,
+      "q1": "can I apply for bereavement leave for my dog",
+      "a1": "You can take bereavement leave for the loss of an immediate family member, but for a pet, it's not specified. You may consider using earned leave instead. Would you like me to help with that?",
+      "chunks1": [
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_a": false,
+      "q2": "do I need to send proof",
+      "a2": "No proof is required to take bereavement leave.",
+      "chunks2": [
+        "Calfus_India_Employee_Handbook_v4_0036",
+        "Calfus_India_Employee_Handbook_v4_0020",
+        "Calfus_India_Employee_Handbook_v4_0021"
+      ],
+      "flag_b": true
+    }
+  ],
+  "flagged": {
+    "a_applies_without_saying_not_mentioned": {
+      "text": 3,
+      "voice": 5
+    },
+    "b_requirement_stated_without_support": {
+      "text": 5,
+      "voice": 6
+    }
+  }
+}
