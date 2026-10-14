@@ -44,7 +44,7 @@ There is no applicability filtering and no clarifying question (see "Intentional
 | retrieval shortcut | 0 | 1 | 1 | 5 | 6 |
 | normal answer (text, voice) | 1 | 1 | 1 | 5 | 7 |
 | advisory follow-up (batched expansion embedding) | 1 | 1 | 1 | 8 | 17 |
-| bare "yes" after an offer | 1 | 1 | 1 | 5 | 11 |
+| bare "yes" after an offer (offer sentence + last user message embedded together in one batch) | 1 | 1 | 1 | 6 | 8 |
 
 DB / Redis counts are the existing config-cache reads and the response-log insert; none of this task's features add a call to any turn type. The
 keys read on every turn go through a 30-second in-process copy (`config.runtime.memo_config`), so a Redis read happens once per key per 30s, not per
@@ -163,6 +163,51 @@ with `PATCH /api/admin/config/{key}` and validated server-side; reads are cache-
 | `user.default_attributes.text` | `{"country": "India"}` |
 | `user.default_attributes.voice` | `{"country": "India"}` |
 
+## Voice robustness (generation timeouts, aborts, STT)
+
+All tunables are in `app_config` / `provider_configs` (admin PATCH, validated); none adds a call to a normal turn.
+
+| key | default | meaning |
+|---|---|---|
+| `generation.first_token_timeout_s` | 4 | no first token within this -> the attempt is closed and retried |
+| `generation.request_timeout_s` | 20 | hard cap for the whole generation |
+| `generation.max_retries.voice` / `.text` | 1 / 1 | retries on failure/first-token timeout only (SDK auto-retry is off, so attempts are counted and logged) |
+| `generation.fallback_message` | "Sorry, I'm having trouble right now. Please try again." | spoken/streamed when every attempt failed (logged as `think event=fallback`, response_type `error`) |
+| `retrieval.context.affirmation_user_weight` / `affirmation_candidate_n` | 1.0 / 5 | fusion of "offer sentence" + last user message for a bare "yes" after an offer |
+
+* Every `/api/voice/v1/chat/completions` request logs ONE line `think type=<answer|source_lookup|smalltalk|catalog|shortcut|aborted|error> duration_ms=... client_disconnected=...`
+  (generation turns add `request_id attempts headers_ms ttft_ms prompt_tokens cached_tokens completion_tokens fallback`).
+* When Deepgram aborts a turn (barge-in) the upstream OpenAI stream is closed, the turn is logged as `aborted`, and generation stops.
+* STT (`provider_configs`, kind `stt`): default is Flux (`model flux-general-en`, `version v2`, `eot_threshold 0.8`) with HR `keyterms`
+  (seeded vocabulary + distinctive document titles; max 500 tokens, validated). `eager_eot_threshold` (0.3-0.9, must be <= eot_threshold) is
+  supported but left OFF: Deepgram documents it as increasing LLM calls and it needs EagerEndOfTurn/TurnResumed handling. `eot_timeout_ms` 500-60000
+  is optional. Flux-only fields are sent only for a Flux model. Rollback to Nova-3: PATCH `stt.model` = `nova-3` and `stt.version` = `v1`.
+* Voice style v4: stop after answering; an offer only if it names a specific next step; no generic closers. Roll back by re-activating style v3.
+* The frontend logs Deepgram's `LatencyReport` to the console (a small on-page line only with `?debug=1`).
+
+## Grounding rules v7 and time-off retrieval
+
+* `grounding_core` v7 (both channels; v1-v6 kept) adds four rules: eligibility fit (say when a situation isn't clearly covered, never state who a
+  leave covers unless the text does), no unstated reassurance (never say what must/needn't be submitted unless the text says so), option order
+  (entitlements before comp-off / LWP), and one short plain acknowledgement for distress. Rollback: activate grounding_core v6.
+* `retrieval.advisory.markers` also holds time-off phrasings ("time off", "days off", "need leave", ...) and `retrieval.expansions` has a `time_off`
+  topic (one expansion query for the leave-entitlement table). Both only affect turns that match those phrases; other turns retrieve exactly as before.
+* Measure with `python3 -m eval.grounding_fit_measure --label <name>` (raw answers in `eval/results/`; the regex screen undercounts, grade by hand).
+
+## Dual-query fusion for contextualised turns (short / follow-up utterances)
+
+A turn that qualifies for contextualisation (shorter than `retrieval.context.max_words_followup` words, or a follow-up marker) searches TWO queries:
+the contextualised text (prior user turns + utterance) and the bare utterance, in one batched encode, one dense statement, one sparse fetch and one
+`retrieve()` call (DB/Redis counts unchanged). The contextualised lists are fused as before and scaled by the ctx weight; the standalone lists are
+added with the standalone weight. Weights: `retrieval.context.weights_with_marker` {standalone 0.05, ctx 1.0} (follow-up marker word, or fewer than
+`retrieval.context.ctx_heavy_below_words`=3 words) and `weights_without_marker` {standalone 1.0, ctx 1.0}; `weight_standalone` / `weight_ctx` are
+fallbacks; `retrieval.context.dual_query.enabled=false` restores the old single query. The follow-up markers now also include "what about", "how about",
+"and for", "and what", "and if", "i am", "im", "as a", "as an". No history or a non-qualifying query = the old single-query path (frozen baseline
+unchanged). Tables: `python3 -m eval.context_dilution_eval`; test: `python3 -m eval.context_dilution_test`.
+
+`grounding_core` v8 adds a general "stay inside the text" rule (no coverage, amount or requirement claims beyond the text; state stated facts plainly).
+`prompts.max_chars` (app_config, default 8000) is the admin limit on one prompt row; grounding_core is now close to it.
+
 ## Prompt rows (`prompt_templates`, immutable versions)
 
 A channel's prompt is its `style` row followed by its `grounding_core` row. Edit with `POST /api/admin/prompts` (new version, activated
@@ -183,7 +228,7 @@ and never address the user as a group they haven't named. Earlier versions are k
 
 `id`, `created_at`, `query_text`, `response_type`, `answer_text`, `user_attributes`, `blocking_tag_type`, `shortcut_fired`, `retrieval_time_ms`, `ttft_ms`, `total_generation_time_ms`, `chunk_ids_used`, `source`, `prompt_version`, `contextualized`, `advisory`
 
-`response_type` is one of `answer`, `refusal_shortcut`, `smalltalk`, `source_lookup`, `catalog` (and the historical `clarification`).
+`response_type` is one of `answer`, `refusal_shortcut`, `smalltalk`, `source_lookup`, `catalog`, `aborted` (voice turn cancelled by the caller; `answer_text` holds what was streamed so far), `error` (provider failure / fallback message spoken, or a rejected think request) (and the historical `clarification`).
 `prompt_version` records the prompt rows used by a generation call; `contextualized` / `advisory` record how retrieval was planned;
 `user_attributes` and `blocking_tag_type` are legacy columns that are no longer written. `source` is `text` or `voice`.
 
