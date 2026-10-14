@@ -113,6 +113,8 @@ def test_prompts():
             old_active[ch] = conn.execute(
                 "SELECT id, content FROM prompt_templates WHERE name='grounding_core' AND channel=%s AND is_active", (ch,)).fetchone()
     marker = "VOICEONLY-GROUNDING-MARKER"
+    with get_pool().connection() as conn:  # a new version is MAX(version)+1, which can exceed the active one when a candidate version exists inactive
+        max_voice_version = conn.execute("SELECT MAX(version) FROM prompt_templates WHERE name='grounding_core' AND channel='voice'").fetchone()[0]
     try:
         with TestClient(app) as client:
             r = client.post("/api/admin/prompts", json={"name": "grounding_core", "channel": "voice",
@@ -120,7 +122,7 @@ def test_prompts():
             check("new grounding_core/voice version created", r.status_code == 200, r.text[:200])
         t_now, v_now = prompts_mod.get_system_prompt("text"), prompts_mod.get_system_prompt("voice")
         check("voice prompt picked up its new grounding version immediately",
-              marker in v_now[0] and v_now[1]["grounding_core"] == before_voice[1]["grounding_core"] + 1, str(v_now[1]))
+              marker in v_now[0] and v_now[1]["grounding_core"] == max_voice_version + 1, str(v_now[1]))
         check("text prompt and its version_info are untouched", t_now == before_text, str(t_now[1]))
     finally:
         with get_pool().connection() as conn:

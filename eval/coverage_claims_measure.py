@@ -11,7 +11,9 @@ eval/results/coverage_claims_<label>.json. The regexes are a SCREEN, not a grade
 """
 import argparse
 import json
+import logging
 import re
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -27,8 +29,15 @@ TURNS = [
     ("proof_bereavement", "do I need to send proof for bereavement leave", "b"),
     ("who_bereavement", "who does bereavement leave cover", "a"),
     ("proof_sick", "do I need proof for sick leave", "b"),
+    ("mother_in_law", "can I take bereavement leave when my mother-in-law passes away", "ab"),
+    ("adoptive_paternity", "does paternity leave cover adoptive parents", "ab"),
+    ("contractor_earned", "can a contractor take earned leave", "a"),
+    ("intern_sick", "do interns get sick leave", "a"),
+    ("sister_wedding", "can I use marriage leave for my sister's wedding", "ab"),
+    ("approval_earned", "do I need my manager's approval to take earned leave", "b"),
     ("days_bereavement", "how many days of bereavement leave", "c"),
     ("days_sick", "how many sick leaves do I get", "c"),
+    ("days_earned", "how many earned leaves do I get", "c"),
 ]
 HEDGE_UNSTATED = re.compile(r"(doesn'?t|does not|don'?t|do not|isn'?t|is not|not) (mention|say|state|specify|cover|list|include|clear|provided)|couldn'?t find|could not find|no mention|nothing (in|about|on)|not (stated|specified|covered|mentioned|clear)|doesn'?t (really )?(go into|detail)", re.I)
 COVERAGE = re.compile(r"\b(family|families|relatives?|immediate|dependents?|spouse|parents?|children|siblings?|in-?laws?|loved ones|close (family|relatives))\b", re.I)
@@ -62,22 +71,94 @@ def main():
     ap.add_argument("--label", required=True)
     ap.add_argument("--runs", type=int, default=8)
     ap.add_argument("--rescore", action="store_true", help="re-screen saved answers, no model calls")
+    ap.add_argument("--grounding-version", type=int, help="activate this grounding_core version on both channels for the run (restored afterwards)")
+    ap.add_argument("--reminder-file", help="set prompts.turn_reminder from this file for the run ('' / omitted = off); restored afterwards")
+    ap.add_argument("--temperature", type=float, help="set generation.temperature for the run (restored afterwards)")
+    ap.add_argument("--workers", type=int, default=6)
     args = ap.parse_args()
     if args.rescore:
         return rescore(args.label)
-    out = {"label": args.label, "prompts": {c: get_system_prompt(c)[1] for c in ("text", "voice")}, "runs": []}
+    with _settings(args):
+        run(args)
+
+
+class _LogTap(logging.Handler):
+    """Collects the 'turn type=answer ... ttft_ms= prompt_tokens= cached_tokens=' log lines."""
+    def __init__(self):
+        super().__init__(logging.INFO)
+        self.rows = []
+
+    def emit(self, record):
+        m = record.getMessage()
+        if m.startswith("turn type=answer"):
+            self.rows.append({k: float(v) for k, v in re.findall(r"\b(ttft_ms|prompt_tokens|cached_tokens|completion_tokens)=([0-9.]+)", m)})
+
+
+class _settings:
+    """Applies the A/B settings through the admin API and restores the previous ones."""
+    def __init__(self, args):
+        self.args = args
+
+    def __enter__(self):
+        from fastapi.testclient import TestClient
+
+        from api.main import app
+        from config.runtime import get_active_provider_config, get_app_config
+        self.client = TestClient(app)
+        self.client.__enter__()
+        self.saved = {"reminder": get_app_config("prompts.turn_reminder", ""), "temperature": get_active_provider_config("generation").get("temperature", 1.0)}
+        a = self.args
+        self.rows = {}
+        if a.grounding_version:
+            groups = self.client.get("/api/admin/prompts").json()
+            for ch in ("text", "voice"):
+                versions = next(g for g in groups if g["name"] == "grounding_core" and g["channel"] == ch)["versions"]
+                active = next(r for r in versions if r["is_active"])
+                target = next(r for r in versions if r["version"] == a.grounding_version)
+                self.rows[ch] = active["id"]
+                assert self.client.post(f"/api/admin/prompts/{target['id']}/activate").status_code == 200
+        text = Path(a.reminder_file).read_text().strip() if a.reminder_file else ""
+        assert self.client.patch("/api/admin/config/prompts.turn_reminder", json={"value": text}).status_code == 200
+        if a.temperature is not None:
+            assert self.client.patch("/api/admin/config/generation.temperature", json={"value": a.temperature}).status_code == 200
+        return self
+
+    def __exit__(self, *exc):
+        for ch, prompt_id in self.rows.items():
+            self.client.post(f"/api/admin/prompts/{prompt_id}/activate")
+        self.client.patch("/api/admin/config/prompts.turn_reminder", json={"value": self.saved["reminder"]})
+        self.client.patch("/api/admin/config/generation.temperature", json={"value": self.saved["temperature"]})
+        self.client.__exit__(*exc)
+
+
+def run(args):
+    tap = _LogTap()
+    for name in ("hrchatbot.text", "hrchatbot.voice"):
+        logging.getLogger(name).addHandler(tap)
+        logging.getLogger(name).setLevel(logging.INFO)
+    out = {"label": args.label, "prompts": {c: get_system_prompt(c)[1] for c in ("text", "voice")}, "runs": [],
+           "settings": {"grounding_version": args.grounding_version, "reminder": bool(args.reminder_file), "temperature": args.temperature}}
     flags = {c: {"a": 0, "b": 0, "c": 0} for c in ("text", "voice")}
     per_turn = {}
-    for channel in ("text", "voice"):
-        module = get_channel(channel)
-        for key, question, kinds_for_turn in TURNS:
-            for i in range(args.runs):
-                text = module.answer(question)["answer"]
-                fa, fb, fc = screen(text, kinds_for_turn)
-                for k, f in (("a", fa), ("b", fb), ("c", fc)):
-                    flags[channel][k] += f
-                    per_turn.setdefault((channel, key), {"a": 0, "b": 0, "c": 0})[k] += f
-                out["runs"].append({"channel": channel, "turn": key, "question": question, "run": i + 1, "answer": text, "a": fa, "b": fb, "c": fc})
+    jobs = [(channel, key, question, kinds, i) for channel in ("text", "voice") for key, question, kinds in TURNS for i in range(args.runs)]
+
+    def work(job):
+        channel, key, question, kinds_for_turn, i = job
+        return job, get_channel(channel).answer(question)["answer"]
+
+    with ThreadPoolExecutor(args.workers) as pool:
+        results = list(pool.map(work, jobs))
+    for (channel, key, question, kinds_for_turn, i), text in results:
+        fa, fb, fc = screen(text, kinds_for_turn)
+        for k, f in (("a", fa), ("b", fb), ("c", fc)):
+            flags[channel][k] += f
+            per_turn.setdefault((channel, key), {"a": 0, "b": 0, "c": 0})[k] += f
+        out["runs"].append({"channel": channel, "turn": key, "question": question, "run": i + 1, "answer": text, "a": fa, "b": fb, "c": fc})
+    rows = tap.rows
+    if rows:
+        mean = lambda k: round(sum(r.get(k, 0) for r in rows) / len(rows), 1)
+        out["usage"] = {"turns": len(rows), "ttft_ms_mean": mean("ttft_ms"), "prompt_tokens_mean": mean("prompt_tokens"),
+                        "cached_tokens_mean": mean("cached_tokens"), "completion_tokens_mean": mean("completion_tokens")}
     out["flags_by_channel"] = flags
     out["flags_by_turn"] = {f"{c}/{t}": v for (c, t), v in per_turn.items()}
     path = Path(__file__).parent / "results" / f"coverage_claims_{args.label}.json"
@@ -85,6 +166,9 @@ def main():
     print(f"[{args.label}] prompts {out['prompts']}")
     for (c, t), v in per_turn.items():
         print(f"[{args.label}] {c:5s} {t:18s} a={v['a']} b={v['b']} c={v['c']}  (of {args.runs})")
+    print(f"[{args.label}] usage {out.get('usage')}")
+    tot = {k: sum(v[k] for v in per_turn.values()) for k in "abc"}
+    print(f"[{args.label}] TOTAL a={tot['a']} b={tot['b']} c={tot['c']} of {args.runs * 2} per turn x {len(TURNS)} turns")
     print(f"[{args.label}] raw answers: {path}")
     close_pool()
 

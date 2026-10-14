@@ -208,6 +208,20 @@ unchanged). Tables: `python3 -m eval.context_dilution_eval`; test: `python3 -m e
 `grounding_core` v8 adds a general "stay inside the text" rule (no coverage, amount or requirement claims beyond the text; state stated facts plainly).
 `prompts.max_chars` (app_config, default 8000) is the admin limit on one prompt row; grounding_core is now close to it.
 
+### Identity markers, sampling, turn reminder, v9 candidate
+
+* `retrieval.context.identity_markers` ("i am", "im", "as a", "as an") count as a follow-up marker only in an utterance of at most
+  `retrieval.context.identity_max_words` (6) words and use `retrieval.context.weights_identity` ({standalone 0.25, ctx 1.0}); in longer sentences they
+  are ordinary words (a fresh question). Equal weights were tried first and broke the "i am an intern" followups_test (the bare statement pulled in
+  intern chunks from unrelated policies).
+* `generation.temperature` (seed 1.0 = the API default every turn already used) and `generation.top_p` (null = not sent) live in the generation
+  provider_configs row, read through a 30 s in-process copy (`config.runtime.memo_provider_config`); validated on PATCH (0-2, 0.01-1).
+* `prompts.turn_reminder` (app_config, "" = off, at most 40 words) is inserted after the retrieved excerpts and before the question.
+* `grounding_core` v9 (inserted INACTIVE in both channels) is a half-length rewrite with three generic examples; text in
+  `eval/results/grounding_core_v9.txt`, reminder in `eval/results/turn_reminder_v9.txt`. It is NOT active: see the activation notes in the task report.
+  A/B: `python3 -m eval.coverage_claims_measure --label X --grounding-version 9 --reminder-file eval/results/turn_reminder_v9.txt --temperature 0.2`
+  (settings are restored afterwards).
+
 ## Prompt rows (`prompt_templates`, immutable versions)
 
 A channel's prompt is its `style` row followed by its `grounding_core` row. Edit with `POST /api/admin/prompts` (new version, activated

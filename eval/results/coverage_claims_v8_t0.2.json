@@ -1,0 +1,2251 @@
+{
+  "label": "v8_t0.2",
+  "prompts": {
+    "text": {
+      "grounding_core": 8,
+      "style": 3
+    },
+    "voice": {
+      "grounding_core": 8,
+      "style": 4
+    }
+  },
+  "runs": [
+    {
+      "channel": "text",
+      "turn": "dog",
+      "question": "can I take bereavement leave for my dog",
+      "run": 1,
+      "answer": "The policy doesn't mention bereavement leave for pets. Bereavement leave is typically intended for specific family situations. You might want to speak to your manager or HR for guidance on this matter.",
+      "a": true,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "dog",
+      "question": "can I take bereavement leave for my dog",
+      "run": 2,
+      "answer": "The policy doesn't mention bereavement leave for pets. Bereavement leave is typically intended for the loss of immediate family members. You may want to speak to your manager or HR for guidance on this matter.",
+      "a": true,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "dog",
+      "question": "can I take bereavement leave for my dog",
+      "run": 3,
+      "answer": "The policy doesn't mention bereavement leave for pets. Bereavement leave is typically for the loss of immediate family members. You may want to speak to your manager or HR for guidance on this situation.",
+      "a": true,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "dog",
+      "question": "can I take bereavement leave for my dog",
+      "run": 4,
+      "answer": "I'm sorry to hear about your loss. The policy doesn't mention bereavement leave for pets. You may want to consider other types of leave, but they would depend on your situation and manager approval. Please check with your manager or HR for further guidance.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "dog",
+      "question": "can I take bereavement leave for my dog",
+      "run": 5,
+      "answer": "The policy doesn't mention bereavement leave for pets. Bereavement leave is typically intended for the loss of immediate family members. You may want to speak to your manager or HR for guidance on this situation.",
+      "a": true,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "dog",
+      "question": "can I take bereavement leave for my dog",
+      "run": 6,
+      "answer": "The policy doesn't mention bereavement leave for pets. Bereavement leave is typically intended for the loss of immediate family members. You may want to speak to your manager or HR for further guidance on this matter.",
+      "a": true,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "dog",
+      "question": "can I take bereavement leave for my dog",
+      "run": 7,
+      "answer": "The policy doesn't mention bereavement leave for pets. Bereavement leave is typically for the loss of a family member. You may want to speak to your manager or HR for guidance on this situation.",
+      "a": true,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "dog",
+      "question": "can I take bereavement leave for my dog",
+      "run": 8,
+      "answer": "The policy doesn't mention bereavement leave for pets. It specifically outlines bereavement leave for certain situations but does not specify coverage for animals. You might want to speak to your manager or HR for further guidance on this matter.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "proof_bereavement",
+      "question": "do I need to send proof for bereavement leave",
+      "run": 1,
+      "answer": "The policy doesn't specify whether proof is required for bereavement leave. You may want to check with HR for clarification on this matter.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "proof_bereavement",
+      "question": "do I need to send proof for bereavement leave",
+      "run": 2,
+      "answer": "The policy doesn't specify whether proof is required for bereavement leave. You may want to check with HR for clarification on this matter.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "proof_bereavement",
+      "question": "do I need to send proof for bereavement leave",
+      "run": 3,
+      "answer": "The policy doesn't specify whether proof is required for bereavement leave. You may want to check with HR for clarification on this matter.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "proof_bereavement",
+      "question": "do I need to send proof for bereavement leave",
+      "run": 4,
+      "answer": "The policy doesn't specify whether proof is required for bereavement leave. It would be best to check with HR for clarification on this matter.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "proof_bereavement",
+      "question": "do I need to send proof for bereavement leave",
+      "run": 5,
+      "answer": "The policy doesn't specify whether proof is required for bereavement leave. You may want to check with HR for clarification on this matter.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "proof_bereavement",
+      "question": "do I need to send proof for bereavement leave",
+      "run": 6,
+      "answer": "The policy doesn't specify whether proof is required for bereavement leave. You may want to check with HR for clarification on this matter.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "proof_bereavement",
+      "question": "do I need to send proof for bereavement leave",
+      "run": 7,
+      "answer": "The policy doesn't specify whether proof is required for bereavement leave. You may want to check with HR for clarification on this matter.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "proof_bereavement",
+      "question": "do I need to send proof for bereavement leave",
+      "run": 8,
+      "answer": "The policy doesn't specify whether proof is required for bereavement leave. You may want to check with HR for clarification on this matter.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "who_bereavement",
+      "question": "who does bereavement leave cover",
+      "run": 1,
+      "answer": "I couldn't find who bereavement leave covers in the HR policies. The policy states that bereavement leave is 2 days, but it doesn't specify eligibility. You may want to check with HR for clarification.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "who_bereavement",
+      "question": "who does bereavement leave cover",
+      "run": 2,
+      "answer": "I couldn't find who bereavement leave covers in the HR policies. The policy states that bereavement leave is for 2 days. You may want to check with HR for more details.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "who_bereavement",
+      "question": "who does bereavement leave cover",
+      "run": 3,
+      "answer": "I couldn't find who bereavement leave covers in the HR policies. The policy states that bereavement leave is for 2 days. You may want to check with HR for more specific information.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "who_bereavement",
+      "question": "who does bereavement leave cover",
+      "run": 4,
+      "answer": "I couldn't find who bereavement leave covers in the HR policies. The policy states that bereavement leave is for 2 days. You may want to check with HR for more information.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "who_bereavement",
+      "question": "who does bereavement leave cover",
+      "run": 5,
+      "answer": "I couldn't find who bereavement leave covers in the HR policies. The policy states that bereavement leave is for 2 days. You may want to check with HR for more details.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "who_bereavement",
+      "question": "who does bereavement leave cover",
+      "run": 6,
+      "answer": "I couldn't find who bereavement leave covers in the HR policies. The policy states that bereavement leave is for 2 days. You may want to check with HR for more details.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "who_bereavement",
+      "question": "who does bereavement leave cover",
+      "run": 7,
+      "answer": "I couldn't find who bereavement leave covers in the HR policies. The policy states that bereavement leave is for 2 days. You may want to check with HR for more details.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "who_bereavement",
+      "question": "who does bereavement leave cover",
+      "run": 8,
+      "answer": "I couldn't find who bereavement leave covers in the HR policies. The policy states that bereavement leave is for 2 days. You may want to check with HR for more details.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "proof_sick",
+      "question": "do I need proof for sick leave",
+      "run": 1,
+      "answer": "Yes, you need to provide proof for sick leave. Sick leave is the only type of leave that can be used during the notice period, and it requires documentation to support your absence. If you have any other questions about leave or related policies, feel free to ask!",
+      "a": false,
+      "b": true,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "proof_sick",
+      "question": "do I need proof for sick leave",
+      "run": 2,
+      "answer": "Yes, you need to provide proof for sick leave. Sick leave is the only type of leave that can be used during the notice period, and it requires documentation to support the absence. If you have any other questions about leave, feel free to ask!",
+      "a": false,
+      "b": true,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "proof_sick",
+      "question": "do I need proof for sick leave",
+      "run": 3,
+      "answer": "Yes, you need to provide proof for sick leave. This is the only type of leave that can be used during the notice period.",
+      "a": false,
+      "b": true,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "proof_sick",
+      "question": "do I need proof for sick leave",
+      "run": 4,
+      "answer": "Yes, you need to provide proof for sick leave. Sick leave is the only type of leave that can be used during the notice period, and it requires documentation to support your absence. If you have any more questions about leave policies, feel free to ask!",
+      "a": false,
+      "b": true,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "proof_sick",
+      "question": "do I need proof for sick leave",
+      "run": 5,
+      "answer": "Yes, you need to provide proof for sick leave. Sick leave is the only type of leave that can be used during the notice period, and it requires documentation to support your absence.",
+      "a": false,
+      "b": true,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "proof_sick",
+      "question": "do I need proof for sick leave",
+      "run": 6,
+      "answer": "Yes, you need to provide proof for sick leave. Sick leave is the only type of leave that can be used during the notice period, and it requires documentation to support the absence. If you have any more questions about leave policies, feel free to ask!",
+      "a": false,
+      "b": true,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "proof_sick",
+      "question": "do I need proof for sick leave",
+      "run": 7,
+      "answer": "Yes, you need to provide proof for sick leave. Sick leave is the only type of leave that can be used during the notice period, but it requires documentation to support your absence.",
+      "a": false,
+      "b": true,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "proof_sick",
+      "question": "do I need proof for sick leave",
+      "run": 8,
+      "answer": "Yes, you need to provide proof for sick leave. Sick leave is the only type of leave that can be used during the notice period, and it requires documentation to support your absence.",
+      "a": false,
+      "b": true,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "mother_in_law",
+      "question": "can I take bereavement leave when my mother-in-law passes away",
+      "run": 1,
+      "answer": "The policy mentions bereavement leave but does not specify the relationships covered. You may consider taking bereavement leave, but it depends on the policy conditions and manager approval. \n\nNext step: Please discuss your situation with your manager for guidance on taking bereavement leave.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "mother_in_law",
+      "question": "can I take bereavement leave when my mother-in-law passes away",
+      "run": 2,
+      "answer": "The policy mentions bereavement leave but does not specify the relationships covered. Therefore, I couldn't find bereavement leave eligibility for your situation in the HR policies. You may want to check with HR for clarification on this matter.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "mother_in_law",
+      "question": "can I take bereavement leave when my mother-in-law passes away",
+      "run": 3,
+      "answer": "The policy doesn't specify eligibility for bereavement leave in relation to family members. It only states that bereavement leave is available for two days. You may want to check with HR for clarification on this matter.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "mother_in_law",
+      "question": "can I take bereavement leave when my mother-in-law passes away",
+      "run": 4,
+      "answer": "The policy mentions bereavement leave but does not specify the relationships covered. You may consider taking bereavement leave, but it depends on the policy conditions and manager approval. \n\nNext, you might want to discuss this with your manager to clarify your situation.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "mother_in_law",
+      "question": "can I take bereavement leave when my mother-in-law passes away",
+      "run": 5,
+      "answer": "The policy doesn't specify eligibility for bereavement leave in relation to family members. It only states that bereavement leave is available for a certain duration. You may want to check with HR for clarification on this matter.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "mother_in_law",
+      "question": "can I take bereavement leave when my mother-in-law passes away",
+      "run": 6,
+      "answer": "The policy doesn't specify eligibility for bereavement leave in relation to family members. You can take bereavement leave, but it would be best to check with HR for clarification on this situation.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "mother_in_law",
+      "question": "can I take bereavement leave when my mother-in-law passes away",
+      "run": 7,
+      "answer": "The policy mentions bereavement leave but does not specify the relationships covered. You may consider taking bereavement leave, but it would depend on the approval of your supervisor. \n\nNext, you might want to discuss your situation with your manager.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "mother_in_law",
+      "question": "can I take bereavement leave when my mother-in-law passes away",
+      "run": 8,
+      "answer": "I'm sorry to hear about your loss. The policy mentions bereavement leave, but it doesn't specify the relationships covered. You may want to check with HR for clarification on this matter.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "adoptive_paternity",
+      "question": "does paternity leave cover adoptive parents",
+      "run": 1,
+      "answer": "I couldn't find information about paternity leave for adoptive parents in the HR policies. The policy mentions paternity leave but does not specify who it covers. You may want to check with HR for clarification.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "adoptive_paternity",
+      "question": "does paternity leave cover adoptive parents",
+      "run": 2,
+      "answer": "I couldn't find information about paternity leave for adoptive parents in the HR policies. The policy states that paternity leave is available for 10 days, but it does not specify who it covers. You may want to check with HR for clarification.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "adoptive_paternity",
+      "question": "does paternity leave cover adoptive parents",
+      "run": 3,
+      "answer": "I couldn't find information about paternity leave for adoptive parents in the HR policies. Paternity leave is available for a duration of 10 days. Please check with HR for clarification on this matter.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "adoptive_paternity",
+      "question": "does paternity leave cover adoptive parents",
+      "run": 4,
+      "answer": "I couldn't find information about paternity leave for adoptive parents in the HR policies. Paternity leave is available for 10 days, but the policy doesn't specify who it covers. You may want to check with HR for clarification.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "adoptive_paternity",
+      "question": "does paternity leave cover adoptive parents",
+      "run": 5,
+      "answer": "I couldn't find information about paternity leave for adoptive parents in the HR policies. Paternity leave is available for 10 days, but the policy doesn't specify who it covers. You may want to check with HR for clarification.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "adoptive_paternity",
+      "question": "does paternity leave cover adoptive parents",
+      "run": 6,
+      "answer": "I couldn't find information about paternity leave for adoptive parents in the HR policies. Paternity leave is available for 10 days, but the policy doesn't specify who it covers. You may want to check with HR for clarification.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "adoptive_paternity",
+      "question": "does paternity leave cover adoptive parents",
+      "run": 7,
+      "answer": "I couldn't find information about paternity leave for adoptive parents in the HR policies. Paternity leave is available for 10 days, but the policy doesn't specify who it covers. You may want to check with HR for clarification.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "adoptive_paternity",
+      "question": "does paternity leave cover adoptive parents",
+      "run": 8,
+      "answer": "I couldn't find information about paternity leave for adoptive parents in the HR policies. Paternity leave is available for a duration of 10 days. You may want to check with HR for clarification on this matter.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "contractor_earned",
+      "question": "can a contractor take earned leave",
+      "run": 1,
+      "answer": "I couldn't find earned leave for contractors in the HR policies. You get 12 holidays during the calendar year, but the policy doesn't specify earned leave for contractors. Please check with HR for more information.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "contractor_earned",
+      "question": "can a contractor take earned leave",
+      "run": 2,
+      "answer": "I couldn't find earned leave for contractors in the HR policies. You get 12 holidays each calendar year, but the policy doesn't specify earned leave for contractors. Please check with HR for more information.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "contractor_earned",
+      "question": "can a contractor take earned leave",
+      "run": 3,
+      "answer": "I couldn't find earned leave for contractors in the HR policies. You get 12 holidays during the calendar year, but the policy doesn't specify earned leave for contractors. Please check with HR for more information.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "contractor_earned",
+      "question": "can a contractor take earned leave",
+      "run": 4,
+      "answer": "I couldn't find earned leave for contractors in the HR policies. You get 12 holidays during the calendar year, but the policy doesn't specify earned leave for contractors. Please check with HR for more information.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "contractor_earned",
+      "question": "can a contractor take earned leave",
+      "run": 5,
+      "answer": "I couldn't find earned leave for contractors in the HR policies. You get 12 holidays each calendar year, but the policy doesn't specify earned leave for contractors. You may want to check with HR for more details.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "contractor_earned",
+      "question": "can a contractor take earned leave",
+      "run": 6,
+      "answer": "I couldn't find earned leave for contractors in the HR policies. You get 12 holidays during the calendar year, but the policy doesn't specify earned leave for contractors. Please check with HR for more information.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "contractor_earned",
+      "question": "can a contractor take earned leave",
+      "run": 7,
+      "answer": "I couldn't find earned leave for contractors in the HR policies. You get 12 holidays during the calendar year, but the policy does not specify earned leave for contractors. Please check with HR for more information.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "contractor_earned",
+      "question": "can a contractor take earned leave",
+      "run": 8,
+      "answer": "I couldn't find earned leave for contractors in the HR policies. You get 12 holidays each calendar year, but the policy doesn't specify earned leave for contractors. You may want to check with HR for more information.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "intern_sick",
+      "question": "do interns get sick leave",
+      "run": 1,
+      "answer": "I couldn't find sick leave for interns in the HR policies. However, full-time employees are entitled to sick leave with proof during their notice period. You may want to check with HR for specific details regarding interns.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "intern_sick",
+      "question": "do interns get sick leave",
+      "run": 2,
+      "answer": "I couldn't find sick leave for interns in the HR policies. Full-time employees are entitled to sick leave, but the policy does not specify anything for interns.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "intern_sick",
+      "question": "do interns get sick leave",
+      "run": 3,
+      "answer": "I couldn't find sick leave for interns in the HR policies. Full-time employees are entitled to sick leave, but the policy doesn't specify for interns. You may want to check with HR for more information.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "intern_sick",
+      "question": "do interns get sick leave",
+      "run": 4,
+      "answer": "I couldn't find sick leave for interns in the HR policies. Full-time employees are entitled to sick leave, but the policy does not specify the same for interns.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "intern_sick",
+      "question": "do interns get sick leave",
+      "run": 5,
+      "answer": "I couldn't find sick leave for interns in the HR policies. However, full-time employees are entitled to sick leave, which can be used during the notice period with proof.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "intern_sick",
+      "question": "do interns get sick leave",
+      "run": 6,
+      "answer": "I couldn't find sick leave for interns in the HR policies. However, full-time employees are entitled to sick leave, which can be used during the notice period with proof. If you have any other questions about leave policies, feel free to ask!",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "intern_sick",
+      "question": "do interns get sick leave",
+      "run": 7,
+      "answer": "I couldn't find sick leave for interns in the HR policies. However, full-time employees are entitled to sick leave, which can be used during the notice period with proof.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "intern_sick",
+      "question": "do interns get sick leave",
+      "run": 8,
+      "answer": "I couldn't find sick leave for interns in the HR policies. Full-time employees are entitled to sick leave, but the policy does not specify the same for interns.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "sister_wedding",
+      "question": "can I use marriage leave for my sister's wedding",
+      "run": 1,
+      "answer": "Marriage leave is specifically for the employee's own wedding. It cannot be used for other events, such as a sibling's wedding. You may want to consider other leave options. If you need to take leave for your sister's wedding, you could look into using your earned leave or sick leave (with proof). Please check with your supervisor for approval.",
+      "a": true,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "sister_wedding",
+      "question": "can I use marriage leave for my sister's wedding",
+      "run": 2,
+      "answer": "Marriage leave is specifically for the employee's own marriage. The policy does not mention using it for a sibling's wedding. You may want to consider other leave options or speak to your manager about your situation.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "sister_wedding",
+      "question": "can I use marriage leave for my sister's wedding",
+      "run": 3,
+      "answer": "Marriage leave is specifically granted for the employee's own marriage. It doesn't cover family members' weddings, including a sister's wedding. \n\nYou may want to consider other leave options, such as:\n- Earned Leave: You can use your earned leave, which requires supervisor approval.\n- Sick Leave: This can only be used with proof during your notice period.\n- Leave Without Pay: This option is available if you have no leave balance, but it also requires manager approval.\n\nPlease check with your supervisor for the best option.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "sister_wedding",
+      "question": "can I use marriage leave for my sister's wedding",
+      "run": 4,
+      "answer": "Marriage leave is specifically for the employee's own wedding. You cannot use it for a sibling's wedding. If you need time off for your sister's wedding, you might consider using earned leave or taking leave without pay, depending on your leave balance and manager approval. Please check your leave balance and discuss with your supervisor for the next steps.",
+      "a": true,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "sister_wedding",
+      "question": "can I use marriage leave for my sister's wedding",
+      "run": 5,
+      "answer": "Marriage leave is specifically for the employee's own wedding. Since your sister's wedding does not qualify, you cannot use marriage leave for that purpose. You might consider other types of leave, such as earned leave or leave without pay, depending on your situation. Please check with your manager for approval on any leave you wish to take.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "sister_wedding",
+      "question": "can I use marriage leave for my sister's wedding",
+      "run": 6,
+      "answer": "Marriage leave is specifically for the employee's own marriage. You cannot use it for your sister's wedding. If you need time off for that, you might consider using earned leave or taking leave without pay, depending on your situation. Please check with your supervisor for approval on any leave request.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "sister_wedding",
+      "question": "can I use marriage leave for my sister's wedding",
+      "run": 7,
+      "answer": "Marriage leave is specifically for the employee's own marriage. Since your sister's wedding does not qualify, you cannot use marriage leave for that purpose. You may want to consider other leave options available to you. Please let me know if you have any other questions about leave types!",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "sister_wedding",
+      "question": "can I use marriage leave for my sister's wedding",
+      "run": 8,
+      "answer": "Marriage leave is specifically for the employee's own marriage. It cannot be used for other events, such as a sibling's wedding. You may want to consider other leave options available to you. If you need further assistance, please check with your manager or HR.",
+      "a": true,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "approval_earned",
+      "question": "do I need my manager's approval to take earned leave",
+      "run": 1,
+      "answer": "Yes, you need your manager's approval to take earned leave. Additionally, if you are in your notice period, you cannot use your leave balance other than sick leave (with proof). For any absence using earned leave during the notice period, it will extend your notice period by an equal number of days.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "approval_earned",
+      "question": "do I need my manager's approval to take earned leave",
+      "run": 2,
+      "answer": "Yes, you need your manager's approval to take earned leave. Additionally, if you are in your notice period, using earned leave will extend your notice period by the same number of days. Make sure to discuss your leave plans with your manager.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "approval_earned",
+      "question": "do I need my manager's approval to take earned leave",
+      "run": 3,
+      "answer": "Yes, you need your manager's approval to take earned leave. Additionally, if you are in your notice period, using earned leave will extend your notice period by the same number of days. Make sure to discuss your plans with your manager.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "approval_earned",
+      "question": "do I need my manager's approval to take earned leave",
+      "run": 4,
+      "answer": "Yes, you need your manager's approval to take earned leave. Additionally, if you are in your notice period, you cannot use your leave balance other than sick leave (with proof), and any absence taken as earned leave will extend your notice period by the same number of days.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "approval_earned",
+      "question": "do I need my manager's approval to take earned leave",
+      "run": 5,
+      "answer": "Yes, you need your manager's approval to take earned leave. Additionally, if you are in your notice period, using earned leave will extend your notice period by the number of days taken. Make sure to discuss your leave plans with your manager.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "approval_earned",
+      "question": "do I need my manager's approval to take earned leave",
+      "run": 6,
+      "answer": "Yes, you need your manager's approval to take earned leave. Additionally, if you are in your notice period, using earned leave will extend your notice period by the same number of days. Make sure to get the leave approved by your supervisor.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "approval_earned",
+      "question": "do I need my manager's approval to take earned leave",
+      "run": 7,
+      "answer": "Yes, you need your manager's approval to take earned leave. Additionally, if you are in your notice period, using earned leave will extend your notice period by the same number of days. Make sure to get the leave approved by your supervisor.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "approval_earned",
+      "question": "do I need my manager's approval to take earned leave",
+      "run": 8,
+      "answer": "Yes, you need your manager's approval to take earned leave. All leave requests, including earned leave, should be approved by your supervisor. If you have any specific dates in mind, it would be best to discuss them with your manager.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_bereavement",
+      "question": "how many days of bereavement leave",
+      "run": 1,
+      "answer": "You get 2 days of bereavement leave. This leave cannot be encashed or carried forward.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_bereavement",
+      "question": "how many days of bereavement leave",
+      "run": 2,
+      "answer": "You get 2 days of bereavement leave. This leave cannot be encashed or carried forward.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_bereavement",
+      "question": "how many days of bereavement leave",
+      "run": 3,
+      "answer": "You get 2 days of bereavement leave. This leave cannot be encashed or carried forward.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_bereavement",
+      "question": "how many days of bereavement leave",
+      "run": 4,
+      "answer": "You get 2 days of bereavement leave. This leave cannot be encashed or carried forward.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_bereavement",
+      "question": "how many days of bereavement leave",
+      "run": 5,
+      "answer": "You get 2 days of bereavement leave. This leave cannot be encashed or carried forward.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_bereavement",
+      "question": "how many days of bereavement leave",
+      "run": 6,
+      "answer": "You get 2 days of bereavement leave. This leave cannot be encashed or carried forward.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_bereavement",
+      "question": "how many days of bereavement leave",
+      "run": 7,
+      "answer": "You get 2 days of bereavement leave. This leave cannot be encashed or carried forward.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_bereavement",
+      "question": "how many days of bereavement leave",
+      "run": 8,
+      "answer": "You get 2 days of bereavement leave. This leave cannot be encashed or carried forward.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_sick",
+      "question": "how many sick leaves do I get",
+      "run": 1,
+      "answer": "You get 7 days of sick leave. Sick leave cannot be encashed or carried forward.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_sick",
+      "question": "how many sick leaves do I get",
+      "run": 2,
+      "answer": "You get 7 days of sick leave. This leave cannot be encashed or carried forward.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_sick",
+      "question": "how many sick leaves do I get",
+      "run": 3,
+      "answer": "You get 7 days of sick leave. Sick leave cannot be encashed or carried forward.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_sick",
+      "question": "how many sick leaves do I get",
+      "run": 4,
+      "answer": "You get 7 days of sick leave. Sick leave cannot be encashed or carried forward.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_sick",
+      "question": "how many sick leaves do I get",
+      "run": 5,
+      "answer": "You get 7 days of sick leave. Sick leave cannot be encashed or carried forward.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_sick",
+      "question": "how many sick leaves do I get",
+      "run": 6,
+      "answer": "You get 7 days of sick leave. This leave cannot be encashed or carried forward.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_sick",
+      "question": "how many sick leaves do I get",
+      "run": 7,
+      "answer": "You get 7 days of sick leave. Sick leave cannot be encashed or carried forward.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_sick",
+      "question": "how many sick leaves do I get",
+      "run": 8,
+      "answer": "You get 7 days of sick leave. Sick leave cannot be encashed or carried forward.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_earned",
+      "question": "how many earned leaves do I get",
+      "run": 1,
+      "answer": "You get 21 earned leaves every calendar year. If you start employment mid-year, your leave entitlement will be calculated on a pro-rata basis.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_earned",
+      "question": "how many earned leaves do I get",
+      "run": 2,
+      "answer": "You get 21 earned leaves every calendar year. If you start employment mid-year, your leave entitlement will be calculated on a pro-rata basis.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_earned",
+      "question": "how many earned leaves do I get",
+      "run": 3,
+      "answer": "You get 21 earned leaves every calendar year. If you start employment mid-year, your leave entitlement will be calculated on a pro-rata basis.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_earned",
+      "question": "how many earned leaves do I get",
+      "run": 4,
+      "answer": "You get 21 earned leaves every calendar year. If you start employment mid-year, your leave entitlement will be calculated on a pro-rata basis.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_earned",
+      "question": "how many earned leaves do I get",
+      "run": 5,
+      "answer": "You get 21 earned leaves every calendar year. If your employment starts mid-year, the leave entitlement will be calculated on a pro-rata basis.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_earned",
+      "question": "how many earned leaves do I get",
+      "run": 6,
+      "answer": "You get 21 earned leaves every calendar year. If you start employment mid-year, your leave entitlement will be calculated on a pro-rata basis.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_earned",
+      "question": "how many earned leaves do I get",
+      "run": 7,
+      "answer": "You get 21 earned leaves every calendar year. If you start employment mid-year, your leave entitlement will be calculated on a pro-rata basis.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "text",
+      "turn": "days_earned",
+      "question": "how many earned leaves do I get",
+      "run": 8,
+      "answer": "You get 21 earned leaves every calendar year. If you start employment mid-year, your leave entitlement will be calculated on a pro-rata basis.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "dog",
+      "question": "can I take bereavement leave for my dog",
+      "run": 1,
+      "answer": "I couldn't find bereavement leave for pets in the HR policies. Bereavement leave is typically for the loss of immediate family members. You might want to speak to your manager or HR about your situation.",
+      "a": true,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "dog",
+      "question": "can I take bereavement leave for my dog",
+      "run": 2,
+      "answer": "I couldn't find bereavement leave for pets in the HR policies. Bereavement leave is typically for the loss of immediate family members. You might want to speak to your manager or HR about your situation.",
+      "a": true,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "dog",
+      "question": "can I take bereavement leave for my dog",
+      "run": 3,
+      "answer": "I couldn't find bereavement leave for pets in the HR policies. Bereavement leave is typically for the loss of immediate family members. You might want to speak to your manager or HR for guidance on this.",
+      "a": true,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "dog",
+      "question": "can I take bereavement leave for my dog",
+      "run": 4,
+      "answer": "I couldn't find bereavement leave for pets in the HR policies. Bereavement leave is typically for the loss of immediate family members. You might want to speak to your manager or HR about your situation.",
+      "a": true,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "dog",
+      "question": "can I take bereavement leave for my dog",
+      "run": 5,
+      "answer": "I couldn't find bereavement leave for pets in the HR policies. Bereavement leave is typically for the loss of immediate family members. You might want to speak to your manager or HR for guidance on this situation.",
+      "a": true,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "dog",
+      "question": "can I take bereavement leave for my dog",
+      "run": 6,
+      "answer": "I couldn't find bereavement leave for pets in the HR policies. Bereavement leave is typically for the loss of immediate family members. You might want to speak to your manager or HR about your situation.",
+      "a": true,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "dog",
+      "question": "can I take bereavement leave for my dog",
+      "run": 7,
+      "answer": "I couldn't find bereavement leave for pets in the HR policies. Bereavement leave is typically for the loss of immediate family members. You might want to speak to your manager or HR about your situation.",
+      "a": true,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "dog",
+      "question": "can I take bereavement leave for my dog",
+      "run": 8,
+      "answer": "I couldn't find bereavement leave for pets in the HR policies. Bereavement leave is typically for the loss of immediate family members. You might want to speak to your manager or HR about your situation.",
+      "a": true,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "proof_bereavement",
+      "question": "do I need to send proof for bereavement leave",
+      "run": 1,
+      "answer": "The policy doesn't specify that you need to provide proof for bereavement leave. If you have any other questions about leave, feel free to ask.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "proof_bereavement",
+      "question": "do I need to send proof for bereavement leave",
+      "run": 2,
+      "answer": "The policy doesn't specify that you need to provide proof for bereavement leave. If you have any other questions about leave, feel free to ask.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "proof_bereavement",
+      "question": "do I need to send proof for bereavement leave",
+      "run": 3,
+      "answer": "The policy doesn't specify that proof is needed for bereavement leave. You might want to check with HR for any specific requirements.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "proof_bereavement",
+      "question": "do I need to send proof for bereavement leave",
+      "run": 4,
+      "answer": "The policy doesn't specify that you need to provide proof for bereavement leave. If you have any more questions about leave types or requirements, feel free to ask.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "proof_bereavement",
+      "question": "do I need to send proof for bereavement leave",
+      "run": 5,
+      "answer": "The policy doesn't specify any proof requirements for bereavement leave. You might want to check with HR for any specific guidelines they may have.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "proof_bereavement",
+      "question": "do I need to send proof for bereavement leave",
+      "run": 6,
+      "answer": "The policy doesn't specify that proof is required for bereavement leave. You might want to check with HR for any specific requirements.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "proof_bereavement",
+      "question": "do I need to send proof for bereavement leave",
+      "run": 7,
+      "answer": "The policy doesn't specify that you need to provide proof for bereavement leave. You can take two days of bereavement leave as needed.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "proof_bereavement",
+      "question": "do I need to send proof for bereavement leave",
+      "run": 8,
+      "answer": "The policy doesn't specify that proof is needed for bereavement leave. You might want to check with HR for any specific requirements.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "who_bereavement",
+      "question": "who does bereavement leave cover",
+      "run": 1,
+      "answer": "I couldn't find who bereavement leave covers in the HR policies. You get two days of bereavement leave, but for specific eligibility details, it’s best to check with HR.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "who_bereavement",
+      "question": "who does bereavement leave cover",
+      "run": 2,
+      "answer": "I couldn't find who bereavement leave covers in the HR policies. However, bereavement leave is for two days.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "who_bereavement",
+      "question": "who does bereavement leave cover",
+      "run": 3,
+      "answer": "I couldn't find who bereavement leave covers in the HR policies. You get two days of bereavement leave, but the policy doesn't specify further details. You might want to check with HR for more information.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "who_bereavement",
+      "question": "who does bereavement leave cover",
+      "run": 4,
+      "answer": "I couldn't find who bereavement leave covers in the HR policies. However, it allows for two days of leave. You might want to check with HR for more details.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "who_bereavement",
+      "question": "who does bereavement leave cover",
+      "run": 5,
+      "answer": "I couldn't find who bereavement leave covers in the HR policies. However, it allows for two days of leave. You might want to check with HR for more details.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "who_bereavement",
+      "question": "who does bereavement leave cover",
+      "run": 6,
+      "answer": "I couldn't find who bereavement leave covers in the HR policies. You get two days of bereavement leave, but the specifics aren't mentioned. It might be best to check with HR for more details.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "who_bereavement",
+      "question": "who does bereavement leave cover",
+      "run": 7,
+      "answer": "I couldn't find who bereavement leave covers in the HR policies. You get two days of bereavement leave, but the policy doesn't specify further details. You might want to check with HR for more information.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "who_bereavement",
+      "question": "who does bereavement leave cover",
+      "run": 8,
+      "answer": "I couldn't find who bereavement leave covers in the HR policies. You get two days of bereavement leave, but the specifics aren't mentioned. You might want to check with HR for more details.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "proof_sick",
+      "question": "do I need proof for sick leave",
+      "run": 1,
+      "answer": "Yes, you need to provide proof for sick leave.",
+      "a": false,
+      "b": true,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "proof_sick",
+      "question": "do I need proof for sick leave",
+      "run": 2,
+      "answer": "Yes, you need to provide proof for sick leave.",
+      "a": false,
+      "b": true,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "proof_sick",
+      "question": "do I need proof for sick leave",
+      "run": 3,
+      "answer": "Yes, you need to provide proof for sick leave.",
+      "a": false,
+      "b": true,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "proof_sick",
+      "question": "do I need proof for sick leave",
+      "run": 4,
+      "answer": "Yes, you need to provide proof for sick leave.",
+      "a": false,
+      "b": true,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "proof_sick",
+      "question": "do I need proof for sick leave",
+      "run": 5,
+      "answer": "Yes, you need to provide proof for sick leave.",
+      "a": false,
+      "b": true,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "proof_sick",
+      "question": "do I need proof for sick leave",
+      "run": 6,
+      "answer": "Yes, you need to provide proof for sick leave.",
+      "a": false,
+      "b": true,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "proof_sick",
+      "question": "do I need proof for sick leave",
+      "run": 7,
+      "answer": "Yes, you need to provide proof for sick leave.",
+      "a": false,
+      "b": true,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "proof_sick",
+      "question": "do I need proof for sick leave",
+      "run": 8,
+      "answer": "Yes, you need to provide proof for sick leave.",
+      "a": false,
+      "b": true,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "mother_in_law",
+      "question": "can I take bereavement leave when my mother-in-law passes away",
+      "run": 1,
+      "answer": "The policy mentions bereavement leave but doesn't specify the relationship for eligibility. You might want to check with HR for clarification on this situation.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "mother_in_law",
+      "question": "can I take bereavement leave when my mother-in-law passes away",
+      "run": 2,
+      "answer": "The policy mentions bereavement leave, but it doesn't specify the relationships covered. You might want to check with HR for clarification on this.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "mother_in_law",
+      "question": "can I take bereavement leave when my mother-in-law passes away",
+      "run": 3,
+      "answer": "The policy mentions bereavement leave but doesn't specify the relationship for eligibility. You might want to check with HR for clarification on this situation.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "mother_in_law",
+      "question": "can I take bereavement leave when my mother-in-law passes away",
+      "run": 4,
+      "answer": "The policy mentions bereavement leave, but it doesn't specify the relationships covered. You might want to check with HR for clarification on this situation.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "mother_in_law",
+      "question": "can I take bereavement leave when my mother-in-law passes away",
+      "run": 5,
+      "answer": "The policy doesn't specify bereavement leave for a mother-in-law. It only mentions two days of bereavement leave without detailing specific relationships. You might want to speak to your manager or HR for guidance on this situation.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "mother_in_law",
+      "question": "can I take bereavement leave when my mother-in-law passes away",
+      "run": 6,
+      "answer": "The policy doesn't specify bereavement leave for specific family members. It just states that you can take two days of bereavement leave. You might want to check with HR for more details on your situation.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "mother_in_law",
+      "question": "can I take bereavement leave when my mother-in-law passes away",
+      "run": 7,
+      "answer": "The policy mentions bereavement leave but doesn't specify the relationship for eligibility. You might want to check with HR for clarification on this situation.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "mother_in_law",
+      "question": "can I take bereavement leave when my mother-in-law passes away",
+      "run": 8,
+      "answer": "The policy doesn't specify bereavement leave for a mother-in-law. It only mentions two days of bereavement leave, but it doesn't clarify the relationship. You might want to speak to HR for guidance on this situation.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "adoptive_paternity",
+      "question": "does paternity leave cover adoptive parents",
+      "run": 1,
+      "answer": "I couldn't find information about paternity leave for adoptive parents in the HR policies. Paternity leave is generally for biological parents. You might want to check with HR for more details.",
+      "a": true,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "adoptive_paternity",
+      "question": "does paternity leave cover adoptive parents",
+      "run": 2,
+      "answer": "I couldn't find information about paternity leave for adoptive parents in the HR policies. Paternity leave is available for ten days, but the policy doesn't specify who it covers. You might want to check with HR for clarification.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "adoptive_paternity",
+      "question": "does paternity leave cover adoptive parents",
+      "run": 3,
+      "answer": "I couldn't find paternity leave for adoptive parents in the HR policies. Paternity leave is specifically mentioned, but it doesn't specify who it covers. You might want to check with HR for clarification.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "adoptive_paternity",
+      "question": "does paternity leave cover adoptive parents",
+      "run": 4,
+      "answer": "I couldn't find information about paternity leave for adoptive parents in the HR policies. Paternity leave is available for ten days, but the policy doesn't specify who it covers. You might want to check with HR for clarification.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "adoptive_paternity",
+      "question": "does paternity leave cover adoptive parents",
+      "run": 5,
+      "answer": "I couldn't find paternity leave for adoptive parents in the HR policies. Paternity leave is stated as ten days, but the policy doesn't specify who it covers. You might want to check with HR for clarification.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "adoptive_paternity",
+      "question": "does paternity leave cover adoptive parents",
+      "run": 6,
+      "answer": "I couldn't find information about paternity leave for adoptive parents in the HR policies. Paternity leave is available for ten days, but the policy doesn't specify who it covers. You might want to check with HR for clarification.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "adoptive_paternity",
+      "question": "does paternity leave cover adoptive parents",
+      "run": 7,
+      "answer": "I couldn't find information about paternity leave for adoptive parents in the HR policies. Paternity leave is available for ten days, but the policy doesn't specify who it covers. You might want to check with HR for clarification.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "adoptive_paternity",
+      "question": "does paternity leave cover adoptive parents",
+      "run": 8,
+      "answer": "I couldn't find information about paternity leave for adoptive parents in the HR policies. Paternity leave is stated as ten days, but the policy doesn't specify who it covers. You might want to check with HR for clarification.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "contractor_earned",
+      "question": "can a contractor take earned leave",
+      "run": 1,
+      "answer": "I couldn't find earned leave for contractors in the HR policies. You get twelve holidays each calendar year, but the policy doesn't specify earned leave for contractors.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "contractor_earned",
+      "question": "can a contractor take earned leave",
+      "run": 2,
+      "answer": "I couldn't find earned leave for contractors in the HR policies. You get twelve holidays each calendar year, but the policy doesn't specify earned leave for contractors. You might want to check with HR for more details.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "contractor_earned",
+      "question": "can a contractor take earned leave",
+      "run": 3,
+      "answer": "I couldn't find earned leave for contractors in the HR policies. You get earned leave as a full-time employee, but the policy doesn't specify anything for contractors.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "contractor_earned",
+      "question": "can a contractor take earned leave",
+      "run": 4,
+      "answer": "I couldn't find earned leave for contractors in the HR policies. You get twelve holidays each year, but earned leave isn't mentioned for contractors.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "contractor_earned",
+      "question": "can a contractor take earned leave",
+      "run": 5,
+      "answer": "I couldn't find earned leave for contractors in the HR policies. You get twelve holidays each calendar year, but earned leave isn't mentioned for contractors. You might want to check with HR for more details.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "contractor_earned",
+      "question": "can a contractor take earned leave",
+      "run": 6,
+      "answer": "I couldn't find earned leave for contractors in the HR policies. You get twelve holidays each calendar year, but earned leave isn't mentioned for contractors. You might want to check with HR for more details.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "contractor_earned",
+      "question": "can a contractor take earned leave",
+      "run": 7,
+      "answer": "I couldn't find earned leave for contractors in the HR policies. You get twelve holidays each calendar year, but the policy doesn't specify earned leave for contractors.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "contractor_earned",
+      "question": "can a contractor take earned leave",
+      "run": 8,
+      "answer": "I couldn't find earned leave for contractors in the HR policies. You get twelve holidays each calendar year, but earned leave isn't mentioned for contractors. You might want to check with HR for more details.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "intern_sick",
+      "question": "do interns get sick leave",
+      "run": 1,
+      "answer": "I couldn't find sick leave for interns in the HR policies. Full-time employees get sick leave, but the policy doesn't specify anything for interns.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "intern_sick",
+      "question": "do interns get sick leave",
+      "run": 2,
+      "answer": "I couldn't find sick leave for interns in the HR policies. Full-time employees get sick leave, but the policy doesn't specify for interns.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "intern_sick",
+      "question": "do interns get sick leave",
+      "run": 3,
+      "answer": "I couldn't find sick leave for interns in the HR policies. Full-time employees get sick leave, but the policy doesn't specify for interns.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "intern_sick",
+      "question": "do interns get sick leave",
+      "run": 4,
+      "answer": "I couldn't find sick leave for interns in the HR policies. Full-time employees get sick leave, but the policy doesn't specify for interns.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "intern_sick",
+      "question": "do interns get sick leave",
+      "run": 5,
+      "answer": "I couldn't find sick leave for interns in the HR policies. Full-time employees get sick leave, but the policy doesn't specify for interns.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "intern_sick",
+      "question": "do interns get sick leave",
+      "run": 6,
+      "answer": "I couldn't find sick leave for interns in the HR policies. Full-time employees get sick leave, but the policy doesn't specify for interns.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "intern_sick",
+      "question": "do interns get sick leave",
+      "run": 7,
+      "answer": "I couldn't find sick leave for interns in the HR policies. Full-time employees get sick leave, but the policy doesn't specify for interns.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "intern_sick",
+      "question": "do interns get sick leave",
+      "run": 8,
+      "answer": "I couldn't find sick leave for interns in the HR policies. Full-time employees get sick leave, but the policy doesn't specify for interns.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "sister_wedding",
+      "question": "can I use marriage leave for my sister's wedding",
+      "run": 1,
+      "answer": "Marriage leave is specifically for the employee's own wedding. You might want to consider using earned leave instead, which you have twenty-one days of. Would you like to know how to apply for that?",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "sister_wedding",
+      "question": "can I use marriage leave for my sister's wedding",
+      "run": 2,
+      "answer": "Marriage leave is specifically for the employee's own wedding, so it can't be used for a sibling's wedding. You might want to consider taking earned leave or discussing other options with your manager.",
+      "a": true,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "sister_wedding",
+      "question": "can I use marriage leave for my sister's wedding",
+      "run": 3,
+      "answer": "Marriage leave is specifically for your own wedding, so it can't be used for your sister's wedding. You might consider taking earned leave instead, which you have twenty-one days of, or possibly leave without pay if needed.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "sister_wedding",
+      "question": "can I use marriage leave for my sister's wedding",
+      "run": 4,
+      "answer": "Marriage leave is specifically for the employee's own wedding. You might consider using earned leave instead, which you have twenty-one days of. Want me to go through the process for that?",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "sister_wedding",
+      "question": "can I use marriage leave for my sister's wedding",
+      "run": 5,
+      "answer": "Marriage leave is specifically for the employee's own wedding. You might consider using earned leave instead, which you have twenty-one days of. Would you like to know more about how to apply for earned leave?",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "sister_wedding",
+      "question": "can I use marriage leave for my sister's wedding",
+      "run": 6,
+      "answer": "Marriage leave is specifically for your own wedding. I couldn't find anything about using it for a sibling's wedding in the HR policies. You might want to consider taking earned leave instead, which you have twenty-one days of, or discuss your situation with your manager.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "sister_wedding",
+      "question": "can I use marriage leave for my sister's wedding",
+      "run": 7,
+      "answer": "Marriage leave is specifically for the employee's own marriage. I couldn't find anything about using it for a sibling's wedding in the HR policies. You might want to consider taking earned leave instead, which requires supervisor approval.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "sister_wedding",
+      "question": "can I use marriage leave for my sister's wedding",
+      "run": 8,
+      "answer": "Marriage leave is specifically for your own wedding. You might want to consider taking earned leave instead, which you have twenty-one days of. Would you like to know how to apply for that?",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "approval_earned",
+      "question": "do I need my manager's approval to take earned leave",
+      "run": 1,
+      "answer": "Yes, you need your manager's approval to take earned leave. If you have any specific situations in mind, feel free to share.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "approval_earned",
+      "question": "do I need my manager's approval to take earned leave",
+      "run": 2,
+      "answer": "Yes, you need your manager's approval to take earned leave. It's important to discuss your plans with them before submitting your request.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "approval_earned",
+      "question": "do I need my manager's approval to take earned leave",
+      "run": 3,
+      "answer": "Yes, you need your manager's approval to take earned leave. If you don't have any leave balance, it will be granted as loss of pay.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "approval_earned",
+      "question": "do I need my manager's approval to take earned leave",
+      "run": 4,
+      "answer": "Yes, you need your manager's approval to take earned leave. If you don't have any leave balance, it will be considered as loss of pay.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "approval_earned",
+      "question": "do I need my manager's approval to take earned leave",
+      "run": 5,
+      "answer": "Yes, you need your manager's approval to take earned leave.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "approval_earned",
+      "question": "do I need my manager's approval to take earned leave",
+      "run": 6,
+      "answer": "Yes, you need your manager's approval to take earned leave.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "approval_earned",
+      "question": "do I need my manager's approval to take earned leave",
+      "run": 7,
+      "answer": "Yes, you need your manager's approval to take earned leave. If you don't have any leave left, it will be granted as loss of pay.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "approval_earned",
+      "question": "do I need my manager's approval to take earned leave",
+      "run": 8,
+      "answer": "Yes, you need your manager's approval to take earned leave.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_bereavement",
+      "question": "how many days of bereavement leave",
+      "run": 1,
+      "answer": "You get two days of bereavement leave.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_bereavement",
+      "question": "how many days of bereavement leave",
+      "run": 2,
+      "answer": "You get two days of bereavement leave.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_bereavement",
+      "question": "how many days of bereavement leave",
+      "run": 3,
+      "answer": "You get two days of bereavement leave.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_bereavement",
+      "question": "how many days of bereavement leave",
+      "run": 4,
+      "answer": "You get two days of bereavement leave.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_bereavement",
+      "question": "how many days of bereavement leave",
+      "run": 5,
+      "answer": "You get two days of bereavement leave.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_bereavement",
+      "question": "how many days of bereavement leave",
+      "run": 6,
+      "answer": "You get two days of bereavement leave.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_bereavement",
+      "question": "how many days of bereavement leave",
+      "run": 7,
+      "answer": "You get two days of bereavement leave.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_bereavement",
+      "question": "how many days of bereavement leave",
+      "run": 8,
+      "answer": "You get two days of bereavement leave.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_sick",
+      "question": "how many sick leaves do I get",
+      "run": 1,
+      "answer": "You get seven days of sick leave each year.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_sick",
+      "question": "how many sick leaves do I get",
+      "run": 2,
+      "answer": "You get seven days of sick leave each year.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_sick",
+      "question": "how many sick leaves do I get",
+      "run": 3,
+      "answer": "You get seven days of sick leave each year.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_sick",
+      "question": "how many sick leaves do I get",
+      "run": 4,
+      "answer": "You get seven days of sick leave each year.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_sick",
+      "question": "how many sick leaves do I get",
+      "run": 5,
+      "answer": "You get seven days of sick leave each year.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_sick",
+      "question": "how many sick leaves do I get",
+      "run": 6,
+      "answer": "You get seven days of sick leave each year.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_sick",
+      "question": "how many sick leaves do I get",
+      "run": 7,
+      "answer": "You get seven days of sick leave each year.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_sick",
+      "question": "how many sick leaves do I get",
+      "run": 8,
+      "answer": "You get seven days of sick leave each year.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_earned",
+      "question": "how many earned leaves do I get",
+      "run": 1,
+      "answer": "You get twenty-one earned leaves every calendar year. If you have any remaining leaves beyond the carry forward limit, they will lapse at the end of the year.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_earned",
+      "question": "how many earned leaves do I get",
+      "run": 2,
+      "answer": "You get twenty-one earned leaves every calendar year. If you have any remaining leaves beyond the carry forward limit, they will lapse at the end of the calendar year.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_earned",
+      "question": "how many earned leaves do I get",
+      "run": 3,
+      "answer": "You get twenty-one earned leaves every calendar year. If you have any remaining leaves beyond the carry forward limit, they will lapse at the end of the year.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_earned",
+      "question": "how many earned leaves do I get",
+      "run": 4,
+      "answer": "You get twenty-one earned leaves every calendar year. If you have any remaining leaves beyond the carry forward limit, they will lapse at the end of the year.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_earned",
+      "question": "how many earned leaves do I get",
+      "run": 5,
+      "answer": "You get twenty-one earned leaves every calendar year. If you have any remaining leaves beyond the carry forward limit, they will lapse at the end of the year.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_earned",
+      "question": "how many earned leaves do I get",
+      "run": 6,
+      "answer": "You get twenty-one earned leaves every calendar year. If you have any remaining leaves beyond the carry forward limit, they will lapse at the end of the year.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_earned",
+      "question": "how many earned leaves do I get",
+      "run": 7,
+      "answer": "You get twenty-one earned leaves every calendar year. If you have any remaining leaves beyond the carry forward limit, they will lapse at the end of the year.",
+      "a": false,
+      "b": false,
+      "c": false
+    },
+    {
+      "channel": "voice",
+      "turn": "days_earned",
+      "question": "how many earned leaves do I get",
+      "run": 8,
+      "answer": "You get twenty-one earned leaves every calendar year. If you have any remaining leaves beyond the carry forward limit, they will lapse at the end of the year.",
+      "a": false,
+      "b": false,
+      "c": false
+    }
+  ],
+  "settings": {
+    "grounding_version": 8,
+    "reminder": false,
+    "temperature": 0.2
+  },
+  "usage": {
+    "turns": 208,
+    "ttft_ms_mean": 879.6,
+    "prompt_tokens_mean": 2386.6,
+    "cached_tokens_mean": 2194.5,
+    "completion_tokens_mean": 33.9
+  },
+  "flags_by_channel": {
+    "text": {
+      "a": 9,
+      "b": 8,
+      "c": 0
+    },
+    "voice": {
+      "a": 10,
+      "b": 8,
+      "c": 0
+    }
+  },
+  "flags_by_turn": {
+    "text/dog": {
+      "a": 6,
+      "b": 0,
+      "c": 0
+    },
+    "text/proof_bereavement": {
+      "a": 0,
+      "b": 0,
+      "c": 0
+    },
+    "text/who_bereavement": {
+      "a": 0,
+      "b": 0,
+      "c": 0
+    },
+    "text/proof_sick": {
+      "a": 0,
+      "b": 8,
+      "c": 0
+    },
+    "text/mother_in_law": {
+      "a": 0,
+      "b": 0,
+      "c": 0
+    },
+    "text/adoptive_paternity": {
+      "a": 0,
+      "b": 0,
+      "c": 0
+    },
+    "text/contractor_earned": {
+      "a": 0,
+      "b": 0,
+      "c": 0
+    },
+    "text/intern_sick": {
+      "a": 0,
+      "b": 0,
+      "c": 0
+    },
+    "text/sister_wedding": {
+      "a": 3,
+      "b": 0,
+      "c": 0
+    },
+    "text/approval_earned": {
+      "a": 0,
+      "b": 0,
+      "c": 0
+    },
+    "text/days_bereavement": {
+      "a": 0,
+      "b": 0,
+      "c": 0
+    },
+    "text/days_sick": {
+      "a": 0,
+      "b": 0,
+      "c": 0
+    },
+    "text/days_earned": {
+      "a": 0,
+      "b": 0,
+      "c": 0
+    },
+    "voice/dog": {
+      "a": 8,
+      "b": 0,
+      "c": 0
+    },
+    "voice/proof_bereavement": {
+      "a": 0,
+      "b": 0,
+      "c": 0
+    },
+    "voice/who_bereavement": {
+      "a": 0,
+      "b": 0,
+      "c": 0
+    },
+    "voice/proof_sick": {
+      "a": 0,
+      "b": 8,
+      "c": 0
+    },
+    "voice/mother_in_law": {
+      "a": 0,
+      "b": 0,
+      "c": 0
+    },
+    "voice/adoptive_paternity": {
+      "a": 1,
+      "b": 0,
+      "c": 0
+    },
+    "voice/contractor_earned": {
+      "a": 0,
+      "b": 0,
+      "c": 0
+    },
+    "voice/intern_sick": {
+      "a": 0,
+      "b": 0,
+      "c": 0
+    },
+    "voice/sister_wedding": {
+      "a": 1,
+      "b": 0,
+      "c": 0
+    },
+    "voice/approval_earned": {
+      "a": 0,
+      "b": 0,
+      "c": 0
+    },
+    "voice/days_bereavement": {
+      "a": 0,
+      "b": 0,
+      "c": 0
+    },
+    "voice/days_sick": {
+      "a": 0,
+      "b": 0,
+      "c": 0
+    },
+    "voice/days_earned": {
+      "a": 0,
+      "b": 0,
+      "c": 0
+    }
+  }
+}
