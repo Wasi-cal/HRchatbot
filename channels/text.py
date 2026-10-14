@@ -131,7 +131,7 @@ def source_reply(query: str, history: list | None) -> dict | None:
     previous_query, previous_answer = cleaned[user_index]["content"], cleaned[assistant_index]["content"]
     templates = common.memo_config("source.templates.text", {}) or {}
     started = time.monotonic()
-    if (smalltalk_match(previous_query) or previous_answer.lower().startswith(common.REFUSAL_PREFIX)
+    if (smalltalk_match(previous_query, cleaned[:user_index]) or previous_answer.lower().startswith(common.REFUSAL_PREFIX)
             or previous_answer.startswith(NO_MATCH_BASE)):
         text = _template(templates, "none")
         chunk_ids: list = []
@@ -184,7 +184,9 @@ def _retrieve(plan: common.TurnPlan, top_k: int | None = None, candidate_n: int 
     breadth and expansions. A normal turn and a source lookup both call exactly this, so the retrieval a
     source lookup recomputes cannot drift from the one the answer was built on."""
     return retrieve(plan.retrieval_query, top_k=top_k, candidate_n=candidate_n, k=k,
-                    channel=CHANNEL, advisory=plan.advisory, expansions=plan.expansions)
+                    channel=CHANNEL, advisory=plan.advisory, expansions=plan.expansions,
+                    expansion_weight=plan.expansion_weight, expansion_candidate_n=plan.expansion_candidate_n,
+                    standalone_query=plan.standalone_query, standalone_weight=plan.standalone_weight, ctx_weight=plan.ctx_weight)
 
 
 def answer_stream(
@@ -194,6 +196,7 @@ def answer_stream(
     k: int | None = None,
     confidence_threshold: float | None = None,
     history: list | None = None,
+    handle: common.TurnHandle | None = None,
 ):
     """One turn: retrieve ONCE, generate ONCE, stream. A generator yielding dict events:
 
@@ -211,7 +214,9 @@ def answer_stream(
     Every setting (top_k, candidate_n, rrf k, confidence threshold, model, prompt)
     resolves for THIS channel; an explicit argument wins. history (prior
     user/assistant messages, untrusted) is sanitised, may widen the retrieval query for
-    follow-ups, and is sent to the model as prior chat turns (see channels/common.py)."""
+    follow-ups, and is sent to the model as prior chat turns (see channels/common.py). handle (optional) lets the
+    caller cancel the upstream stream and read what happened (request id, attempts, usage)."""
+    handle = handle or common.TurnHandle()
     plan = common.plan_turn(query, history, CHANNEL)
     threshold = get_confidence_threshold(CHANNEL) if confidence_threshold is None else confidence_threshold
 
@@ -240,17 +245,21 @@ def answer_stream(
     model = get_generation_model(CHANNEL)
     system_prompt, prompt_version = get_system_prompt(CHANNEL)
     messages = common.build_messages(query, results, system_prompt, plan.history)
-    stats = yield from common.stream_completion(get_client(), model, messages)
+    stats = yield from common.stream_completion(get_client(), model, messages, channel=CHANNEL, handle=handle)
 
     timing = {
         "retrieval_time_ms": retrieval_time_ms,
         "time_to_first_token_ms": stats["time_to_first_token_ms"],
         "total_generation_time_ms": stats["total_generation_time_ms"],
     }
-    logger.info("turn type=answer model=%s prompt=%s chunks=%d contextualized=%s advisory=%s retrieval_ms=%.0f ttft_ms=%s total_ms=%.0f",
-                model, prompt_version, len(results), plan.contextualized, plan.advisory, retrieval_time_ms,
-                None if stats["time_to_first_token_ms"] is None else round(stats["time_to_first_token_ms"]),
-                stats["total_generation_time_ms"])
+    g = handle.info
+    logger.info(
+        "turn type=%s model=%s prompt=%s chunks=%d contextualized=%s advisory=%s retrieval_ms=%.0f headers_ms=%s ttft_ms=%s total_ms=%.0f "
+        "request_id=%s attempts=%s prompt_tokens=%s cached_tokens=%s completion_tokens=%s",
+        "error" if stats["fallback"] else "answer", model, prompt_version, len(results), plan.contextualized, plan.advisory, retrieval_time_ms,
+        None if g.get("headers_ms") is None else round(g["headers_ms"]),
+        None if stats["time_to_first_token_ms"] is None else round(stats["time_to_first_token_ms"]),
+        stats["total_generation_time_ms"], g.get("request_id"), g.get("attempts"), g.get("prompt_tokens"), g.get("cached_tokens"), g.get("completion_tokens"))
     yield {
         "type": "done",
         "answer": stats["answer"],

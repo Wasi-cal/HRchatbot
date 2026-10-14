@@ -124,6 +124,22 @@ DEFAULT_CATALOG_STOPWORDS = [
     "there", "here", "please", "and", "or", "so", "if", "just", "also", "right", "now",
 ]
 
+# Deepgram listen (STT) vocabulary for the voice agent: HR terms the recognizer tends to mishear ("leaves" -> "leads").
+# Plain strings, no weights; a multi-word phrase is ONE element (Deepgram keyterm docs). Documented limit: 500 tokens per
+# request, so keep it to a few dozen terms. Distinctive terms from the active document titles are appended ONCE at seeding.
+DEFAULT_STT_KEYTERMS = [
+    "leave", "leaves", "earned leave", "sick leave", "comp-off", "loss of pay", "LOP", "work from home", "WFH",
+    "notice period", "PIP", "POSH", "BGV", "probation", "maternity", "paternity", "bereavement", "referral bonus",
+    "appraisal", "Calfus",
+]
+STT_KEYTERM_TOKEN_LIMIT = 500  # Deepgram: "Key Terms are limited to 500 tokens per request"
+
+
+def estimate_keyterm_tokens(terms) -> int:
+    """Conservative token estimate for a keyterm list (2 tokens per word): used to stay under the documented limit."""
+    return sum(max(1, len(t.split())) * 2 for t in terms)
+
+
 DEFAULT_APP_CONFIG = {
     "retrieval.top_k": (3, "Chunks returned by retrieve() after RRF fusion."),
     "retrieval.candidate_n": (20, "Candidates pulled from each of dense and sparse search before fusion."),
@@ -134,13 +150,24 @@ DEFAULT_APP_CONFIG = {
     "retrieval.context.prior_user_turns": (2, "How many previous user messages are prepended to a follow-up's retrieval query."),
     "retrieval.context.followup_markers": (
         ["that", "it", "this", "those", "these", "them", "there", "same", "anything else", "what else",
-         "instead", "other option", "other options"],
+         "instead", "other option", "other options", "what about", "how about", "and for", "and what", "and if",
+         "i am", "im", "as a", "as an"],
         "Words/phrases that mark an utterance as a follow-up (whole-word match on the normalized text).",
     ),
+    "prompts.max_chars": (8000, "Maximum length of one prompt_templates row accepted by the admin API (grounding_core grows with every rule added)."),
+    "retrieval.context.dual_query.enabled": (True, "A follow-up-contextualised turn also searches the bare utterance and fuses both (one batched encode, one retrieve call). False = the old single contextualised query."),
+    "retrieval.context.ctx_heavy_below_words": (3, "An utterance with fewer words than this gets the weights_with_marker pair even without a marker word ('for interns?' cannot stand alone)."),
+    "retrieval.context.weight_standalone": (1.0, "Fallback RRF weight of the bare-utterance lists when weights_with/without_marker lack a 'standalone' value."),
+    "retrieval.context.weight_ctx": (1.0, "Fallback RRF weight of the contextualised-query lists when weights_with/without_marker lack a 'ctx' value."),
+    "retrieval.context.weights_with_marker": ({"standalone": 0.5, "ctx": 1.0}, "Weights for a contextualised turn whose utterance has a follow-up marker (that, it, what else, ...): context-heavy."),
+    "retrieval.context.weights_without_marker": ({"standalone": 1.0, "ctx": 0.5}, "Weights for a contextualised turn that is only SHORT (no follow-up marker): standalone-heavy, so a fresh question is not diluted."),
+    "retrieval.context.affirmation_user_weight": (1.0, "RRF weight of the last user message's results when a bare 'yes' after an offer retrieves for the offer sentence."),
+    "retrieval.context.affirmation_candidate_n": (5, "Candidates pulled per list for the user-message side of that fused query."),
     "retrieval.advisory.markers": (
         ["anything else i can do", "anything else that i can do", "what are my options", "how can i avoid",
          "how do i avoid", "is there a way", "alternatives", "alternative", "i dont want", "without losing",
-         "can i instead", "workaround", "any other option", "other options", "avoid losing"],
+         "can i instead", "workaround", "any other option", "other options", "avoid losing",
+         "time off", "day off", "days off", "some time off", "need leave", "take leave", "want leave", "need some time"],
         "Phrases (normalized: lowercase, no punctuation) that mark a turn as advisory: broader, multi-policy retrieval.",
     ),
     "retrieval.expansions": (
@@ -156,6 +183,12 @@ DEFAULT_APP_CONFIG = {
                 "compensatory leave comp off earn and utilize",
                 "leave without pay LWP when leave balance is exhausted",
             ],
+        }, {
+            # Time-off requests ("I want some time off") otherwise retrieve WFH / comp-off chunks and miss the leave
+            # entitlement table (earned, sick, bereavement ... leave), because the user's wording is not the policy's.
+            "topic": "time_off",
+            "triggers": ["time off", "day off", "days off", "need leave", "take leave", "want leave", "need some time"],
+            "queries": ["types of leave and days entitled earned leave sick leave bereavement leave"],
         }],
         "Topic -> expansion queries for advisory turns. A topic fires when any trigger phrase appears in the "
         "current utterance or prior user messages; its queries are embedded in one batched encode and fused in.",
@@ -175,6 +208,11 @@ DEFAULT_APP_CONFIG = {
         ["would you like", "want me to", "i can also"],
         "Phrases that mark an assistant message as an offer (a message ending in '?' also counts).",
     ),
+    "generation.first_token_timeout_s": (4, "Seconds to wait for the first streamed token (also the longest gap between chunks) before the attempt is aborted and retried. Failure path only."),
+    "generation.request_timeout_s": (20, "Overall deadline in seconds for one generation attempt chain; the stream is closed when it passes."),
+    "generation.max_retries.voice": (1, "Retries after a failed or first-token-timeout attempt on the voice channel (0 = none), before the fallback message is spoken."),
+    "generation.max_retries.text": (1, "Retries after a failed or first-token-timeout attempt on the text channel (0 = none), before the fallback message."),
+    "generation.fallback_message": ("Sorry, I'm having trouble right now. Please try again.", "Spoken / shown when generation fails after the allowed retries instead of hanging."),
     "catalog.enabled": (True, "Whether 'what documents do you have' questions get the deterministic catalog reply."),
     "catalog.vocab": (DEFAULT_CATALOG_VOCAB, "A catalog question may contain ONLY these content words (after stopword removal and the normalize map)."),
     "catalog.nouns": (DEFAULT_CATALOG_NOUNS, "A catalog question must contain at least one of these (multi-word entries match the whole utterance)."),
@@ -306,6 +344,26 @@ def _seed_provider(conn, category: str, provider_name: str, defaults: dict) -> N
         )
 
 
+def _default_stt_keyterms(conn) -> list[str]:
+    """HR vocabulary plus a few distinctive terms from the active document titles, derived ONCE at seeding (never per
+    turn; editable afterwards via PATCH /api/admin/config/stt.keyterms). Skipped when the stt row already has keyterms."""
+    existing = conn.execute("SELECT config FROM provider_configs WHERE category = 'stt' AND is_active").fetchone()
+    if existing and (existing[0] or {}).get("keyterms"):
+        return existing[0]["keyterms"]
+    from config.topics import clean_title
+
+    terms = list(DEFAULT_STT_KEYTERMS)
+    seen = {t.lower() for t in terms}
+    for (title,) in conn.execute(
+        "SELECT DISTINCT document_title FROM documents WHERE status = 'active' AND NOT is_restricted AND document_title IS NOT NULL "
+        "ORDER BY document_title").fetchall():
+        term = clean_title(title)
+        if term and 1 <= len(term.split()) <= 4 and term.lower() not in seen and estimate_keyterm_tokens(terms + [term]) <= STT_KEYTERM_TOKEN_LIMIT // 2:
+            terms.append(term)
+            seen.add(term.lower())
+    return terms
+
+
 def _seed_channel_settings(conn) -> None:
     """Gives text and voice their own copy of every tunable they use, seeded at
     the CURRENT effective value (so nothing changes on day one) and never
@@ -350,9 +408,15 @@ def seed_runtime_config() -> None:
             "confidence_threshold": float(os.environ.get("GENERATION_CONFIDENCE_THRESHOLD", DEFAULT_CONFIDENCE_THRESHOLD)),
         })
         _seed_channel_settings(conn)
-        _seed_provider(conn, "stt", "deepgram", {
+        stt_defaults = {
             "model": os.environ.get("DEEPGRAM_LISTEN_MODEL", DEFAULT_STT_MODEL),
-        })
+            "version": "v1",       # Deepgram: Flux uses v2, every other model v1
+            "keyterms": _default_stt_keyterms(conn),
+            "eot_threshold": 0.8,  # Flux only (documented 0.5-1.0, default 0.7); ignored for other models
+            # eager_eot_threshold is deliberately NOT seeded: eager end-of-turn "increases LLM calls" (speculative
+            # generation + TurnResumed cancellations), so it stays off. eot_timeout_ms is optional (Deepgram default 5000).
+        }
+        _seed_provider(conn, "stt", "deepgram", stt_defaults)
         _seed_provider(conn, "tts", "deepgram", {
             "voice": os.environ.get("DEEPGRAM_TTS_MODEL", DEFAULT_TTS_VOICE),
             "greeting": os.environ.get("VOICE_GREETING", DEFAULT_GREETING),

@@ -104,6 +104,27 @@ def dense_search(
     return [(chunk_db_id, float(similarity)) for chunk_db_id, similarity in rows]
 
 
+def dense_search_many(conn, query_denses: list, model_id: int, limits: list[int]):
+    """dense_search() for several query vectors in ONE statement (UNION ALL of per-query HNSW searches), so a turn that
+    searches with two queries still makes one dense round trip. limits[i] is candidate_n for query i."""
+    filter_sql = _visibility_filter_sql()
+    parts, params = [], []
+    for i, (vec, limit) in enumerate(zip(query_denses, limits)):
+        parts.append(f"""(SELECT {i} AS q, ce.chunk_id, 1 - (ce.dense_vector <=> %s) AS similarity
+            FROM chunk_embeddings ce
+            JOIN chunks c ON c.id = ce.chunk_id
+            JOIN documents d ON d.id = c.document_id
+            WHERE ce.embedding_model_id = %s AND NOT c.is_superseded AND {filter_sql}
+            ORDER BY ce.dense_vector <=> %s
+            LIMIT %s)""")
+        params += [vec, model_id, vec, limit]
+    rows = conn.execute(" UNION ALL ".join(parts) + " ORDER BY q, similarity DESC", params).fetchall()
+    out = [[] for _ in query_denses]
+    for q, chunk_db_id, similarity in rows:
+        out[q].append((chunk_db_id, float(similarity)))
+    return out
+
+
 def _sparse_dot(query_sparse: dict, chunk_sparse: dict) -> float:
     """Weighted dot product over shared lexical (token-id) weights."""
     if len(query_sparse) > len(chunk_sparse):
@@ -255,6 +276,11 @@ def retrieve(
     channel: str | None = None,
     advisory: bool = False,
     expansions: list[str] | None = None,
+    expansion_weight: float | None = None,
+    expansion_candidate_n: int | None = None,
+    standalone_query: str | None = None,
+    standalone_weight: float = 1.0,
+    ctx_weight: float = 1.0,
 ) -> list[dict]:
     """Hybrid dense+sparse retrieval fused with RRF. Returns up to top_k
     results, each: {chunk_id, section_path, text, document_title,
@@ -279,7 +305,15 @@ def retrieve(
     expansions (advisory turns only; see channels/common.py select_expansions): extra
     queries embedded in ONE batched encode with the main query, searched, and fused in
     with weight retrieval.expansion.weight (RRF), so related policies the main query's
-    wording doesn't reach (e.g. work from home, comp-off) can enter the pool."""
+    wording doesn't reach (e.g. work from home, comp-off) can enter the pool. expansion_weight overrides
+    retrieval.expansion.weight and expansion_candidate_n retrieval.expansion.candidate_n for this call (the
+    affirmation-after-an-offer query fuses the offer sentence with the last user message this way).
+
+    standalone_query (a follow-up-contextualised turn, see channels/common.py plan_turn): `query` is the contextualised
+    text and standalone_query the user's bare utterance. Both are encoded in the SAME batched call and searched (one
+    dense statement, one sparse fetch); the contextualised lists are fused as usual and scaled by ctx_weight, the
+    standalone lists are added with standalone_weight (RRF), so a fresh short question is not drowned by earlier
+    unrelated turns while a true follow-up keeps its topic. Without standalone_query the path is exactly the old one."""
     if top_k is None and advisory:
         top_k = channel_setting("retrieval.top_k.advisory", channel)
     if top_k is None:
@@ -288,9 +322,11 @@ def retrieve(
         candidate_n = channel_setting("retrieval.candidate_n", channel, DEFAULT_CANDIDATE_N)
     if k is None:
         k = channel_setting("retrieval.rrf_k", channel, DEFAULT_RRF_K)
-    expansions = list(expansions) if (advisory and expansions) else []
-    if expansions:
-        dense_vecs, sparse_vecs = embed_queries((query, *expansions))
+    expansions = list(expansions) if expansions else []
+    texts = [query] + ([standalone_query] if standalone_query else []) + expansions
+    n_main = 2 if standalone_query else 1  # query vectors before the expansions
+    if len(texts) > 1:
+        dense_vecs, sparse_vecs = embed_queries(tuple(texts))
         query_dense, query_sparse = dense_vecs[0], sparse_vecs[0]
     else:
         query_dense, query_sparse = embed_query(query)
@@ -298,20 +334,31 @@ def retrieve(
     pool = get_pool()
     with pool.connection() as conn:
         model_id = get_active_embedding_model_id(conn)
-        dense_results = dense_search(conn, query_dense, model_id, candidate_n)
-        if expansions:
-            expansion_n = get_app_config("retrieval.expansion.candidate_n", 5)
-            sparse_all = sparse_search_many(conn, sparse_vecs, model_id, [candidate_n] + [expansion_n] * len(expansions))
+        if standalone_query:
+            dense_pair = dense_search_many(conn, dense_vecs[:2], model_id, [candidate_n, candidate_n])
+            dense_results = dense_pair[0]
+        else:
+            dense_results = dense_search(conn, query_dense, model_id, candidate_n)
+        if expansions or standalone_query:
+            expansion_n = 0
+            if expansions:
+                expansion_n = expansion_candidate_n if expansion_candidate_n is not None else get_app_config("retrieval.expansion.candidate_n", 5)
+            limits = [candidate_n] + ([candidate_n] if standalone_query else []) + [expansion_n] * len(expansions)
+            sparse_all = sparse_search_many(conn, sparse_vecs, model_id, limits)
             sparse_results = sparse_all[0]
             expansion_lists = []
-            for i, dense_vec in enumerate(dense_vecs[1:], start=1):
+            for i, dense_vec in enumerate(dense_vecs[n_main:], start=n_main):
                 expansion_lists.append(dense_search(conn, dense_vec, model_id, expansion_n))
                 expansion_lists.append(sparse_all[i])
         else:
             sparse_results = sparse_search(conn, query_sparse, model_id, candidate_n)
         fused = rrf_fuse(dense_results, sparse_results, k)
+        if standalone_query:
+            fused = [(cid, score * ctx_weight, dr, sr) for cid, score, dr, sr in fused]
+            fused = add_expansion_scores(fused, [dense_pair[1], sparse_all[1]], standalone_weight, k)
         if expansions:
-            fused = add_expansion_scores(fused, expansion_lists, get_app_config("retrieval.expansion.weight", 1.0), k)
+            fused = add_expansion_scores(fused, expansion_lists,
+                                         expansion_weight if expansion_weight is not None else get_app_config("retrieval.expansion.weight", 1.0), k)
         if advisory:
             details = fetch_chunk_details(conn, [chunk_db_id for chunk_db_id, *_ in fused])
             fused = _diversify(fused, details, top_k, channel_setting("retrieval.advisory.max_chunks_per_doc", channel, 2))

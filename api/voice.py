@@ -18,6 +18,7 @@ once and stream (channels/voice.py); a "where is this from" turn is a templated 
 applicability filtering and no per-user attributes - see
 docs/applicability_layer_removed.md.
 """
+import asyncio
 import json
 import logging
 import os
@@ -25,14 +26,16 @@ import secrets
 import time
 import uuid
 
+import anyio
 import httpx
 from dotenv import dotenv_values
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict
 
-from channels import voice as voice_channel
 from api.query_log import log_query
+from channels import common
+from channels import voice as voice_channel
 from api.voice_settings import ENV_PATH_DEFAULT, build_agent_settings
 
 logger = logging.getLogger(__name__)
@@ -81,7 +84,7 @@ def conversation_history(turns) -> list[dict]:
 # Turn handling
 # --------------------------------------------------------------------------
 
-def _turn_pieces(turns, record: dict):
+def _turn_pieces(turns, record: dict, handle: common.TurnHandle):
     """Generator of text pieces to speak for the final user turn. Fills
     `record` with what to log (query, outcome)."""
     current = turns[-1][1]
@@ -112,13 +115,13 @@ def _turn_pieces(turns, record: dict):
         return
 
     record["query_text"] = current
-    for event in voice_channel.answer_stream(current, history=history):
+    for event in voice_channel.answer_stream(current, history=history, handle=handle):
         if event["type"] == "token":
             record.setdefault("pieces", []).append(event["text"])
             yield event["text"]
         else:  # done
             record.update(
-                response_type="refusal_shortcut" if event["shortcut"] else "answer",
+                response_type="refusal_shortcut" if event["shortcut"] else ("error" if handle.info.get("fallback") else "answer"),
                 shortcut_fired=event["shortcut"],
                 timing=event["timing"],
                 chunk_ids_used=event.get("chunk_ids", []),
@@ -128,23 +131,30 @@ def _turn_pieces(turns, record: dict):
             )
 
 
-def _logged_pieces(turns):
-    """Wraps _turn_pieces: swallows errors into a spoken apology and logs
-    the turn exactly once when the stream ends (or is cut off by a
-    barge-in), never letting logging break the response."""
-    record: dict = {}
+def _logged_pieces(turns, handle: common.TurnHandle, record: dict):
+    """Wraps _turn_pieces: swallows errors into a spoken apology, logs the turn exactly once when the stream ends,
+    and records an ABORTED turn (the client disconnected mid-turn, e.g. Deepgram barge-in) instead of losing it.
+    Never lets logging break the response. `record` is the caller's dict so the endpoint can read the outcome."""
     try:
-        yield from _turn_pieces(turns, record)
+        yield from _turn_pieces(turns, record, handle)
+    except (common.TurnCancelled, GeneratorExit):
+        record.update(response_type="aborted", query_text=record.get("query_text") or turns[-1][1])
     except Exception:
         logger.exception("think turn failed")
-        record = {}
+        keep = record.get("query_text")
+        record.clear()
+        if keep:
+            record.update(query_text=keep, response_type="error")
         yield APOLOGY
     finally:
         if record.get("query_text") and record.get("response_type"):
             pieces = record.pop("pieces", None)
             if pieces:
                 record["answer_text"] = "".join(pieces)
-            log_query(source="voice", **record)
+            if record["response_type"] == "aborted":
+                record.setdefault("timing", {"time_to_first_token_ms": handle.info.get("ttft_ms")})
+            row = {k: v for k, v in record.items() if k != "pieces"}
+            log_query(source="voice", **row)
 
 
 # --------------------------------------------------------------------------
@@ -264,19 +274,52 @@ def _chunk(completion_id, model, created, delta, finish=None) -> str:
     return f"data: {json.dumps(payload)}\n\n"
 
 
+_END = object()
+_think_logger = logging.getLogger("hrchatbot.voice")
+_TYPE_BY_RESPONSE = {"answer": "answer", "refusal_shortcut": "shortcut", "smalltalk": "smalltalk", "source_lookup": "source_lookup",
+                     "catalog": "catalog", "aborted": "aborted", "error": "error"}
+
+
+def _log_think(started: float, kind: str, disconnected: bool, handle: common.TurnHandle | None = None, **extra) -> None:
+    """ONE INFO line per think request: type (answer | source_lookup | smalltalk | catalog | shortcut | aborted | error),
+    duration_ms and client_disconnected; generation turns add the OpenAI request id, attempts, time to response headers,
+    time to first token and token usage (all captured from the same call - no extra request)."""
+    fields = {"type": kind, "duration_ms": round((time.monotonic() - started) * 1000), "client_disconnected": disconnected}
+    info = (handle.info if handle else {}) or {}
+    if info.get("attempts"):
+        fields.update(request_id=info.get("request_id"), attempts=info.get("attempts"),
+                      headers_ms=None if info.get("headers_ms") is None else round(info["headers_ms"]),
+                      ttft_ms=None if info.get("ttft_ms") is None else round(info["ttft_ms"]),
+                      chunks=info.get("chunks"), prompt_tokens=info.get("prompt_tokens"), cached_tokens=info.get("cached_tokens"),
+                      completion_tokens=info.get("completion_tokens"), fallback=info.get("fallback"))
+    fields.update(extra)
+    _think_logger.info("think " + " ".join(f"{k}={v}" for k, v in fields.items()))
+
+
+def _next_piece(iterator):
+    return next(iterator, _END)
+
+
 @router.post("/v1/chat/completions")
-def think(req: ThinkRequest, authorization: str | None = Header(None), _debug=Depends(_debug_log_raw_request)):
-    _check_auth(authorization)
-    turns = _turns(req.messages)
-    if not turns or turns[-1][0] != "user":
-        raise HTTPException(400, "messages must end with a non-empty user message")
+async def think(req: ThinkRequest, authorization: str | None = Header(None), _debug=Depends(_debug_log_raw_request)):
+    started = time.monotonic()
+    try:
+        _check_auth(authorization)
+        turns = _turns(req.messages)
+        if not turns or turns[-1][0] != "user":
+            raise HTTPException(400, "messages must end with a non-empty user message")
+    except HTTPException as exc:
+        _log_think(started, "error", False, status=exc.status_code)
+        raise
 
     completion_id, created = f"chatcmpl-{uuid.uuid4().hex}", int(time.time())
     model = str(req.model_extra.get("model") or "hr-rag") if req.model_extra else "hr-rag"
-    pieces = _logged_pieces(turns)
+    handle, record = common.TurnHandle(), {}
+    pieces = _logged_pieces(turns, handle, record)
 
     if req.stream is False:
-        text = "".join(pieces)
+        text = await anyio.to_thread.run_sync(lambda: "".join(pieces))
+        _log_think(started, _TYPE_BY_RESPONSE.get(record.get("response_type"), "error"), False, handle)
         return JSONResponse({
             "id": completion_id,
             "object": "chat.completion",
@@ -285,11 +328,30 @@ def think(req: ThinkRequest, authorization: str | None = Header(None), _debug=De
             "choices": [{"index": 0, "message": {"role": "assistant", "content": text}, "finish_reason": "stop"}],
         })
 
-    def sse():
-        yield _chunk(completion_id, model, created, {"role": "assistant", "content": ""})
-        for piece in pieces:
-            yield _chunk(completion_id, model, created, {"content": piece})
-        yield _chunk(completion_id, model, created, {}, finish="stop")
-        yield "data: [DONE]\n\n"
+    async def sse():
+        """Streams the turn. Each next piece is produced in a worker thread; if the client disconnects (Deepgram aborts a
+        turn on barge-in) the await is cancelled at once, the upstream OpenAI stream is closed via the handle - so the
+        provider stops generating - and the turn is logged as aborted."""
+        disconnected = True
+        try:
+            yield _chunk(completion_id, model, created, {"role": "assistant", "content": ""})
+            while True:
+                piece = await anyio.to_thread.run_sync(_next_piece, pieces, abandon_on_cancel=True)
+                if piece is _END:
+                    break
+                yield _chunk(completion_id, model, created, {"content": piece})
+            disconnected = False  # every token was produced; what remains is only the stop chunk
+            yield _chunk(completion_id, model, created, {}, finish="stop")
+            yield "data: [DONE]\n\n"
+        finally:
+            if disconnected:
+                handle.cancel()
+                try:
+                    pieces.close()  # finalises the turn (aborted row) if no worker thread is inside it right now
+                except ValueError:
+                    pass  # a worker thread is mid-next(): it sees handle.cancelled and finalises itself
+                _log_think(started, "aborted", True, handle, tokens_streamed_so_far=handle.info.get("chunks", 0))
+            else:
+                _log_think(started, _TYPE_BY_RESPONSE.get(record.get("response_type"), "error"), False, handle)
 
     return StreamingResponse(sse(), media_type="text/event-stream", headers={"Cache-Control": "no-cache"})

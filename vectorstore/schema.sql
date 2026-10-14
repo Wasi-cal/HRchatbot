@@ -125,7 +125,7 @@ CREATE TABLE IF NOT EXISTS query_logs (
     id                          BIGSERIAL PRIMARY KEY,
     created_at                  TIMESTAMPTZ NOT NULL DEFAULT now(),
     query_text                  TEXT NOT NULL,
-    response_type               TEXT NOT NULL CHECK (response_type IN ('answer', 'clarification', 'refusal_shortcut', 'smalltalk', 'source_lookup', 'catalog')),
+    response_type               TEXT NOT NULL CHECK (response_type IN ('answer', 'clarification', 'refusal_shortcut', 'smalltalk', 'source_lookup', 'catalog', 'aborted', 'error')),
     answer_text                 TEXT,
     user_attributes             JSONB,    -- legacy: no longer written (applicability layer unwired)
     blocking_tag_type           TEXT,     -- legacy: only on historical response_type = 'clarification' rows
@@ -147,11 +147,13 @@ END $$;
 
 -- 'smalltalk' (greetings etc. answered without retrieval/LLM) and 'source_lookup' ("where is this from": a
 -- templated reply from a deterministic re-retrieval, no LLM; see channels/common.py) and 'catalog' ("what documents
--- do you have": a templated reply from the cached title list; see channels/catalog.py)
+-- do you have": a templated reply from the cached title list; see channels/catalog.py), 'aborted' (the client
+-- disconnected mid-turn, e.g. Deepgram barge-in; the upstream stream was closed) and 'error' (generation failed
+-- after the allowed retries and the fallback message was used).
 -- was added after the table first shipped; widen the constraint on existing databases.
 ALTER TABLE query_logs DROP CONSTRAINT IF EXISTS query_logs_response_type_check;
 ALTER TABLE query_logs ADD CONSTRAINT query_logs_response_type_check
-    CHECK (response_type IN ('answer', 'clarification', 'refusal_shortcut', 'smalltalk', 'source_lookup', 'catalog'));
+    CHECK (response_type IN ('answer', 'clarification', 'refusal_shortcut', 'smalltalk', 'source_lookup', 'catalog', 'aborted', 'error'));
 
 -- Pipeline-level tunables, editable at runtime via /api/admin/config
 -- (read through a Redis cache, see config/runtime.py). Seeded by

@@ -6,6 +6,7 @@ reply-picking machinery. Which patterns count as small talk, what the
 replies say, how settings are resolved and what the pipeline does with them
 are all decided in each channel module.
 """
+import logging
 import random
 import re
 import threading
@@ -42,26 +43,176 @@ def build_messages(query: str, chunks: list[dict], system_prompt: str, history: 
     ]
 
 
-def stream_completion(client, model: str, messages: list[dict]):
-    """Generator: yields {"type": "token", "text": ...} per streamed piece and
-    RETURNS {"answer", "time_to_first_token_ms", "total_generation_time_ms"}
-    (use `stats = yield from stream_completion(...)`). Exactly one LLM call."""
+class TurnCancelled(Exception):
+    """The turn was abandoned (the client disconnected, e.g. Deepgram barge-in). Raised inside the generation so the
+    pipeline stops; callers log the turn as aborted."""
+
+
+class TurnHandle:
+    """Shared by the voice endpoint and the generation call of ONE turn: lets the endpoint cancel the upstream OpenAI
+    stream from another thread (closing it, so the provider stops generating) and collects what happened
+    (`info`: request_id, attempts, headers_ms, ttft_ms, token counts, fallback, ...)."""
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._stream = None
+        self.cancelled = False
+        self.expired = False
+        self.info: dict = {}
+
+    def attach(self, stream) -> None:
+        with self._lock:
+            self._stream = stream
+            if self.cancelled or self.expired:
+                self._close_locked()
+
+    def _close_locked(self) -> None:
+        stream = self._stream
+        if stream is not None:
+            try:
+                stream.close()
+            except Exception:
+                pass
+
+    def cancel(self) -> None:
+        with self._lock:
+            self.cancelled = True
+            self.info["closed_upstream"] = self._stream is not None
+            self._close_locked()
+
+    def expire(self) -> None:
+        with self._lock:
+            self.expired = True
+            self._close_locked()
+
+
+def generation_settings(channel: str) -> dict:
+    """Timeout / retry / fallback settings for a channel (app_config, read through the in-process copy)."""
+    return {
+        "first_token_timeout_s": float(memo_config("generation.first_token_timeout_s", 4)),
+        "request_timeout_s": float(memo_config("generation.request_timeout_s", 20)),
+        "max_retries": int(memo_config(f"generation.max_retries.{channel}", 1)),
+        "fallback_message": memo_config("generation.fallback_message", "Sorry, I'm having trouble right now. Please try again."),
+    }
+
+
+_gen_logger = logging.getLogger("hrchatbot.generation")
+
+
+def _with_options(client, cfg: dict):
+    """The same client (shared connection pool) with per-attempt options: no automatic SDK retries (retrying is done
+    here, with a log line per retry) and a read timeout of first_token_timeout_s, which bounds the wait for the response
+    headers and for the first token (and, after that, the longest gap between streamed chunks)."""
+    if not hasattr(client, "with_options"):
+        return client
+    import httpx
+
+    return client.with_options(
+        timeout=httpx.Timeout(connect=min(3.0, cfg["first_token_timeout_s"]), read=cfg["first_token_timeout_s"], write=10.0, pool=5.0),
+        max_retries=0,
+    )
+
+
+def _usage_fields(usage) -> dict:
+    details = getattr(usage, "prompt_tokens_details", None)
+    return {
+        "prompt_tokens": getattr(usage, "prompt_tokens", None),
+        "completion_tokens": getattr(usage, "completion_tokens", None),
+        "cached_tokens": getattr(details, "cached_tokens", None) if details is not None else None,
+    }
+
+
+def stream_completion(client, model: str, messages: list[dict], *, channel: str = "text", handle: "TurnHandle | None" = None,
+                      settings: dict | None = None):
+    """Generator: yields {"type": "token", "text": ...} per streamed piece and RETURNS
+    {"answer", "time_to_first_token_ms", "total_generation_time_ms", "fallback"} (use `stats = yield from
+    stream_completion(...)`). A normal turn makes exactly ONE OpenAI call.
+
+    The retry / timeout / cancel logic only runs on failure or cancel: an attempt that fails or gets no first token
+    within first_token_timeout_s is closed and, while retries remain, repeated; after the last retry the configured
+    fallback message is streamed instead of hanging. Once speech has started nothing is retried. If `handle` is
+    cancelled (client disconnect) the upstream stream is closed and TurnCancelled is raised. `handle.info` records
+    request id, attempts, time to response headers, time to first token and usage (the usage chunk is requested in the
+    same call via stream_options)."""
+    cfg = settings or generation_settings(channel)
+    handle = handle or TurnHandle()
+    info = handle.info
     start = time.monotonic()
     first_token_time = None
-    pieces = []
-    for event in client.chat.completions.create(model=model, messages=messages, stream=True):
-        delta = event.choices[0].delta.content
-        if not delta:
-            continue
-        if first_token_time is None:
-            first_token_time = time.monotonic()
-        pieces.append(delta)
-        yield {"type": "token", "text": delta}
+    pieces: list[str] = []
+    info.update(attempts=0, headers_ms=None, ttft_ms=None, request_id=None, chunks=0, fallback=False, error=None)
+    max_attempts = 1 + max(0, cfg["max_retries"])
+    for attempt in range(1, max_attempts + 1):
+        info["attempts"] = attempt
+        stream = None
+        timer = None
+        try:
+            attempt_start = time.monotonic()
+            stream = _with_options(client, cfg).chat.completions.create(
+                model=model, messages=messages, stream=True, stream_options={"include_usage": True})
+            info["headers_ms"] = (time.monotonic() - attempt_start) * 1000
+            headers = getattr(getattr(stream, "response", None), "headers", None) or {}
+            info["request_id"] = headers.get("x-request-id") if hasattr(headers, "get") else None
+            handle.attach(stream)
+            timer = threading.Timer(max(cfg["request_timeout_s"] - (time.monotonic() - start), 0.1), handle.expire)
+            timer.daemon = True
+            timer.start()
+            for event in stream:
+                if handle.cancelled:
+                    raise TurnCancelled()
+                usage = getattr(event, "usage", None)
+                if usage is not None:
+                    info.update(_usage_fields(usage))
+                choices = getattr(event, "choices", None)
+                if not choices:
+                    continue
+                delta = choices[0].delta.content
+                if not delta:
+                    continue
+                if first_token_time is None:
+                    first_token_time = time.monotonic()
+                    info["ttft_ms"] = (first_token_time - start) * 1000
+                pieces.append(delta)
+                info["chunks"] = len(pieces)
+                yield {"type": "token", "text": delta}
+            if handle.cancelled:
+                raise TurnCancelled()
+            break
+        except (TurnCancelled, GeneratorExit):
+            raise
+        except Exception as exc:  # noqa: BLE001 - provider / network failures of any kind
+            if handle.cancelled:
+                raise TurnCancelled() from exc
+            reason = f"{type(exc).__name__}: {str(exc)[:120]}"
+            elapsed_ms = (time.monotonic() - start) * 1000
+            if pieces:  # speech already started: cannot retry, stop here
+                info["error"] = reason
+                _gen_logger.error("think event=error stage=mid_stream attempt=%d elapsed_ms=%.0f reason=%s", attempt, elapsed_ms, reason)
+                break
+            if attempt < max_attempts:
+                _gen_logger.warning("think event=retry attempt=%d of %d elapsed_ms=%.0f first_token_timeout_s=%.1f reason=%s",
+                                    attempt, max_attempts, elapsed_ms, cfg["first_token_timeout_s"], reason)
+                continue
+            info["error"] = reason
+            info["fallback"] = True
+            _gen_logger.error("think event=fallback attempts=%d elapsed_ms=%.0f reason=%s", attempt, elapsed_ms, reason)
+            pieces.append(cfg["fallback_message"])
+            yield {"type": "token", "text": cfg["fallback_message"]}
+            break
+        finally:
+            if timer is not None:
+                timer.cancel()
+            if stream is not None:
+                try:
+                    stream.close()
+                except Exception:
+                    pass
     end = time.monotonic()
     return {
         "answer": "".join(pieces),
-        "time_to_first_token_ms": (first_token_time - start) * 1000 if first_token_time is not None else None,
+        "time_to_first_token_ms": info["ttft_ms"],
         "total_generation_time_ms": (end - start) * 1000,
+        "fallback": info["fallback"],
     }
 
 
@@ -108,6 +259,42 @@ def clean_history(history: list | None, channel: str) -> list[dict]:
 def _contains_phrase(normalized_text: str, phrases) -> bool:
     padded = f" {normalized_text} "
     return any(p and f" {normalize(p)} " in padded for p in phrases or [])
+
+
+_SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
+
+
+def _offer_sentence(assistant_text: str) -> str | None:
+    """The last sentence of an assistant turn that contains the offer: one with an offer marker ("would you like", "want me
+    to", "i can also"), else one ending in a question mark, else the last sentence."""
+    sentences = [x.strip() for x in _SENTENCE_SPLIT.split(assistant_text.strip()) if x.strip()]
+    if not sentences:
+        return None
+    markers = [m.lower() for m in memo_config("smalltalk.offer_markers", []) or []]
+    for sentence in reversed(sentences):
+        if any(m in sentence.lower().replace("\u2019", "'") for m in markers):
+            return sentence
+    for sentence in reversed(sentences):
+        if sentence.rstrip().endswith("?"):
+            return sentence
+    return sentences[-1]
+
+
+def _context_weights(current: str, channel: str) -> tuple[float, float]:
+    """(standalone_weight, ctx_weight) for a contextualised turn. A follow-up marker ("that", "what about", ...) shifts the
+    weights toward the contextualised query; without one (a merely SHORT utterance) toward the standalone query; an utterance of fewer than retrieval.context.ctx_heavy_below_words words counts as having a marker. Both pairs
+    are app_config (retrieval.context.weights_with_marker / weights_without_marker, each {"standalone": x, "ctx": y});
+    a missing key falls back to retrieval.context.weight_standalone / weight_ctx."""
+    norm = normalize(current)
+    # a marker word, or a very short utterance ("for interns?", "contractors too?" - too little text to stand alone), gets the
+    # context-heavy pair
+    has_marker = (_contains_phrase(norm, memo_config("retrieval.context.followup_markers", []))
+                  or len(norm.split()) < memo_config("retrieval.context.ctx_heavy_below_words", 3))
+    key = "retrieval.context.weights_with_marker" if has_marker else "retrieval.context.weights_without_marker"
+    pair = memo_config(key, {}) or {}
+    standalone = pair.get("standalone", memo_config("retrieval.context.weight_standalone", 1.0))
+    ctx = pair.get("ctx", memo_config("retrieval.context.weight_ctx", 1.0))
+    return float(standalone), float(ctx)
 
 
 def build_retrieval_query(current: str, history: list[dict], channel: str) -> tuple[str, bool]:
@@ -166,15 +353,45 @@ class TurnPlan:
     contextualized: bool = False
     advisory: bool = False
     expansions: list = field(default_factory=list)
+    expansion_weight: float | None = None       # None -> retrieval.expansion.weight
+    expansion_candidate_n: int | None = None    # None -> retrieval.expansion.candidate_n
+    standalone_query: str | None = None         # the bare utterance, searched next to the contextualised retrieval_query
+    standalone_weight: float = 1.0
+    ctx_weight: float = 1.0
+
+
+def _affirmation_plan(current: str, cleaned: list[dict], channel: str) -> TurnPlan | None:
+    """A bare "yes" after an assistant offer ("Want me to go through the work-from-home option?"): the main retrieval query
+    is the OFFER sentence of the previous assistant turn and the last user message rides along as a second query fused in
+    (one batched embedding, one retrieval, no extra call). Embedding "offer + user message" as ONE string let the long user
+    message drown the offer (measured: the work-from-home chunks fell out of the top 3), so the two are fused with
+    retrieval.context.affirmation_user_weight / affirmation_candidate_n instead."""
+    if not (is_affirmation(current) and previous_turn_invites_reply(cleaned)):
+        return None
+    users = [m["content"] for m in cleaned if m["role"] == "user"]
+    offer = _offer_sentence(cleaned[-1]["content"])
+    if not users or not offer:
+        return None
+    return TurnPlan(cleaned, offer, True, False, [users[-1]],
+                    float(memo_config("retrieval.context.affirmation_user_weight", 1.0)),
+                    int(memo_config("retrieval.context.affirmation_candidate_n", 5)))
 
 
 def plan_turn(current: str, history: list | None, channel: str) -> TurnPlan:
     """Everything the pipeline decides about a turn BEFORE retrieval, deterministically."""
     cleaned = clean_history(history, channel)
+    affirmation = _affirmation_plan(current, cleaned, channel)
+    if affirmation is not None:
+        return affirmation
     query, contextualized = build_retrieval_query(current, cleaned, channel)
     advisory = detect_advisory(current, cleaned)
-    return TurnPlan(cleaned, query, contextualized, advisory,
+    plan = TurnPlan(cleaned, query, contextualized, advisory,
                     select_expansions(current, cleaned, channel) if advisory else [])
+    if contextualized and memo_config("retrieval.context.dual_query.enabled", True):
+        # the contextualised text is searched next to the bare utterance (one batched encode, one retrieve() call)
+        plan.standalone_query = current
+        plan.standalone_weight, plan.ctx_weight = _context_weights(current, channel)
+    return plan
 
 
 from config.runtime import clear_config_memo, memo_config  # noqa: E402,F401  (kept here: channels use common.memo_config)

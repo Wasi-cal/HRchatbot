@@ -18,7 +18,7 @@ from psycopg.rows import dict_row
 from pydantic import BaseModel
 
 from access_control.extract_applicability import extract_and_store_for_document
-from config.runtime import set_app_config, set_provider_setting
+from config.runtime import get_active_provider_config, set_app_config, set_provider_setting
 from channels.common import clear_config_memo
 from config.prompts import SLOTS, refresh_prompt_cache
 from config.doc_caches import invalidate_document_caches
@@ -323,6 +323,8 @@ def usage_summary(
                    count(*) FILTER (WHERE response_type = 'smalltalk') AS smalltalk,
                    count(*) FILTER (WHERE response_type = 'source_lookup') AS source_lookup,
                    count(*) FILTER (WHERE response_type = 'catalog') AS catalog,
+                   count(*) FILTER (WHERE response_type = 'aborted') AS aborted,
+                   count(*) FILTER (WHERE response_type = 'error') AS error,
                    count(*) FILTER (WHERE contextualized) AS contextualized,
                    count(*) FILTER (WHERE advisory) AS advisory,
                    avg(retrieval_time_ms) AS avg_retrieval_time_ms,
@@ -348,6 +350,8 @@ def usage_summary(
             "smalltalk": r["smalltalk"],
             "source_lookup": r["source_lookup"],
             "catalog": r["catalog"],
+            "aborted": r["aborted"],
+            "error": r["error"],
         },
         "avg_retrieval_time_ms": rnd(r["avg_retrieval_time_ms"]),
         "avg_ttft_ms": rnd(r["avg_ttft_ms"]),
@@ -473,6 +477,51 @@ def _str_map(v):
     return {k.strip().lower(): x.strip().lower() for k, x in v.items()}
 
 
+def _nonneg_int(v):
+    if isinstance(v, bool) or not isinstance(v, int) or v < 0:
+        raise ValueError("must be an integer >= 0")
+    return v
+
+
+def _pos_number(v):
+    if isinstance(v, bool) or not isinstance(v, (int, float)) or v <= 0:
+        raise ValueError("must be a number > 0")
+    return float(v)
+
+
+def _fallback_message(v):
+    if not isinstance(v, str) or not v.strip() or len(v.strip()) > 200 or re.search(r"[\x00-\x1f\x7f]", v):
+        raise ValueError("must be a non-empty single line of at most 200 characters")
+    return v.strip()
+
+
+def _stt_version(v):
+    if v not in ("v1", "v2"):
+        raise ValueError('must be "v1" or "v2" (Deepgram: Flux models use v2, every other model v1)')
+    return v
+
+
+def _stt_keyterms(v):
+    from config.runtime import STT_KEYTERM_TOKEN_LIMIT, estimate_keyterm_tokens
+    if not isinstance(v, list) or any(not isinstance(t, str) or not t.strip() or len(t) > 80 for t in v):
+        raise ValueError("must be a list of non-empty strings (plain terms, no weights; a multi-word phrase is one element)")
+    terms = [t.strip() for t in v]
+    if estimate_keyterm_tokens(terms) > STT_KEYTERM_TOKEN_LIMIT:
+        raise ValueError(f"too many keyterms: Deepgram limits keyterms to {STT_KEYTERM_TOKEN_LIMIT} tokens per request (about 20-50 terms recommended)")
+    return terms
+
+
+def _bounded(low, high, name, allow_null=False, integer=False):
+    def validate(v):
+        if v is None and allow_null:
+            return None
+        ok = isinstance(v, int) if integer else (isinstance(v, (int, float)))
+        if isinstance(v, bool) or not ok or not low <= v <= high:
+            raise ValueError(f"{name} must be {'an integer' if integer else 'a number'} between {low} and {high}" + (" (or null to unset)" if allow_null else ""))
+        return v if integer else float(v)
+    return validate
+
+
 def _label_mode(v):
     if v not in ("deviation", "always", "off"):
         raise ValueError("must be one of deviation, always, off")
@@ -491,6 +540,15 @@ def _non_neg_number(v):
     return float(v)
 
 
+def _context_weights_pair(v):
+    if not isinstance(v, dict) or not v or set(v) - {"standalone", "ctx"}:
+        raise ValueError('must be an object with "standalone" and/or "ctx" (numbers >= 0)')
+    out = {k: _non_neg_number(x) for k, x in v.items()}
+    if "standalone" in out and "ctx" in out and out["standalone"] == 0 and out["ctx"] == 0:
+        raise ValueError("standalone and ctx cannot both be 0")
+    return out
+
+
 # key -> validator. app_config keys have no table prefix; provider_configs
 # keys are "<category>.<field>".
 _APP_CONFIG_VALIDATORS = {
@@ -503,6 +561,15 @@ _APP_CONFIG_VALIDATORS = {
     "retrieval.context.prior_user_turns": _pos_int,
     "retrieval.context.followup_markers": _str_list,
     "retrieval.advisory.markers": _str_list,
+    "retrieval.context.affirmation_user_weight": _non_neg_number,
+    "prompts.max_chars": _pos_int,
+    "retrieval.context.dual_query.enabled": _bool,
+    "retrieval.context.ctx_heavy_below_words": _nonneg_int,
+    "retrieval.context.weight_standalone": _non_neg_number,
+    "retrieval.context.weight_ctx": _non_neg_number,
+    "retrieval.context.weights_with_marker": _context_weights_pair,
+    "retrieval.context.weights_without_marker": _context_weights_pair,
+    "retrieval.context.affirmation_candidate_n": _pos_int,
     "retrieval.advisory.max_chunks_per_doc": _pos_int,
     "smalltalk.phrases.text": _smalltalk_phrases,
     "smalltalk.phrases.voice": _smalltalk_phrases,
@@ -518,6 +585,11 @@ _APP_CONFIG_VALIDATORS = {
     "dup.title_match": _bool,
     "title.generic_phrases": _str_list,
     "catalog.stopwords": _str_list,
+    "generation.first_token_timeout_s": _pos_number,
+    "generation.request_timeout_s": _pos_number,
+    "generation.max_retries.voice": _nonneg_int,
+    "generation.max_retries.text": _nonneg_int,
+    "generation.fallback_message": _fallback_message,
     "catalog.enabled": _bool,
     "catalog.vocab": _str_list,
     "catalog.nouns": _str_list,
@@ -556,6 +628,13 @@ _PROVIDER_VALIDATORS = {
     "generation.model": _non_empty_str,
     "generation.confidence_threshold": _unit_interval,
     "stt.model": _non_empty_str,
+    # Deepgram listen settings (configure-voice-agent / voice-agent-stt-models). eot_* and eager_* are Flux (v2) only and
+    # are ignored for other models. Secrets NEVER go in this table (it is readable via the admin API).
+    "stt.version": _stt_version,
+    "stt.keyterms": _stt_keyterms,
+    "stt.eot_threshold": _bounded(0.5, 1.0, "eot_threshold"),                 # 1.0 suppresses natural end-of-turn
+    "stt.eager_eot_threshold": _bounded(0.3, 0.9, "eager_eot_threshold", allow_null=True),  # leave unset: eager mode increases LLM calls
+    "stt.eot_timeout_ms": _bounded(500, 60000, "eot_timeout_ms", allow_null=True, integer=True),
     "tts.voice": _non_empty_str,
     "tts.greeting": _non_empty_str,
 }
@@ -596,6 +675,12 @@ def update_config(key: str, body: ConfigUpdate):
     except ValueError as exc:
         raise HTTPException(422, f"Invalid value for {key}: {exc} (got {body.value!r})")
 
+    if key in ("stt.eager_eot_threshold", "stt.eot_threshold"):
+        stt = get_active_provider_config("stt")
+        eager = value if key == "stt.eager_eot_threshold" else stt.get("eager_eot_threshold")
+        eot = value if key == "stt.eot_threshold" else stt.get("eot_threshold", 0.7)
+        if eager is not None and eot is not None and eager > eot:
+            raise HTTPException(422, f"Invalid value for {key}: eager_eot_threshold ({eager}) must be <= eot_threshold ({eot}) (Deepgram)")
     if key in _PROVIDER_VALIDATORS:
         category, field = key.split(".", 1)
         updated = set_provider_setting(category, field, value)
@@ -614,7 +699,7 @@ def update_config(key: str, body: ConfigUpdate):
 # Prompts must never contain secrets or credentials.
 # --------------------------------------------------------------------------
 
-MAX_PROMPT_CHARS = 6000
+MAX_PROMPT_CHARS = 8000  # default; the live limit is app_config prompts.max_chars
 MAX_PROMPT_NOTE_CHARS = 200
 
 
@@ -657,8 +742,9 @@ def create_prompt_version(body: PromptCreate):
     content = body.content.strip()
     if not content:
         raise HTTPException(422, "content must be non-empty")
-    if len(content) > MAX_PROMPT_CHARS:
-        raise HTTPException(422, f"content is {len(content)} chars; the maximum is {MAX_PROMPT_CHARS}")
+    max_chars = int(get_app_config("prompts.max_chars", MAX_PROMPT_CHARS))
+    if len(content) > max_chars:
+        raise HTTPException(422, f"content is {len(content)} chars; the maximum is {max_chars}")
     note = (body.note or "").strip() or None
     if note and len(note) > MAX_PROMPT_NOTE_CHARS:
         raise HTTPException(422, f"note is {len(note)} chars; the maximum is {MAX_PROMPT_NOTE_CHARS}")
