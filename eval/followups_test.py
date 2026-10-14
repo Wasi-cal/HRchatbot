@@ -58,6 +58,14 @@ def install_counters():
         return original(*a, **k)
 
     client.chat.completions.create = counted
+    from eval.llm_count import wrap_with_options
+    def _scoped(create):
+        def scoped_counted(*a, **k):
+            calls['llm'] += 1
+            calls['messages'].append(k.get('messages'))
+            return create(*a, **k)
+        return scoped_counted
+    wrap_with_options(client, _scoped)
     embedder = retrieve_mod._get_embedder()
     original_embed = embedder.embed
 

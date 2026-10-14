@@ -59,6 +59,14 @@ def install_counters():
         return original(*a, **k)
 
     client.chat.completions.create = counted
+    from eval.llm_count import wrap_with_options
+    def _scoped(create):
+        def scoped_counted(*a, **k):
+            calls['llm'] += 1
+            calls['messages'].append(k.get('messages'))
+            return create(*a, **k)
+        return scoped_counted
+    wrap_with_options(client, _scoped)
     embedder = retrieve_mod._get_embedder()
     original_embed = embedder.embed
 
@@ -232,8 +240,8 @@ def test_budgets_and_model_input(client):
 
     r = run("advisory (transcript turn 3)", lambda: client.post("/api/chat", json={"query": T3, "history": H}))
     check("advisory turn: exactly 1 LLM call", r.json()["type"] == "answer" and calls["llm"] == 1, f"{calls['llm']} {r.json()['type']}")
-    check("advisory turn with expansions: exactly ONE embedding call (one batched encode of main + 3 expansions)",
-          calls["embed"] == 1 and len(calls["embed_texts"][0]) == 4, f"{calls['embed']} {[len(t) for t in calls['embed_texts']]}")
+    check("advisory turn with expansions: exactly ONE embedding call (one batched encode of main + standalone utterance + 3 expansions)",
+          calls["embed"] == 1 and len(calls["embed_texts"][0]) == 5, f"{calls['embed']} {[len(t) for t in calls['embed_texts']]}")
     check("advisory turn logged contextualized=True advisory=True with prompt_version", last_log()[3:5] == (True, True) and last_log()[6], str(last_log()[3:7]))
 
     msgs = calls["messages"][-1]

@@ -133,10 +133,22 @@
     "category": "advisory_followup",
     "channel": "text",
     "history": [
-      {"role": "user", "content": "whats my leave policy"},
-      {"role": "assistant", "content": "You get 21 days of earned leave a year, plus sick leave, marriage, bereavement, paternity, birthday and maternity leave, and 12 public holidays."},
-      {"role": "user", "content": "i need to go to my hometown for a week but i only have 3 leaves left"},
-      {"role": "assistant", "content": "You can take the week, but the days beyond your 3 remaining leaves would be leave without pay."}
+      {
+        "role": "user",
+        "content": "whats my leave policy"
+      },
+      {
+        "role": "assistant",
+        "content": "You get 21 days of earned leave a year, plus sick leave, marriage, bereavement, paternity, birthday and maternity leave, and 12 public holidays."
+      },
+      {
+        "role": "user",
+        "content": "i need to go to my hometown for a week but i only have 3 leaves left"
+      },
+      {
+        "role": "assistant",
+        "content": "You can take the week, but the days beyond your 3 remaining leaves would be leave without pay."
+      }
     ],
     "expected_behavior": "answer",
     "notes": "REAL TRANSCRIPT (turn 3 of 3). Before conversation-aware retrieval it retrieved IT-security/POSH chunks and answered with a muddled hedge (\"depends on your location or employment type\"). Expect: grounded alternatives the retrieved policies support - at least one of work from home with manager approval (Handbook WFH section) or comp-off (Handbook Comp Off Policy) - each with the condition the chunks state, no invented entitlements, no location/employment-type hedge, no document titles."
@@ -171,10 +183,22 @@
     "category": "hedge_misfire",
     "channel": "voice",
     "history": [
-      {"role": "user", "content": "whats my leave policy"},
-      {"role": "assistant", "content": "You get 21 days of earned leave a year, plus sick leave, marriage, bereavement, paternity, birthday and maternity leave, and 12 public holidays."},
-      {"role": "user", "content": "i need to go to my hometown for a week but i only have 3 leaves left"},
-      {"role": "assistant", "content": "You can take the week, but the days beyond your 3 remaining leaves would be leave without pay."}
+      {
+        "role": "user",
+        "content": "whats my leave policy"
+      },
+      {
+        "role": "assistant",
+        "content": "You get 21 days of earned leave a year, plus sick leave, marriage, bereavement, paternity, birthday and maternity leave, and 12 public holidays."
+      },
+      {
+        "role": "user",
+        "content": "i need to go to my hometown for a week but i only have 3 leaves left"
+      },
+      {
+        "role": "assistant",
+        "content": "You can take the week, but the days beyond your 3 remaining leaves would be leave without pay."
+      }
     ],
     "expected_behavior": "answer",
     "notes": "Voice version of the transcript turn whose old answer misused the location/employment-type hedge (\"That can depend on your specific situation...\"). Expect 2-3 spoken sentences leading with the single best option (WFH with manager approval or comp-off), at most one more, an offer to go through the others, no hedge, no markdown or symbols."
@@ -219,14 +243,14 @@
     "channel": "text",
     "history": [
       {
-            "role": "user",
-            "content": "tell me everything you know about the interns"
+        "role": "user",
+        "content": "tell me everything you know about the interns"
       },
       {
-            "role": "assistant",
-            "content": "Interns at Calfus are part of a fixed-period internship program. They can take part in the referral bonus program as long as they are still employed and not on a notice period or a performance improvement plan when the bonus is paid."
+        "role": "assistant",
+        "content": "Interns at Calfus are part of a fixed-period internship program. They can take part in the referral bonus program as long as they are still employed and not on a notice period or a performance improvement plan when the bonus is paid."
       }
-],
+    ],
     "expected_behavior": "answer",
     "notes": "REAL TRANSCRIPT (a). The user asked about interns, then 'how many leaves do i get' WITHOUT saying they are an intern. Expect the standard employee rule (21 leaves a year, 12 holidays, pro-rata mid-year) with NO 'As an intern...' framing, no claim that interns are not entitled / typically don't get leave, and no general-knowledge remarks about interns. The corpus has no intern leave content. Run several times: the old prompt produced the intern framing in about 1 of 3 runs."
   },
@@ -237,22 +261,22 @@
     "channel": "text",
     "history": [
       {
-            "role": "user",
-            "content": "tell me everything you know about the interns"
+        "role": "user",
+        "content": "tell me everything you know about the interns"
       },
       {
-            "role": "assistant",
-            "content": "Interns at Calfus are part of a fixed-period internship program. They can take part in the referral bonus program as long as they are still employed and not on a notice period or a performance improvement plan when the bonus is paid."
+        "role": "assistant",
+        "content": "Interns at Calfus are part of a fixed-period internship program. They can take part in the referral bonus program as long as they are still employed and not on a notice period or a performance improvement plan when the bonus is paid."
       },
       {
-            "role": "user",
-            "content": "how many leaves do i get"
+        "role": "user",
+        "content": "how many leaves do i get"
       },
       {
-            "role": "assistant",
-            "content": "You get 21 leaves every calendar year, plus 12 holidays. If you started mid-year it is pro-rated."
+        "role": "assistant",
+        "content": "You get 21 leaves every calendar year, plus 12 holidays. If you started mid-year it is pro-rated."
       }
-],
+    ],
     "expected_behavior": "answer",
     "notes": "Continuation of f1: the user now explicitly says they are an intern. Expect 'I couldn't find leave for interns in the HR policies' (optionally adding the standard employee rule as the only one found) and a suggestion to speak to HR/manager. No 'not entitled', 'differs' or invented intern entitlement."
   },
@@ -279,14 +303,14 @@
     "channel": "text",
     "history": [
       {
-            "role": "user",
-            "content": "will I get paid extra for recommending a friend for a job here"
+        "role": "user",
+        "content": "will I get paid extra for recommending a friend for a job here"
       },
       {
-            "role": "assistant",
-            "content": "Yes. A referral bonus is paid once the person you referred completes their probation and shows satisfactory performance, as long as you are still employed and not serving a notice period."
+        "role": "assistant",
+        "content": "Yes. A referral bonus is paid once the person you referred completes their probation and shows satisfactory performance, as long as you are still employed and not serving a notice period."
       }
-],
+    ],
     "expected_behavior": "source_lookup",
     "notes": "REAL TRANSCRIPT (c). After a referral-program answer. Expect a templated line naming the document(s) the answer drew on (e.g. 'That drew on the Calfus Crew: Referral Bonus Program - India and Employee Handbook.'), not 'I couldn't find information about the source'. 0 LLM calls."
   },
@@ -297,14 +321,14 @@
     "channel": "voice",
     "history": [
       {
-            "role": "user",
-            "content": "will I get paid extra for recommending a friend for a job here"
+        "role": "user",
+        "content": "will I get paid extra for recommending a friend for a job here"
       },
       {
-            "role": "assistant",
-            "content": "Yes. A referral bonus is paid once the person you referred completes their probation and shows satisfactory performance, as long as you are still employed and not serving a notice period."
+        "role": "assistant",
+        "content": "Yes. A referral bonus is paid once the person you referred completes their probation and shows satisfactory performance, as long as you are still employed and not serving a notice period."
       }
-],
+    ],
     "expected_behavior": "source_lookup",
     "notes": "Voice version of f5. Expect 'That drew on the referral bonus program and employee handbook policies.' (document names only, no section path). 0 LLM calls."
   },
@@ -315,14 +339,14 @@
     "channel": "text",
     "history": [
       {
-            "role": "user",
-            "content": "will I get paid extra for recommending a friend for a job here"
+        "role": "user",
+        "content": "will I get paid extra for recommending a friend for a job here"
       },
       {
-            "role": "assistant",
-            "content": "Yes, a referral bonus is paid after the referred candidate completes probation. Would you like the eligibility details?"
+        "role": "assistant",
+        "content": "Yes, a referral bonus is paid after the referred candidate completes probation. Would you like the eligibility details?"
       }
-],
+    ],
     "expected_behavior": "answer",
     "notes": "The bot's last message ended with an offer ('Would you like the eligibility details?'). A bare 'yes' must NOT be small talk: it goes through retrieval + generation with the history, and the reply should follow up the offer (the referral eligibility details)."
   },
@@ -333,14 +357,14 @@
     "channel": "text",
     "history": [
       {
-            "role": "user",
-            "content": "how many days of earned leave do i get"
+        "role": "user",
+        "content": "how many days of earned leave do i get"
       },
       {
-            "role": "assistant",
-            "content": "You get 21 days of earned leave each calendar year."
+        "role": "assistant",
+        "content": "You get 21 days of earned leave each calendar year."
       }
-],
+    ],
     "expected_behavior": "smalltalk",
     "notes": "REAL TRANSCRIPT (d). After a statement (no question/offer) this must be small talk (0 LLM, 0 retrieval calls) - a short friendly acknowledgement, no policy lookup."
   },
@@ -351,14 +375,14 @@
     "channel": "text",
     "history": [
       {
-            "role": "user",
-            "content": "how many days of earned leave do i get"
+        "role": "user",
+        "content": "how many days of earned leave do i get"
       },
       {
-            "role": "assistant",
-            "content": "You get 21 days of earned leave each calendar year."
+        "role": "assistant",
+        "content": "You get 21 days of earned leave each calendar year."
       }
-],
+    ],
     "expected_behavior": "smalltalk",
     "notes": "REAL TRANSCRIPT (d). After a statement this must be small talk (0 LLM, 0 retrieval calls). After an offer it would instead be followed up (see f7)."
   },
@@ -433,15 +457,1391 @@
     "channel": "text",
     "history": [
       {
-            "role": "user",
-            "content": "how many leaves do i get"
+        "role": "user",
+        "content": "how many leaves do i get"
       },
       {
-            "role": "assistant",
-            "content": "You get 21 earned leaves every calendar year, which runs from January 1 to December 31. If your employment starts mid-year the entitlement is pro-rated. You also get 12 public holidays."
+        "role": "assistant",
+        "content": "You get 21 earned leaves every calendar year, which runs from January 1 to December 31. If your employment starts mid-year the entitlement is pro-rated. You also get 12 public holidays."
       }
-],
+    ],
     "expected_behavior": "source_lookup",
     "notes": "REAL TRANSCRIPT. The leading 'okay' used to stop the source matcher (whole-utterance match), so the question went to the model, which answered 'I couldn't find the source details ... in the HR policies'. Filler words at either end are now ignored (source.filler_words): expect 'That came from the Employee Handbook.' (0 LLM calls, 1 retrieval). A following bare 'why' is NOT deterministic - it goes through the normal pipeline."
+  },
+  {
+    "id": "vq1",
+    "query": "how many leaves do i get",
+    "category": "voice_robustness",
+    "channel": "voice",
+    "history": [],
+    "expected_behavior": "Answer with the 21 earned leaves / calendar year; short spoken style; ends after answering (no generic closer).",
+    "notes": "Voice robustness set (first real-mic test): leave policy."
+  },
+  {
+    "id": "vq2",
+    "query": "i need to go to my hometown for a week and i have only 3 leaves left",
+    "category": "voice_robustness",
+    "channel": "voice",
+    "history": [],
+    "expected_behavior": "Explain the shortfall (unpaid days) from the handbook; may offer ONE specific next step (WFH or comp-off); no generic closer.",
+    "notes": "Voice robustness set (first real-mic test): hometown trip, 3 leaves left."
+  },
+  {
+    "id": "vq3",
+    "query": "can i work from home if i am sick",
+    "category": "voice_robustness",
+    "channel": "voice",
+    "history": [],
+    "expected_behavior": "Grounded answer from the handbook WFH/sick-leave content, or an honest 'not covered'; no invented policy.",
+    "notes": "Voice robustness set (first real-mic test): wfh when sick."
+  },
+  {
+    "id": "vq4",
+    "query": "my manager refused my work from home request what can i do",
+    "category": "voice_robustness",
+    "channel": "voice",
+    "history": [],
+    "expected_behavior": "Grounded answer only; no invented escalation path; no referring to other teams.",
+    "notes": "Voice robustness set (first real-mic test): manager refuses wfh."
+  },
+  {
+    "id": "vq5",
+    "query": "yes",
+    "category": "voice_robustness",
+    "channel": "voice",
+    "history": [
+      {
+        "role": "user",
+        "content": "i need a week off but i only have 3 leaves left"
+      },
+      {
+        "role": "assistant",
+        "content": "Assuming a five-day week, two days would be unpaid. You could also ask your manager about working from home. Want me to go through the work-from-home option?"
+      }
+    ],
+    "expected_behavior": "Bare 'yes' retrieves for the offered topic (WFH chunks) and answers it; does not ask what the user means.",
+    "notes": "Voice robustness set (first real-mic test): vague offer then yes."
+  },
+  {
+    "id": "g1_text",
+    "query": "Yeah. I want some time off.",
+    "category": "grief_time_off",
+    "channel": "text",
+    "history": [
+      {
+        "role": "user",
+        "content": "My dog died."
+      },
+      {
+        "role": "assistant",
+        "content": "I'm so sorry for your loss. How can I help?"
+      }
+    ],
+    "expected_behavior": "Time-off turn after a pet's death: advisory retrieval brings the leave entitlement table (earned leave 21 days, sick, bereavement) into context. Answer lists entitlements the user already has (earned/sick) BEFORE comp-off / LWP; one short plain acknowledgement; no counselling/EAP claims.",
+    "notes": "Grief-scenario test (real transcript): ungrounded reassurance / situation fit. Prompt v7 + time_off advisory."
+  },
+  {
+    "id": "g1_voice",
+    "query": "Yeah. I want some time off.",
+    "category": "grief_time_off",
+    "channel": "voice",
+    "history": [
+      {
+        "role": "user",
+        "content": "My dog died."
+      },
+      {
+        "role": "assistant",
+        "content": "I'm so sorry for your loss. How can I help?"
+      }
+    ],
+    "expected_behavior": "Time-off turn after a pet's death: advisory retrieval brings the leave entitlement table (earned leave 21 days, sick, bereavement) into context. Answer lists entitlements the user already has (earned/sick) BEFORE comp-off / LWP; one short plain acknowledgement; no counselling/EAP claims.",
+    "notes": "Grief-scenario test (real transcript): ungrounded reassurance / situation fit. Prompt v7 + time_off advisory."
+  },
+  {
+    "id": "g2_text",
+    "query": "can I apply for bereavement leave for my dog",
+    "category": "grief_eligibility",
+    "channel": "text",
+    "history": [
+      {
+        "role": "user",
+        "content": "My dog died."
+      },
+      {
+        "role": "assistant",
+        "content": "I'm so sorry for your loss. How can I help?"
+      },
+      {
+        "role": "user",
+        "content": "Yeah. I want some time off."
+      },
+      {
+        "role": "assistant",
+        "content": "Earned leave is one option. Want me to go through the leave types?"
+      }
+    ],
+    "expected_behavior": "The text lists 'Bereavement Leave 2 days' with no coverage statement and says nothing about pets: answer must say the policy doesn't mention pets / who it covers; must NOT claim it applies or doesn't apply to the dog; then give clearly-applicable leave types.",
+    "notes": "Grief-scenario test (real transcript): ungrounded reassurance / situation fit. Prompt v7 + time_off advisory."
+  },
+  {
+    "id": "g2_voice",
+    "query": "can I apply for bereavement leave for my dog",
+    "category": "grief_eligibility",
+    "channel": "voice",
+    "history": [
+      {
+        "role": "user",
+        "content": "My dog died."
+      },
+      {
+        "role": "assistant",
+        "content": "I'm so sorry for your loss. How can I help?"
+      },
+      {
+        "role": "user",
+        "content": "Yeah. I want some time off."
+      },
+      {
+        "role": "assistant",
+        "content": "Earned leave is one option. Want me to go through the leave types?"
+      }
+    ],
+    "expected_behavior": "The text lists 'Bereavement Leave 2 days' with no coverage statement and says nothing about pets: answer must say the policy doesn't mention pets / who it covers; must NOT claim it applies or doesn't apply to the dog; then give clearly-applicable leave types.",
+    "notes": "Grief-scenario test (real transcript): ungrounded reassurance / situation fit. Prompt v7 + time_off advisory."
+  },
+  {
+    "id": "g3_text",
+    "query": "do I need to send proof",
+    "category": "grief_no_unstated_reassurance",
+    "channel": "text",
+    "history": [
+      {
+        "role": "user",
+        "content": "My dog died."
+      },
+      {
+        "role": "assistant",
+        "content": "I'm so sorry for your loss. How can I help?"
+      },
+      {
+        "role": "user",
+        "content": "can I apply for bereavement leave for my dog"
+      },
+      {
+        "role": "assistant",
+        "content": "The handbook lists bereavement leave as two days."
+      }
+    ],
+    "expected_behavior": "No chunk states a proof/documentation requirement for bereavement leave: answer must say it couldn't find what is required; must NOT say 'you don't need proof' or 'proof is required'.",
+    "notes": "Grief-scenario test (real transcript): ungrounded reassurance / situation fit. Prompt v7 + time_off advisory."
+  },
+  {
+    "id": "g3_voice",
+    "query": "do I need to send proof",
+    "category": "grief_no_unstated_reassurance",
+    "channel": "voice",
+    "history": [
+      {
+        "role": "user",
+        "content": "My dog died."
+      },
+      {
+        "role": "assistant",
+        "content": "I'm so sorry for your loss. How can I help?"
+      },
+      {
+        "role": "user",
+        "content": "can I apply for bereavement leave for my dog"
+      },
+      {
+        "role": "assistant",
+        "content": "The handbook lists bereavement leave as two days."
+      }
+    ],
+    "expected_behavior": "No chunk states a proof/documentation requirement for bereavement leave: answer must say it couldn't find what is required; must NOT say 'you don't need proof' or 'proof is required'.",
+    "notes": "Grief-scenario test (real transcript): ungrounded reassurance / situation fit. Prompt v7 + time_off advisory."
+  },
+  {
+    "id": "g4_text",
+    "query": "Tell me how change of work location",
+    "category": "relocation_scope",
+    "channel": "text",
+    "history": [],
+    "expected_behavior": "Standalone: retrieves the India Relocation Policy, whose scope is NEW HIRES relocating within India (accommodation, travel, goods transport). Answer may describe it only as that; must not present it as a transfer process for existing staff.",
+    "notes": "Grief-scenario test (real transcript): ungrounded reassurance / situation fit. Prompt v7 + time_off advisory."
+  },
+  {
+    "id": "g4_voice",
+    "query": "Tell me how change of work location",
+    "category": "relocation_scope",
+    "channel": "voice",
+    "history": [],
+    "expected_behavior": "Standalone: retrieves the India Relocation Policy, whose scope is NEW HIRES relocating within India (accommodation, travel, goods transport). Answer may describe it only as that; must not present it as a transfer process for existing staff.",
+    "notes": "Grief-scenario test (real transcript): ungrounded reassurance / situation fit. Prompt v7 + time_off advisory."
+  },
+  {
+    "id": "g5_text",
+    "query": "Tell me how change of work location",
+    "category": "relocation_after_grief_context",
+    "channel": "text",
+    "history": [
+      {
+        "role": "user",
+        "content": "My dog died."
+      },
+      {
+        "role": "assistant",
+        "content": "I'm so sorry for your loss. How can I help?"
+      },
+      {
+        "role": "user",
+        "content": "can I apply for bereavement leave for my dog"
+      },
+      {
+        "role": "assistant",
+        "content": "The handbook lists bereavement leave as two days."
+      },
+      {
+        "role": "user",
+        "content": "do I need to send proof"
+      },
+      {
+        "role": "assistant",
+        "content": "I couldn't find what is required."
+      }
+    ],
+    "expected_behavior": "KNOWN ISSUE (reported, not fixed): this 7-word query is treated as a follow-up (max_words_followup=8) so the two previous user messages are prepended and the relocation chunk drops out of the context; the answer is 'couldn't find'.",
+    "notes": "Grief-scenario test (real transcript): ungrounded reassurance / situation fit. Prompt v7 + time_off advisory."
+  },
+  {
+    "id": "g5_voice",
+    "query": "Tell me how change of work location",
+    "category": "relocation_after_grief_context",
+    "channel": "voice",
+    "history": [
+      {
+        "role": "user",
+        "content": "My dog died."
+      },
+      {
+        "role": "assistant",
+        "content": "I'm so sorry for your loss. How can I help?"
+      },
+      {
+        "role": "user",
+        "content": "can I apply for bereavement leave for my dog"
+      },
+      {
+        "role": "assistant",
+        "content": "The handbook lists bereavement leave as two days."
+      },
+      {
+        "role": "user",
+        "content": "do I need to send proof"
+      },
+      {
+        "role": "assistant",
+        "content": "I couldn't find what is required."
+      }
+    ],
+    "expected_behavior": "KNOWN ISSUE (reported, not fixed): this 7-word query is treated as a follow-up (max_words_followup=8) so the two previous user messages are prepended and the relocation chunk drops out of the context; the answer is 'couldn't find'.",
+    "notes": "Grief-scenario test (real transcript): ungrounded reassurance / situation fit. Prompt v7 + time_off advisory."
+  },
+  {
+    "id": "cd01_fresh_text",
+    "query": "Tell me how change of work location",
+    "category": "context_dilution_fresh",
+    "channel": "text",
+    "history": [
+      {
+        "role": "user",
+        "content": "My dog died."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "Yeah. I want some time off."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "Fresh short question after unrelated turns: answer is about THIS question's own policy (standalone top chunk India_Relocation_Policy_Ver1_0_0004), not the earlier topic.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd01_fresh_voice",
+    "query": "Tell me how change of work location",
+    "category": "context_dilution_fresh",
+    "channel": "voice",
+    "history": [
+      {
+        "role": "user",
+        "content": "My dog died."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "Yeah. I want some time off."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "Fresh short question after unrelated turns: answer is about THIS question's own policy (standalone top chunk India_Relocation_Policy_Ver1_0_0004), not the earlier topic.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd02_fresh_text",
+    "query": "what is the notice period",
+    "category": "context_dilution_fresh",
+    "channel": "text",
+    "history": [
+      {
+        "role": "user",
+        "content": "how many days of earned leave do i get"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "can i work from home if i am sick"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "Fresh short question after unrelated turns: answer is about THIS question's own policy (standalone top chunk Calfus_India_Employee_Handbook_v4_0032), not the earlier topic.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd02_fresh_voice",
+    "query": "what is the notice period",
+    "category": "context_dilution_fresh",
+    "channel": "voice",
+    "history": [
+      {
+        "role": "user",
+        "content": "how many days of earned leave do i get"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "can i work from home if i am sick"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "Fresh short question after unrelated turns: answer is about THIS question's own policy (standalone top chunk Calfus_India_Employee_Handbook_v4_0032), not the earlier topic.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd03_fresh_text",
+    "query": "referral bonus amount",
+    "category": "context_dilution_fresh",
+    "channel": "text",
+    "history": [
+      {
+        "role": "user",
+        "content": "what is the probation period"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "who do i report a security incident to"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "Fresh short question after unrelated turns: answer is about THIS question's own policy (standalone top chunk Calfus_India_Employee_Handbook_v4_0028), not the earlier topic.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd03_fresh_voice",
+    "query": "referral bonus amount",
+    "category": "context_dilution_fresh",
+    "channel": "voice",
+    "history": [
+      {
+        "role": "user",
+        "content": "what is the probation period"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "who do i report a security incident to"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "Fresh short question after unrelated turns: answer is about THIS question's own policy (standalone top chunk Calfus_India_Employee_Handbook_v4_0028), not the earlier topic.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd04_fresh_text",
+    "query": "how do I report a whistleblower concern",
+    "category": "context_dilution_fresh",
+    "channel": "text",
+    "history": [
+      {
+        "role": "user",
+        "content": "My dog died."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "Yeah. I want some time off."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "Fresh short question after unrelated turns: answer is about THIS question's own policy (standalone top chunk HR_Security_Policy_V1_0_0016), not the earlier topic.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd04_fresh_voice",
+    "query": "how do I report a whistleblower concern",
+    "category": "context_dilution_fresh",
+    "channel": "voice",
+    "history": [
+      {
+        "role": "user",
+        "content": "My dog died."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "Yeah. I want some time off."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "Fresh short question after unrelated turns: answer is about THIS question's own policy (standalone top chunk HR_Security_Policy_V1_0_0016), not the earlier topic.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd05_fresh_text",
+    "query": "performance appraisal cycle",
+    "category": "context_dilution_fresh",
+    "channel": "text",
+    "history": [
+      {
+        "role": "user",
+        "content": "how many days of earned leave do i get"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "can i work from home if i am sick"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "Fresh short question after unrelated turns: answer is about THIS question's own policy (standalone top chunk Performance_Appraisal_Promotion_Policy_Ver_1_0_0002), not the earlier topic.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd05_fresh_voice",
+    "query": "performance appraisal cycle",
+    "category": "context_dilution_fresh",
+    "channel": "voice",
+    "history": [
+      {
+        "role": "user",
+        "content": "how many days of earned leave do i get"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "can i work from home if i am sick"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "Fresh short question after unrelated turns: answer is about THIS question's own policy (standalone top chunk Performance_Appraisal_Promotion_Policy_Ver_1_0_0002), not the earlier topic.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd06_fresh_text",
+    "query": "remote connectivity rules",
+    "category": "context_dilution_fresh",
+    "channel": "text",
+    "history": [
+      {
+        "role": "user",
+        "content": "what is the probation period"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "who do i report a security incident to"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "Fresh short question after unrelated turns: answer is about THIS question's own policy (standalone top chunk Remote_Connectivity_Data_Protection_Policy_Ver1_0_0002), not the earlier topic.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd06_fresh_voice",
+    "query": "remote connectivity rules",
+    "category": "context_dilution_fresh",
+    "channel": "voice",
+    "history": [
+      {
+        "role": "user",
+        "content": "what is the probation period"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "who do i report a security incident to"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "Fresh short question after unrelated turns: answer is about THIS question's own policy (standalone top chunk Remote_Connectivity_Data_Protection_Policy_Ver1_0_0002), not the earlier topic.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd07_fresh_text",
+    "query": "certification reimbursement process",
+    "category": "context_dilution_fresh",
+    "channel": "text",
+    "history": [
+      {
+        "role": "user",
+        "content": "My dog died."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "Yeah. I want some time off."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "Fresh short question after unrelated turns: answer is about THIS question's own policy (standalone top chunk Certification_Reimbursement_Policy_Ver1_0_0007), not the earlier topic.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd07_fresh_voice",
+    "query": "certification reimbursement process",
+    "category": "context_dilution_fresh",
+    "channel": "voice",
+    "history": [
+      {
+        "role": "user",
+        "content": "My dog died."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "Yeah. I want some time off."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "Fresh short question after unrelated turns: answer is about THIS question's own policy (standalone top chunk Certification_Reimbursement_Policy_Ver1_0_0007), not the earlier topic.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd08_fresh_text",
+    "query": "how to file a POSH complaint",
+    "category": "context_dilution_fresh",
+    "channel": "text",
+    "history": [
+      {
+        "role": "user",
+        "content": "how many days of earned leave do i get"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "can i work from home if i am sick"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "Fresh short question after unrelated turns: answer is about THIS question's own policy (standalone top chunk POSH_Policy_2025_Ver2_0_0011), not the earlier topic.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd08_fresh_voice",
+    "query": "how to file a POSH complaint",
+    "category": "context_dilution_fresh",
+    "channel": "voice",
+    "history": [
+      {
+        "role": "user",
+        "content": "how many days of earned leave do i get"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "can i work from home if i am sick"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "Fresh short question after unrelated turns: answer is about THIS question's own policy (standalone top chunk POSH_Policy_2025_Ver2_0_0011), not the earlier topic.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd09_fresh_text",
+    "query": "travel reimbursement limits",
+    "category": "context_dilution_fresh",
+    "channel": "text",
+    "history": [
+      {
+        "role": "user",
+        "content": "what is the probation period"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "who do i report a security incident to"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "Fresh short question after unrelated turns: answer is about THIS question's own policy (standalone top chunk Travel_Policy_Ver1_0_0006), not the earlier topic.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd09_fresh_voice",
+    "query": "travel reimbursement limits",
+    "category": "context_dilution_fresh",
+    "channel": "voice",
+    "history": [
+      {
+        "role": "user",
+        "content": "what is the probation period"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "who do i report a security incident to"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "Fresh short question after unrelated turns: answer is about THIS question's own policy (standalone top chunk Travel_Policy_Ver1_0_0006), not the earlier topic.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd10_fresh_text",
+    "query": "what is the confirmation process",
+    "category": "context_dilution_fresh",
+    "channel": "text",
+    "history": [
+      {
+        "role": "user",
+        "content": "My dog died."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "Yeah. I want some time off."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "Fresh short question after unrelated turns: answer is about THIS question's own policy (standalone top chunk Confirmation_Policy_Ver1_0_0002), not the earlier topic.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd10_fresh_voice",
+    "query": "what is the confirmation process",
+    "category": "context_dilution_fresh",
+    "channel": "voice",
+    "history": [
+      {
+        "role": "user",
+        "content": "My dog died."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "Yeah. I want some time off."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "Fresh short question after unrelated turns: answer is about THIS question's own policy (standalone top chunk Confirmation_Policy_Ver1_0_0002), not the earlier topic.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd11_followup_text",
+    "query": "what about interns",
+    "category": "context_dilution_followup",
+    "channel": "text",
+    "history": [
+      {
+        "role": "user",
+        "content": "how many earned leaves do i get"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "True follow-up: answer stays on the preceding topic (how many earned leaves do i get); expected chunks Calfus_India_Employee_Handbook_v4_0023, Calfus_India_Employee_Handbook_v4_0020, Calfus_India_Employee_Handbook_v4_0021.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd11_followup_voice",
+    "query": "what about interns",
+    "category": "context_dilution_followup",
+    "channel": "voice",
+    "history": [
+      {
+        "role": "user",
+        "content": "how many earned leaves do i get"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "True follow-up: answer stays on the preceding topic (how many earned leaves do i get); expected chunks Calfus_India_Employee_Handbook_v4_0023, Calfus_India_Employee_Handbook_v4_0020, Calfus_India_Employee_Handbook_v4_0021.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd12_followup_text",
+    "query": "and for contractors",
+    "category": "context_dilution_followup",
+    "channel": "text",
+    "history": [
+      {
+        "role": "user",
+        "content": "how do I refer a friend for a job"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "True follow-up: answer stays on the preceding topic (how do I refer a friend for a job); expected chunks Calfus_Crew_Employee_Referral_Policy_0004, Calfus_Crew_Employee_Referral_Policy_1_2_0008, Calfus_Crew_Employee_Referral_Policy_1_2_0004.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd12_followup_voice",
+    "query": "and for contractors",
+    "category": "context_dilution_followup",
+    "channel": "voice",
+    "history": [
+      {
+        "role": "user",
+        "content": "how do I refer a friend for a job"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "True follow-up: answer stays on the preceding topic (how do I refer a friend for a job); expected chunks Calfus_Crew_Employee_Referral_Policy_0004, Calfus_Crew_Employee_Referral_Policy_1_2_0008, Calfus_Crew_Employee_Referral_Policy_1_2_0004.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd13_followup_text",
+    "query": "can I carry it forward",
+    "category": "context_dilution_followup",
+    "channel": "text",
+    "history": [
+      {
+        "role": "user",
+        "content": "how many days of earned leave do i get"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "True follow-up: answer stays on the preceding topic (how many days of earned leave do i get); expected chunks Calfus_India_Employee_Handbook_v4_0020, Calfus_India_Employee_Handbook_v4_0021, Calfus_India_Employee_Handbook_v4_0023.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd13_followup_voice",
+    "query": "can I carry it forward",
+    "category": "context_dilution_followup",
+    "channel": "voice",
+    "history": [
+      {
+        "role": "user",
+        "content": "how many days of earned leave do i get"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "True follow-up: answer stays on the preceding topic (how many days of earned leave do i get); expected chunks Calfus_India_Employee_Handbook_v4_0020, Calfus_India_Employee_Handbook_v4_0021, Calfus_India_Employee_Handbook_v4_0023.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd14_followup_text",
+    "query": "what happens if I exceed it",
+    "category": "context_dilution_followup",
+    "channel": "text",
+    "history": [
+      {
+        "role": "user",
+        "content": "what is the notice period"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "True follow-up: answer stays on the preceding topic (what is the notice period); expected chunks Calfus_India_Employee_Handbook_v4_0032, Calfus_India_Employee_Handbook_v4_0036, Performance_Appraisal_Promotion_Policy_Ver_1_0_0005.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd14_followup_voice",
+    "query": "what happens if I exceed it",
+    "category": "context_dilution_followup",
+    "channel": "voice",
+    "history": [
+      {
+        "role": "user",
+        "content": "what is the notice period"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "True follow-up: answer stays on the preceding topic (what is the notice period); expected chunks Calfus_India_Employee_Handbook_v4_0032, Calfus_India_Employee_Handbook_v4_0036, Performance_Appraisal_Promotion_Policy_Ver_1_0_0005.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd15_followup_text",
+    "query": "is it the same for managers",
+    "category": "context_dilution_followup",
+    "channel": "text",
+    "history": [
+      {
+        "role": "user",
+        "content": "how many earned leaves do i get"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "True follow-up: answer stays on the preceding topic (how many earned leaves do i get); expected chunks Calfus_India_Employee_Handbook_v4_0023, Calfus_India_Employee_Handbook_v4_0020, Calfus_India_Employee_Handbook_v4_0021.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd15_followup_voice",
+    "query": "is it the same for managers",
+    "category": "context_dilution_followup",
+    "channel": "voice",
+    "history": [
+      {
+        "role": "user",
+        "content": "how many earned leaves do i get"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "True follow-up: answer stays on the preceding topic (how many earned leaves do i get); expected chunks Calfus_India_Employee_Handbook_v4_0023, Calfus_India_Employee_Handbook_v4_0020, Calfus_India_Employee_Handbook_v4_0021.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd16_followup_text",
+    "query": "what else",
+    "category": "context_dilution_followup",
+    "channel": "text",
+    "history": [
+      {
+        "role": "user",
+        "content": "how does work from home work"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "True follow-up: answer stays on the preceding topic (how does work from home work); expected chunks Calfus_India_Employee_Handbook_v4_0022, Calfus_India_Employee_Handbook_v4_0018, All_IT_Policies_0182.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd16_followup_voice",
+    "query": "what else",
+    "category": "context_dilution_followup",
+    "channel": "voice",
+    "history": [
+      {
+        "role": "user",
+        "content": "how does work from home work"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "True follow-up: answer stays on the preceding topic (how does work from home work); expected chunks Calfus_India_Employee_Handbook_v4_0022, Calfus_India_Employee_Handbook_v4_0018, All_IT_Policies_0182.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd17_followup_text",
+    "query": "instead?",
+    "category": "context_dilution_followup",
+    "channel": "text",
+    "history": [
+      {
+        "role": "user",
+        "content": "what are the work from home rules"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "True follow-up: answer stays on the preceding topic (what are the work from home rules); expected chunks Calfus_India_Employee_Handbook_v4_0022, Calfus_India_Employee_Handbook_v4_0018, All_IT_Policies_0182.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd17_followup_voice",
+    "query": "instead?",
+    "category": "context_dilution_followup",
+    "channel": "voice",
+    "history": [
+      {
+        "role": "user",
+        "content": "what are the work from home rules"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "True follow-up: answer stays on the preceding topic (what are the work from home rules); expected chunks Calfus_India_Employee_Handbook_v4_0022, Calfus_India_Employee_Handbook_v4_0018, All_IT_Policies_0182.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd18_followup_text",
+    "query": "how many days is that",
+    "category": "context_dilution_followup",
+    "channel": "text",
+    "history": [
+      {
+        "role": "user",
+        "content": "can i encash my earned leaves"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "True follow-up: answer stays on the preceding topic (can i encash my earned leaves); expected chunks Calfus_India_Employee_Handbook_v4_0020, Calfus_India_Employee_Handbook_v4_0021, Calfus_India_Employee_Handbook_v4_0036.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd18_followup_voice",
+    "query": "how many days is that",
+    "category": "context_dilution_followup",
+    "channel": "voice",
+    "history": [
+      {
+        "role": "user",
+        "content": "can i encash my earned leaves"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "True follow-up: answer stays on the preceding topic (can i encash my earned leaves); expected chunks Calfus_India_Employee_Handbook_v4_0020, Calfus_India_Employee_Handbook_v4_0021, Calfus_India_Employee_Handbook_v4_0036.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd19_followup_text",
+    "query": "what about interns",
+    "category": "context_dilution_followup",
+    "channel": "text",
+    "history": [
+      {
+        "role": "user",
+        "content": "what is the referral bonus"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "True follow-up: answer stays on the preceding topic (what is the referral bonus); expected chunks Calfus_India_Employee_Handbook_v4_0028, Calfus_India_Employee_Handbook_v4_0026, Calfus_Crew_Employee_Referral_Policy_1_2_0007.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd19_followup_voice",
+    "query": "what about interns",
+    "category": "context_dilution_followup",
+    "channel": "voice",
+    "history": [
+      {
+        "role": "user",
+        "content": "what is the referral bonus"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "True follow-up: answer stays on the preceding topic (what is the referral bonus); expected chunks Calfus_India_Employee_Handbook_v4_0028, Calfus_India_Employee_Handbook_v4_0026, Calfus_Crew_Employee_Referral_Policy_1_2_0007.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd20_followup_text",
+    "query": "how long does it last",
+    "category": "context_dilution_followup",
+    "channel": "text",
+    "history": [
+      {
+        "role": "user",
+        "content": "how does the performance improvement plan work"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "True follow-up: answer stays on the preceding topic (how does the performance improvement plan work); expected chunks PIP_Process_Ver1_0_0003, PIP_Process_Ver1_0_0004, Performance_Appraisal_Promotion_Policy_Ver_1_0_0005.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd20_followup_voice",
+    "query": "how long does it last",
+    "category": "context_dilution_followup",
+    "channel": "voice",
+    "history": [
+      {
+        "role": "user",
+        "content": "how does the performance improvement plan work"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "True follow-up: answer stays on the preceding topic (how does the performance improvement plan work); expected chunks PIP_Process_Ver1_0_0003, PIP_Process_Ver1_0_0004, Performance_Appraisal_Promotion_Policy_Ver_1_0_0005.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd21_followup_text",
+    "query": "for interns?",
+    "category": "context_dilution_followup",
+    "channel": "text",
+    "history": [
+      {
+        "role": "user",
+        "content": "how many earned leaves do i get"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "True follow-up: answer stays on the preceding topic (how many earned leaves do i get); expected chunks Calfus_India_Employee_Handbook_v4_0023, Calfus_India_Employee_Handbook_v4_0020, Calfus_India_Employee_Handbook_v4_0021.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd21_followup_voice",
+    "query": "for interns?",
+    "category": "context_dilution_followup",
+    "channel": "voice",
+    "history": [
+      {
+        "role": "user",
+        "content": "how many earned leaves do i get"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "True follow-up: answer stays on the preceding topic (how many earned leaves do i get); expected chunks Calfus_India_Employee_Handbook_v4_0023, Calfus_India_Employee_Handbook_v4_0020, Calfus_India_Employee_Handbook_v4_0021.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd22_followup_text",
+    "query": "contractors too?",
+    "category": "context_dilution_followup",
+    "channel": "text",
+    "history": [
+      {
+        "role": "user",
+        "content": "how do I refer a friend for a job"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "True follow-up: answer stays on the preceding topic (how do I refer a friend for a job); expected chunks Calfus_Crew_Employee_Referral_Policy_0004, Calfus_Crew_Employee_Referral_Policy_1_2_0008, Calfus_Crew_Employee_Referral_Policy_1_2_0004.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd22_followup_voice",
+    "query": "contractors too?",
+    "category": "context_dilution_followup",
+    "channel": "voice",
+    "history": [
+      {
+        "role": "user",
+        "content": "how do I refer a friend for a job"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "True follow-up: answer stays on the preceding topic (how do I refer a friend for a job); expected chunks Calfus_Crew_Employee_Referral_Policy_0004, Calfus_Crew_Employee_Referral_Policy_1_2_0008, Calfus_Crew_Employee_Referral_Policy_1_2_0004.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd23_followup_text",
+    "query": "how long to wait?",
+    "category": "context_dilution_followup",
+    "channel": "text",
+    "history": [
+      {
+        "role": "user",
+        "content": "what is the referral bonus"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "True follow-up: answer stays on the preceding topic (what is the referral bonus); expected chunks Calfus_India_Employee_Handbook_v4_0028, Calfus_India_Employee_Handbook_v4_0026, Calfus_Crew_Employee_Referral_Policy_1_2_0007.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cd23_followup_voice",
+    "query": "how long to wait?",
+    "category": "context_dilution_followup",
+    "channel": "voice",
+    "history": [
+      {
+        "role": "user",
+        "content": "what is the referral bonus"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "expected_behavior": "True follow-up: answer stays on the preceding topic (what is the referral bonus); expected chunks Calfus_India_Employee_Handbook_v4_0028, Calfus_India_Employee_Handbook_v4_0026, Calfus_Crew_Employee_Referral_Policy_1_2_0007.",
+    "notes": "Dual-query fusion set (eval/context_dilution_eval.py)."
+  },
+  {
+    "id": "cov_dog_text",
+    "query": "can I take bereavement leave for my dog",
+    "category": "coverage_claims",
+    "channel": "text",
+    "history": [],
+    "expected_behavior": "Policy lists bereavement leave (2 days) but doesn't mention pets or who it covers: say the policy doesn't mention it; no 'typically for family' claims.",
+    "notes": "Prompt v8 measurement turn (eval/coverage_claims_measure.py)."
+  },
+  {
+    "id": "cov_dog_voice",
+    "query": "can I take bereavement leave for my dog",
+    "category": "coverage_claims",
+    "channel": "voice",
+    "history": [],
+    "expected_behavior": "Policy lists bereavement leave (2 days) but doesn't mention pets or who it covers: say the policy doesn't mention it; no 'typically for family' claims.",
+    "notes": "Prompt v8 measurement turn (eval/coverage_claims_measure.py)."
+  },
+  {
+    "id": "cov_proofB_text",
+    "query": "do I need to send proof for bereavement leave",
+    "category": "coverage_claims",
+    "channel": "text",
+    "history": [],
+    "expected_behavior": "No chunk states a proof requirement for bereavement leave: say it couldn't find what is required; never 'you don't need proof'.",
+    "notes": "Prompt v8 measurement turn (eval/coverage_claims_measure.py)."
+  },
+  {
+    "id": "cov_proofB_voice",
+    "query": "do I need to send proof for bereavement leave",
+    "category": "coverage_claims",
+    "channel": "voice",
+    "history": [],
+    "expected_behavior": "No chunk states a proof requirement for bereavement leave: say it couldn't find what is required; never 'you don't need proof'.",
+    "notes": "Prompt v8 measurement turn (eval/coverage_claims_measure.py)."
+  },
+  {
+    "id": "cov_whoB_text",
+    "query": "who does bereavement leave cover",
+    "category": "coverage_claims",
+    "channel": "text",
+    "history": [],
+    "expected_behavior": "The text lists '2 days' but not who it covers: say the policy doesn't specify who; state the 2 days plainly.",
+    "notes": "Prompt v8 measurement turn (eval/coverage_claims_measure.py)."
+  },
+  {
+    "id": "cov_whoB_voice",
+    "query": "who does bereavement leave cover",
+    "category": "coverage_claims",
+    "channel": "voice",
+    "history": [],
+    "expected_behavior": "The text lists '2 days' but not who it covers: say the policy doesn't specify who; state the 2 days plainly.",
+    "notes": "Prompt v8 measurement turn (eval/coverage_claims_measure.py)."
+  },
+  {
+    "id": "cov_proofS_text",
+    "query": "do I need proof for sick leave",
+    "category": "coverage_claims",
+    "channel": "text",
+    "history": [],
+    "expected_behavior": "The only stated proof rule is for sick leave during the notice period: name that situation; no general 'proof is required'.",
+    "notes": "Prompt v8 measurement turn (eval/coverage_claims_measure.py)."
+  },
+  {
+    "id": "cov_proofS_voice",
+    "query": "do I need proof for sick leave",
+    "category": "coverage_claims",
+    "channel": "voice",
+    "history": [],
+    "expected_behavior": "The only stated proof rule is for sick leave during the notice period: name that situation; no general 'proof is required'.",
+    "notes": "Prompt v8 measurement turn (eval/coverage_claims_measure.py)."
+  },
+  {
+    "id": "cov_daysB_text",
+    "query": "how many days of bereavement leave",
+    "category": "coverage_claims",
+    "channel": "text",
+    "history": [],
+    "expected_behavior": "Plain, confident: 2 days. No hedging, no 'check with HR'.",
+    "notes": "Prompt v8 measurement turn (eval/coverage_claims_measure.py)."
+  },
+  {
+    "id": "cov_daysB_voice",
+    "query": "how many days of bereavement leave",
+    "category": "coverage_claims",
+    "channel": "voice",
+    "history": [],
+    "expected_behavior": "Plain, confident: 2 days. No hedging, no 'check with HR'.",
+    "notes": "Prompt v8 measurement turn (eval/coverage_claims_measure.py)."
+  },
+  {
+    "id": "cov_daysS_text",
+    "query": "how many sick leaves do I get",
+    "category": "coverage_claims",
+    "channel": "text",
+    "history": [],
+    "expected_behavior": "Plain, confident: 7 days. No hedging, no 'check with HR'.",
+    "notes": "Prompt v8 measurement turn (eval/coverage_claims_measure.py)."
+  },
+  {
+    "id": "cov_daysS_voice",
+    "query": "how many sick leaves do I get",
+    "category": "coverage_claims",
+    "channel": "voice",
+    "history": [],
+    "expected_behavior": "Plain, confident: 7 days. No hedging, no 'check with HR'.",
+    "notes": "Prompt v8 measurement turn (eval/coverage_claims_measure.py)."
   }
 ]

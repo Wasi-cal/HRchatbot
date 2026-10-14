@@ -46,6 +46,16 @@ def install():
         return original(*a, **k)
 
     client.chat.completions.create = counted
+
+    from eval.llm_count import wrap_with_options
+
+    def _scoped(create):
+        def scoped_counted(*a, **k):
+            calls["llm"] += 1
+            return create(*a, **k)
+        return scoped_counted
+
+    wrap_with_options(client, _scoped)
     embedder = retrieve_mod._get_embedder()
     original_embed = embedder.embed
 
@@ -119,6 +129,9 @@ def scenarios(client):
         "text thanks after statement": chat("yes thank you", h(("user", "x"), ("assistant", STATEMENT))),
         "text source lookup": chat("whats the source of this/", ref_hist),
         "text 'yes' after an offer": chat("yes", h(("user", REFERRAL_Q), ("assistant", OFFER))),
+        "text fresh short question after unrelated turns": chat("Tell me how change of work location", h(("user", "My dog died."), ("assistant", "I'm sorry."), ("user", "Yeah. I want some time off."), ("assistant", "OK."))),
+        "text follow-up with marker": chat("can I carry it forward", h(("user", "how many days of earned leave do I get"), ("assistant", "21 days."))),
+        "voice short follow-up": say("for interns?", h(("user", "how many days of earned leave do I get"), ("assistant", "Twenty-one days."))),
         "voice normal turn": say("how many days of earned leave do I get"),
         "voice small talk (wassup)": say("wassup"),
         "voice source lookup": say("where is this from", h(("user", REFERRAL_Q), ("assistant", "A referral bonus is paid after probation."))),

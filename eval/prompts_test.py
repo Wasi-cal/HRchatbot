@@ -21,6 +21,7 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 from fastapi.testclient import TestClient  # noqa: E402
 
 import config.prompts as prompts_mod  # noqa: E402
+from config.runtime import get_app_config  # noqa: E402
 import generation.generate as gen_mod  # noqa: E402
 from api.main import app  # noqa: E402
 from cache.redis_cache import MISS  # noqa: E402
@@ -58,6 +59,13 @@ def install_counter():
         return original(*a, **k)
 
     client.chat.completions.create = counted
+    from eval.llm_count import wrap_with_options
+    def _scoped(create):
+        def scoped_counted(*a, **k):
+            calls['llm'] += 1
+            return create(*a, **k)
+        return scoped_counted
+    wrap_with_options(client, _scoped)
 
 
 def final_event(query, channel):
@@ -142,7 +150,7 @@ def test_admin_versions(client):
     check("generate_answer reports the rolled-back version", done["prompt_version"]["style"] == old_active["version"], str(done["prompt_version"]))
 
     check("empty content rejected (422)", client.post("/api/admin/prompts", json={"name": "style", "channel": "text", "content": "   "}).status_code == 422)
-    check("over-long content rejected (422)", client.post("/api/admin/prompts", json={"name": "style", "channel": "text", "content": "x" * 6001}).status_code == 422)
+    check("over-long content rejected (422)", client.post("/api/admin/prompts", json={"name": "style", "channel": "text", "content": "x" * (int(get_app_config("prompts.max_chars", 8000)) + 1)}).status_code == 422)
     check("unknown slot rejected (422/404)", client.post("/api/admin/prompts", json={"name": "style", "channel": "shared", "content": "x"}).status_code in (404, 422))
     check("unknown name rejected (404)", client.post("/api/admin/prompts", json={"name": "nonsense", "channel": "text", "content": "x"}).status_code == 404)
     check("activate unknown id (404)", client.post("/api/admin/prompts/999999/activate").status_code == 404)

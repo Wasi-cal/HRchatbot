@@ -59,8 +59,8 @@
     "llm": 1,
     "retrieve": 1,
     "embed": 1,
-    "db": 5,
-    "redis": 11
+    "db": 6,
+    "redis": 8
   },
   "voice normal turn": {
     "llm": 1,
@@ -82,5 +82,26 @@
     "embed": 1,
     "db": 5,
     "redis": 6
+  },
+  "text fresh short question after unrelated turns": {
+    "llm": 1,
+    "retrieve": 1,
+    "embed": 1,
+    "db": 5,
+    "redis": 11
+  },
+  "text follow-up with marker": {
+    "llm": 1,
+    "retrieve": 1,
+    "embed": 1,
+    "db": 5,
+    "redis": 11
+  },
+  "voice short follow-up": {
+    "llm": 1,
+    "retrieve": 1,
+    "embed": 1,
+    "db": 5,
+    "redis": 11
   }
 }

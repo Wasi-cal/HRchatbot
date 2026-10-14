@@ -57,6 +57,13 @@ def install_counters():
         return original(*a, **k)
 
     client.chat.completions.create = counted_create
+    from eval.llm_count import wrap_with_options
+    def _scoped(create):
+        def scoped_counted(*a, **k):
+            calls['llm'] += 1
+            return create(*a, **k)
+        return scoped_counted
+    wrap_with_options(client, _scoped)
     for mod in (text_ch, voice_ch):
         orig_retrieve = mod.retrieve
 

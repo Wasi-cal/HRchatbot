@@ -1,0 +1,512 @@
+[
+  {
+    "group": "fresh",
+    "history": [
+      {
+        "role": "user",
+        "content": "My dog died."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "Yeah. I want some time off."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "Tell me how change of work location",
+    "expected": [
+      "India_Relocation_Policy_Ver1_0_0004"
+    ]
+  },
+  {
+    "group": "fresh",
+    "history": [
+      {
+        "role": "user",
+        "content": "how many days of earned leave do i get"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "can i work from home if i am sick"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "what is the notice period",
+    "expected": [
+      "Calfus_India_Employee_Handbook_v4_0032"
+    ]
+  },
+  {
+    "group": "fresh",
+    "history": [
+      {
+        "role": "user",
+        "content": "what is the probation period"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "who do i report a security incident to"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "referral bonus amount",
+    "expected": [
+      "Calfus_India_Employee_Handbook_v4_0028"
+    ]
+  },
+  {
+    "group": "fresh",
+    "history": [
+      {
+        "role": "user",
+        "content": "My dog died."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "Yeah. I want some time off."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "how do I report a whistleblower concern",
+    "expected": [
+      "HR_Security_Policy_V1_0_0016"
+    ]
+  },
+  {
+    "group": "fresh",
+    "history": [
+      {
+        "role": "user",
+        "content": "how many days of earned leave do i get"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "can i work from home if i am sick"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "performance appraisal cycle",
+    "expected": [
+      "Performance_Appraisal_Promotion_Policy_Ver_1_0_0002"
+    ]
+  },
+  {
+    "group": "fresh",
+    "history": [
+      {
+        "role": "user",
+        "content": "what is the probation period"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "who do i report a security incident to"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "remote connectivity rules",
+    "expected": [
+      "Remote_Connectivity_Data_Protection_Policy_Ver1_0_0002"
+    ]
+  },
+  {
+    "group": "fresh",
+    "history": [
+      {
+        "role": "user",
+        "content": "My dog died."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "Yeah. I want some time off."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "certification reimbursement process",
+    "expected": [
+      "Certification_Reimbursement_Policy_Ver1_0_0007"
+    ]
+  },
+  {
+    "group": "fresh",
+    "history": [
+      {
+        "role": "user",
+        "content": "how many days of earned leave do i get"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "can i work from home if i am sick"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "how to file a POSH complaint",
+    "expected": [
+      "POSH_Policy_2025_Ver2_0_0011"
+    ]
+  },
+  {
+    "group": "fresh",
+    "history": [
+      {
+        "role": "user",
+        "content": "what is the probation period"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "who do i report a security incident to"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "travel reimbursement limits",
+    "expected": [
+      "Travel_Policy_Ver1_0_0006"
+    ]
+  },
+  {
+    "group": "fresh",
+    "history": [
+      {
+        "role": "user",
+        "content": "My dog died."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "Yeah. I want some time off."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "what is the confirmation process",
+    "expected": [
+      "Confirmation_Policy_Ver1_0_0002"
+    ]
+  },
+  {
+    "group": "followup",
+    "history": [
+      {
+        "role": "user",
+        "content": "how many earned leaves do i get"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "what about interns",
+    "expected": [
+      "Calfus_India_Employee_Handbook_v4_0023",
+      "Calfus_India_Employee_Handbook_v4_0020",
+      "Calfus_India_Employee_Handbook_v4_0021"
+    ],
+    "previous_query": "how many earned leaves do i get"
+  },
+  {
+    "group": "followup",
+    "history": [
+      {
+        "role": "user",
+        "content": "how do I refer a friend for a job"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "and for contractors",
+    "expected": [
+      "Calfus_Crew_Employee_Referral_Policy_0004",
+      "Calfus_Crew_Employee_Referral_Policy_1_2_0008",
+      "Calfus_Crew_Employee_Referral_Policy_1_2_0004"
+    ],
+    "previous_query": "how do I refer a friend for a job"
+  },
+  {
+    "group": "followup",
+    "history": [
+      {
+        "role": "user",
+        "content": "how many days of earned leave do i get"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "can I carry it forward",
+    "expected": [
+      "Calfus_India_Employee_Handbook_v4_0020",
+      "Calfus_India_Employee_Handbook_v4_0021",
+      "Calfus_India_Employee_Handbook_v4_0023"
+    ],
+    "previous_query": "how many days of earned leave do i get"
+  },
+  {
+    "group": "followup",
+    "history": [
+      {
+        "role": "user",
+        "content": "what is the notice period"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "what happens if I exceed it",
+    "expected": [
+      "Calfus_India_Employee_Handbook_v4_0032",
+      "Calfus_India_Employee_Handbook_v4_0036",
+      "Performance_Appraisal_Promotion_Policy_Ver_1_0_0005"
+    ],
+    "previous_query": "what is the notice period"
+  },
+  {
+    "group": "followup",
+    "history": [
+      {
+        "role": "user",
+        "content": "how many earned leaves do i get"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "is it the same for managers",
+    "expected": [
+      "Calfus_India_Employee_Handbook_v4_0023",
+      "Calfus_India_Employee_Handbook_v4_0020",
+      "Calfus_India_Employee_Handbook_v4_0021"
+    ],
+    "previous_query": "how many earned leaves do i get"
+  },
+  {
+    "group": "followup",
+    "history": [
+      {
+        "role": "user",
+        "content": "how does work from home work"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "what else",
+    "expected": [
+      "Calfus_India_Employee_Handbook_v4_0022",
+      "Calfus_India_Employee_Handbook_v4_0018",
+      "All_IT_Policies_0182"
+    ],
+    "previous_query": "how does work from home work"
+  },
+  {
+    "group": "followup",
+    "history": [
+      {
+        "role": "user",
+        "content": "what are the work from home rules"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "instead?",
+    "expected": [
+      "Calfus_India_Employee_Handbook_v4_0022",
+      "Calfus_India_Employee_Handbook_v4_0018",
+      "All_IT_Policies_0182"
+    ],
+    "previous_query": "what are the work from home rules"
+  },
+  {
+    "group": "followup",
+    "history": [
+      {
+        "role": "user",
+        "content": "can i encash my earned leaves"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "how many days is that",
+    "expected": [
+      "Calfus_India_Employee_Handbook_v4_0020",
+      "Calfus_India_Employee_Handbook_v4_0021",
+      "Calfus_India_Employee_Handbook_v4_0036"
+    ],
+    "previous_query": "can i encash my earned leaves"
+  },
+  {
+    "group": "followup",
+    "history": [
+      {
+        "role": "user",
+        "content": "what is the referral bonus"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "what about interns",
+    "expected": [
+      "Calfus_India_Employee_Handbook_v4_0028",
+      "Calfus_India_Employee_Handbook_v4_0026",
+      "Calfus_Crew_Employee_Referral_Policy_1_2_0007"
+    ],
+    "previous_query": "what is the referral bonus"
+  },
+  {
+    "group": "followup",
+    "history": [
+      {
+        "role": "user",
+        "content": "how does the performance improvement plan work"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "how long does it last",
+    "expected": [
+      "PIP_Process_Ver1_0_0003",
+      "PIP_Process_Ver1_0_0004",
+      "Performance_Appraisal_Promotion_Policy_Ver_1_0_0005"
+    ],
+    "previous_query": "how does the performance improvement plan work"
+  },
+  {
+    "group": "followup",
+    "history": [
+      {
+        "role": "user",
+        "content": "how many earned leaves do i get"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "for interns?",
+    "expected": [
+      "Calfus_India_Employee_Handbook_v4_0023",
+      "Calfus_India_Employee_Handbook_v4_0020",
+      "Calfus_India_Employee_Handbook_v4_0021"
+    ],
+    "previous_query": "how many earned leaves do i get"
+  },
+  {
+    "group": "followup",
+    "history": [
+      {
+        "role": "user",
+        "content": "how do I refer a friend for a job"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "contractors too?",
+    "expected": [
+      "Calfus_Crew_Employee_Referral_Policy_0004",
+      "Calfus_Crew_Employee_Referral_Policy_1_2_0008",
+      "Calfus_Crew_Employee_Referral_Policy_1_2_0004"
+    ],
+    "previous_query": "how do I refer a friend for a job"
+  },
+  {
+    "group": "followup",
+    "history": [
+      {
+        "role": "user",
+        "content": "what is the referral bonus"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "how long to wait?",
+    "expected": [
+      "Calfus_India_Employee_Handbook_v4_0028",
+      "Calfus_India_Employee_Handbook_v4_0026",
+      "Calfus_Crew_Employee_Referral_Policy_1_2_0007"
+    ],
+    "previous_query": "what is the referral bonus"
+  }
+]

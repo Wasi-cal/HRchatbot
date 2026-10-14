@@ -233,6 +233,14 @@ def run_call_budget():
         return original_create(*a, **k)
 
     client_llm.chat.completions.create = counted_create
+    from eval.llm_count import wrap_with_options
+    def _scoped(create):
+        def scoped_counted(*a, **k):
+            calls['llm'] += 1
+            calls['messages'].append(k.get('messages'))
+            return create(*a, **k)
+        return scoped_counted
+    wrap_with_options(client_llm, _scoped)
     embedder = retrieve_mod._get_embedder()
     original_embed = embedder.embed
 
