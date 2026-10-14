@@ -20,6 +20,7 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 from fastapi.testclient import TestClient  # noqa: E402
 
+from eval.prompt_topics import has_topic  # noqa: E402
 import config.prompts as prompts_mod  # noqa: E402
 from config.runtime import get_app_config  # noqa: E402
 import generation.generate as gen_mod  # noqa: E402
@@ -101,10 +102,10 @@ def test_composition():
           "shared" not in str(prompts) and prompts["text"][0] != prompts["voice"][0])
     check("voice style says spoken / ~50 words; text style does not cap at 50 words",
           "read aloud" in prompts["voice"][0] and "50 words" in prompts["voice"][0] and "50 words" not in prompts["text"][0])
-    for needle in ("Answer ONLY using the retrieved policy excerpts", "Never use outside knowledge",
-                   "mention any document title, section name, or page number", "Do not guess"):
-        check(f"grounding rule present in both channels: {needle[:45]!r}",
-              needle in prompts["text"][0] and needle in prompts["voice"][0])
+    for topic in ("grounding: answer only from the excerpts", "grounding: no outside / general knowledge",
+                  "no citations of titles, sections or pages", "grounding: do not guess"):
+        check(f"grounding rule topic present in both channels: {topic!r}",
+              has_topic(prompts["text"][0], topic) and has_topic(prompts["voice"][0], topic))
 
 
 # ---- (b) admin API: versions, activation, validation, immediate effect -----------

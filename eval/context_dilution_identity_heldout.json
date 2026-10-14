@@ -1,0 +1,202 @@
+[
+  {
+    "group": "fresh_identity",
+    "history": [
+      {
+        "role": "user",
+        "content": "My dog died."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "Yeah. I want some time off."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "I am travelling abroad for work, how are my expenses reimbursed",
+    "expected": [
+      "Travel_Policy_Ver1_0_0006"
+    ]
+  },
+  {
+    "group": "fresh_identity",
+    "history": [
+      {
+        "role": "user",
+        "content": "how many days of earned leave do i get"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "can i work from home if i am sick"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "as an employee under a PIP what happens if I do not improve",
+    "expected": [
+      "PIP_Process_Ver1_0_0003"
+    ]
+  },
+  {
+    "group": "fresh_identity",
+    "history": [
+      {
+        "role": "user",
+        "content": "what is the probation period"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "who do i report a security incident to"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "im worried about being asked to work on a public holiday, what are the rules",
+    "expected": [
+      "Calfus_India_Employee_Handbook_v4_0019"
+    ]
+  },
+  {
+    "group": "fresh_identity",
+    "history": [
+      {
+        "role": "user",
+        "content": "My dog died."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "Yeah. I want some time off."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "as a remote employee what do I need to do to keep my laptop secure",
+    "expected": [
+      "Remote_Connectivity_Data_Protection_Policy_Ver1_0_0002"
+    ]
+  },
+  {
+    "group": "fresh_identity",
+    "history": [
+      {
+        "role": "user",
+        "content": "how many days of earned leave do i get"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "can i work from home if i am sick"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "as a manager, referral bonus rules?",
+    "expected": [
+      "Calfus_India_Employee_Handbook_v4_0028"
+    ]
+  },
+  {
+    "group": "fresh_identity",
+    "history": [
+      {
+        "role": "user",
+        "content": "what is the probation period"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "who do i report a security incident to"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "i am on probation, confirmation criteria",
+    "expected": [
+      "Confirmation_Policy_Ver1_0_0002"
+    ]
+  },
+  {
+    "group": "fresh_identity",
+    "history": [
+      {
+        "role": "user",
+        "content": "My dog died."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "Yeah. I want some time off."
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "im reporting harassment, what next",
+    "expected": [
+      "Calfus_India_Employee_Handbook_v4_0009"
+    ]
+  },
+  {
+    "group": "fresh_identity",
+    "history": [
+      {
+        "role": "user",
+        "content": "how many days of earned leave do i get"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      },
+      {
+        "role": "user",
+        "content": "can i work from home if i am sick"
+      },
+      {
+        "role": "assistant",
+        "content": "Here is what the policy says."
+      }
+    ],
+    "query": "as an employee, travel limits?",
+    "expected": [
+      "Travel_Policy_Ver1_0_0004"
+    ]
+  }
+]

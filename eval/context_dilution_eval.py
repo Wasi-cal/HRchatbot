@@ -25,7 +25,8 @@ import channels.text as text_ch  # noqa: E402
 from channels import common  # noqa: E402
 from vectorstore.db import close_pool  # noqa: E402
 
-SET_PATHS = {"tuned": Path(__file__).parent / "context_dilution_set.json", "heldout": Path(__file__).parent / "context_dilution_heldout.json"}
+SET_PATHS = {"tuned": Path(__file__).parent / "context_dilution_set.json", "heldout": Path(__file__).parent / "context_dilution_heldout.json",
+             "identity_heldout": Path(__file__).parent / "context_dilution_identity_heldout.json"}
 SET_PATH = SET_PATHS["tuned"]
 
 UNRELATED = [
@@ -68,6 +69,16 @@ FOLLOWUPS = [
 ]
 
 
+IDENTITY_HELDOUT = [  # 4 long (8+ words) then 4 short (<= 6 words); frozen before any evaluation, never used for tuning
+    "I am travelling abroad for work, how are my expenses reimbursed",
+    "as an employee under a PIP what happens if I do not improve",
+    "im worried about being asked to work on a public holiday, what are the rules",
+    "as a remote employee what do I need to do to keep my laptop secure",
+    "as a manager, referral bonus rules?",
+    "i am on probation, confirmation criteria",
+    "im reporting harassment, what next",
+    "as an employee, travel limits?",
+]
 HELDOUT_FRESH = ["how do I apply for a referral bonus", "what is the process to claim travel expenses", "who is on the POSH internal committee",
                  "can I get my certification fee reimbursed", "how many days notice do I need to serve", "what are the rules for working remotely",
                  "tell me about the performance improvement plan", "how is my probation confirmed", "where do I report a data breach",
@@ -92,7 +103,10 @@ def ranked(plan, n=30):
 
 def build(which="tuned"):
     cases = []
-    fresh, identity, followups = (FRESH, FRESH_IDENTITY, FOLLOWUPS) if which == "tuned" else (HELDOUT_FRESH, [], HELDOUT_FOLLOWUPS)
+    if which == "identity_heldout":
+        fresh, identity, followups = [], IDENTITY_HELDOUT, []
+    else:
+        fresh, identity, followups = (FRESH, FRESH_IDENTITY, FOLLOWUPS) if which == "tuned" else (HELDOUT_FRESH, [], HELDOUT_FOLLOWUPS)
     for i, q in enumerate(identity):
         alone = ranked(common.plan_turn(q, [], "text"))
         hist = []
@@ -143,7 +157,7 @@ def evaluate(quiet=False, which="tuned"):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--build", action="store_true")
-    ap.add_argument("--set", choices=["tuned", "heldout"], default="tuned")
+    ap.add_argument("--set", choices=["tuned", "heldout", "identity_heldout"], default="tuned")
     args = ap.parse_args()
     build(args.set) if args.build else evaluate(which=args.set)
     close_pool()

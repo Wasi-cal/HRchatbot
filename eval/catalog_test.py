@@ -20,6 +20,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 import channels.text as text_ch  # noqa: E402
 import channels.voice as voice_ch  # noqa: E402
+from eval.prompt_topics import has_topic  # noqa: E402
 import config.prompts as prompts_mod  # noqa: E402
 import config.topics as topics_mod  # noqa: E402
 from api.main import app  # noqa: E402
@@ -280,12 +281,11 @@ def test_calls(client):
 
 def test_prompt():
     print("\n=== (f) Prompt rule ===")
-    needle = "never suggest contacting IT, legal, finance or any other team unless the provided text says to"
     for ch in ("text", "voice"):
         prompt, versions = prompts_mod.get_system_prompt(ch)
-        check(f"[{ch}] grounding_core v{versions['grounding_core']} carries the no-other-teams rule", needle in prompt)
+        check(f"[{ch}] grounding_core v{versions['grounding_core']} carries the no-other-teams rule", has_topic(prompt, "no other teams (IT, legal, finance)"))
         check(f"[{ch}] existing rules intact (grounding, group labels, no group inference, counting, no excerpts wording)",
-              all(x in prompt for x in ("Answer ONLY using the retrieved policy excerpts", "[Applies to:", "Never infer which group", "five working days", 'Never say "excerpts"')))
+              all(has_topic(prompt, t) for t in ("grounding: answer only from the excerpts", "group labels ([Applies to: ...])", "never infer the user's group from earlier topics", "working days only, a week is five", "never say 'excerpts' / 'context' wording")))
     with get_pool().connection() as conn:
         n = conn.execute("SELECT count(*) FROM prompt_templates WHERE name='grounding_core' AND channel IN ('text','voice')").fetchone()[0]
     check("earlier versions are kept for rollback", n >= 10, str(n))

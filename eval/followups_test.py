@@ -23,6 +23,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 import channels.text as text_ch  # noqa: E402
 import channels.voice as voice_ch  # noqa: E402
+from eval.prompt_topics import has_topic  # noqa: E402
 import config.prompts as prompts_mod  # noqa: E402
 import generation.generate as gen_mod  # noqa: E402
 import vectorstore.retrieve as retrieve_mod  # noqa: E402
@@ -104,25 +105,26 @@ def msgs(*pairs):
 
 def test_prompt():
     print("\n=== (a) Prompt rules (grounding_core, both channels) ===")
+    # Rule TOPICS (eval/prompt_topics.py), not exact phrases: a rewrite of the wording must not break these, a dropped rule must.
     needles = {
-        "never infers the user's group from earlier topics": "Never infer which group the user belongs to",
-        "group is the user's own only if stated in the first person": "explicitly says so in the first person",
-        "no 'not entitled / typically doesn't get / gets less'": '"not entitled", "typically doesn\'t get", "gets less"',
-        "no general knowledge about how companies treat groups": "Do not use general knowledge about how companies usually treat",
-        "couldn't-find phrasing for a stated group": "I couldn't find <topic> for <group> in the HR policies",
-        "leave-day counting states the assumption": "state the assumption in a few words",
-        "working days only, a week is five": "a week is five working days",
-        "existing: group labels": "[Applies to:",
-        "existing: no clarifying question": "Never ask the user a clarifying question",
-        "existing: never say excerpts/context": 'Never say "excerpts", "context"',
-        "existing: grounding": "Answer ONLY using the retrieved policy excerpts",
-        "existing: no citations": "mention any document title, section name, or page number",
+        "never infers the user's group from earlier topics": "never infer the user's group from earlier topics",
+        "group is the user's own only if stated in the first person": "group is the user's own only when stated in the first person",
+        "no 'not entitled / typically doesn't get / gets less'": "no 'not entitled' / 'gets less' claims",
+        "no general knowledge about how companies treat groups": "grounding: no outside / general knowledge",
+        "couldn't-find phrasing for a stated group": "couldn't-find phrasing for a stated group",
+        "leave-day counting states the assumption": "leave counting states the assumption",
+        "working days only, a week is five": "working days only, a week is five",
+        "existing: group labels": "group labels ([Applies to: ...])",
+        "existing: no clarifying question": "no clarifying question about the group",
+        "existing: never say excerpts/context": "never say 'excerpts' / 'context' wording",
+        "existing: grounding": "grounding: answer only from the excerpts",
+        "existing: no citations": "no citations of titles, sections or pages",
     }
     for channel in ("text", "voice"):
         prompt, versions = prompts_mod.get_system_prompt(channel)
         check(f"[{channel}] grounding_core is version >= 4 (earlier versions kept for rollback)", versions["grounding_core"] >= 4, str(versions))
         for label, needle in needles.items():
-            check(f"[{channel}] {label}", needle in prompt, needle)
+            check(f"[{channel}] {label}", has_topic(prompt, needle), needle)
     with get_pool().connection() as conn:
         n = conn.execute("SELECT count(*) FROM prompt_templates WHERE name='grounding_core' AND channel IN ('text','voice')").fetchone()[0]
     check("earlier grounding_core versions still exist (v1..v3 per channel + v4)", n >= 8, str(n))
