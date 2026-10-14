@@ -222,6 +222,12 @@ unchanged). Tables: `python3 -m eval.context_dilution_eval`; test: `python3 -m e
   A/B: `python3 -m eval.coverage_claims_measure --label X --grounding-version 9 --reminder-file eval/results/turn_reminder_v9.txt --temperature 0.2`
   (settings are restored afterwards).
 
+### v9b candidate (inactive)
+
+`grounding_core` version 10 ("v9b", both channels, inactive) restores the rules v9 dropped and adds an unstated-approval example (4096 characters);
+reminder text in `eval/results/turn_reminder_v9b.txt`. Prompt checks in the suites match rule TOPICS (`eval/prompt_topics.py`), not exact wording.
+Interleaved A/B: `python3 -m eval.prompt_ab --label X` (v8 t1.0 vs v9b t0.2 vs v9b t1.0; writes a blinded side-by-side and its key).
+
 ## Prompt rows (`prompt_templates`, immutable versions)
 
 A channel's prompt is its `style` row followed by its `grounding_core` row. Edit with `POST /api/admin/prompts` (new version, activated

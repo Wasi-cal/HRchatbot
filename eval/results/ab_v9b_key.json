@@ -1,0 +1,72 @@
+{
+  "dog/text": {
+    "A": "v9b_t0.2",
+    "B": "v8_t1.0",
+    "C": "v9b_t1.0"
+  },
+  "dog/voice": {
+    "A": "v9b_t0.2",
+    "B": "v8_t1.0",
+    "C": "v9b_t1.0"
+  },
+  "who_bereavement/text": {
+    "A": "v8_t1.0",
+    "B": "v9b_t1.0",
+    "C": "v9b_t0.2"
+  },
+  "who_bereavement/voice": {
+    "A": "v8_t1.0",
+    "B": "v9b_t0.2",
+    "C": "v9b_t1.0"
+  },
+  "proof_bereavement/text": {
+    "A": "v8_t1.0",
+    "B": "v9b_t1.0",
+    "C": "v9b_t0.2"
+  },
+  "proof_bereavement/voice": {
+    "A": "v9b_t1.0",
+    "B": "v9b_t0.2",
+    "C": "v8_t1.0"
+  },
+  "proof_sick/text": {
+    "A": "v8_t1.0",
+    "B": "v9b_t1.0",
+    "C": "v9b_t0.2"
+  },
+  "proof_sick/voice": {
+    "A": "v8_t1.0",
+    "B": "v9b_t1.0",
+    "C": "v9b_t0.2"
+  },
+  "approval_earned/text": {
+    "A": "v9b_t0.2",
+    "B": "v9b_t1.0",
+    "C": "v8_t1.0"
+  },
+  "approval_earned/voice": {
+    "A": "v8_t1.0",
+    "B": "v9b_t0.2",
+    "C": "v9b_t1.0"
+  },
+  "intern/text": {
+    "A": "v8_t1.0",
+    "B": "v9b_t0.2",
+    "C": "v9b_t1.0"
+  },
+  "intern/voice": {
+    "A": "v8_t1.0",
+    "B": "v9b_t0.2",
+    "C": "v9b_t1.0"
+  },
+  "trip/text": {
+    "A": "v8_t1.0",
+    "B": "v9b_t1.0",
+    "C": "v9b_t0.2"
+  },
+  "trip/voice": {
+    "A": "v9b_t1.0",
+    "B": "v8_t1.0",
+    "C": "v9b_t0.2"
+  }
+}
