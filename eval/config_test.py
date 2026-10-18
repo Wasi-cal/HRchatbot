@@ -7,11 +7,9 @@ pooled concurrency. Needs the API running (uvicorn api.main:app --port 8000), Po
 Takes ~40s (waits out the 30s cache TTL once). Restores every value it changes.
 """
 import argparse
-import re
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
 
 import httpx
 
@@ -19,7 +17,12 @@ from cache import redis_cache
 from cache.redis_cache import MISS
 from config.runtime import CACHE_TTL_SECONDS, DEFAULT_APP_CONFIG, get_app_config
 from vectorstore.db import get_pool
-from vectorstore.retrieve import DEFAULT_CANDIDATE_N, DEFAULT_RRF_K, DEFAULT_TOP_K, retrieve
+from vectorstore.retrieve import (
+    DEFAULT_CANDIDATE_N,
+    DEFAULT_RRF_K,
+    DEFAULT_TOP_K,
+    retrieve,
+)
 
 failures = 0
 FULL_USER = {"country": "India", "employment_type": "full-time employee"}
@@ -40,9 +43,9 @@ def main():
 
     print("1. Seeded values match the code constants / SQL")
     code = {"retrieval.top_k": DEFAULT_TOP_K, "retrieval.candidate_n": DEFAULT_CANDIDATE_N, "retrieval.rrf_k": DEFAULT_RRF_K}
-    for key in code:
+    for key, expected in code.items():
         seed = DEFAULT_APP_CONFIG[key][0]
-        check(f"{key}: seed {seed} == retrieve.py constant {code[key]}", seed == code[key])
+        check(f"{key}: seed {seed} == retrieve.py constant {expected}", seed == expected)
     rows = {r["key"]: r["value"] for r in c.get("/api/admin/config").json()["app_config (table: app_config)"]}
     check("DB rows currently equal seeds", all(rows.get(k) == DEFAULT_APP_CONFIG[k][0] for k in code), str(rows))
     check("per-channel top_k rows are seeded with the global's effective value",

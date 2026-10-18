@@ -212,7 +212,7 @@ def load_all(output_dir: Path):
     for path, doc_json in _load_document_jsons(output_dir):
         try:
             result = load_document(pool, doc_json, embedder, model_id)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             stats["errors"].append((path.name, str(exc)))
             print(f"  {path.name}: FAILED - {exc}")
             continue

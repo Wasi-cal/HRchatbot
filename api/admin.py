@@ -4,13 +4,11 @@ NO AUTH - see the security note in api/main.py.
 """
 import logging
 import os
-import shutil
+import re
 import threading
 from pathlib import Path
 from typing import Any, Literal
 from uuid import UUID
-
-import re
 
 import psycopg
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile
@@ -18,13 +16,17 @@ from psycopg.rows import dict_row
 from pydantic import BaseModel
 
 from access_control.extract_applicability import extract_and_store_for_document
-from config.runtime import get_active_provider_config, set_app_config, set_provider_setting
 from channels.common import clear_config_memo
-from config.prompts import SLOTS, refresh_prompt_cache
 from config.doc_caches import invalidate_document_caches
+from config.prompts import SLOTS, refresh_prompt_cache
+from config.runtime import (
+    get_active_provider_config,
+    get_app_config,
+    set_app_config,
+    set_provider_setting,
+)
 from generation.generate import get_client, get_generation_model
 from ingestion.pipeline import process_document
-from config.runtime import get_app_config
 from ingestion.title_checks import title_warning
 from vectorstore import duplicates as dup
 from vectorstore.db import get_pool
@@ -62,7 +64,7 @@ def _document_tags(conn, document_id) -> list[dict]:
 
 
 @router.post("/documents/upload")
-def upload_document(file: UploadFile = File(...), allow_duplicate: bool = Query(False)):
+def upload_document(file: UploadFile = File(...), allow_duplicate: bool = Query(False)):  # noqa: B008
     # Basename only: the name becomes documents.source_file, which is the
     # key for supersede-on-reupload, and must not carry path components.
     filename = Path(file.filename or "").name
@@ -322,6 +324,8 @@ def usage_summary(
                    count(*) FILTER (WHERE response_type = 'refusal_shortcut') AS refusal_shortcut,
                    count(*) FILTER (WHERE response_type = 'smalltalk') AS smalltalk,
                    count(*) FILTER (WHERE response_type = 'source_lookup') AS source_lookup,
+                   count(*) FILTER (WHERE response_type = 'section_lookup') AS section_lookup,
+                   count(*) FILTER (WHERE response_type = 'page_lookup') AS page_lookup,
                    count(*) FILTER (WHERE response_type = 'catalog') AS catalog,
                    count(*) FILTER (WHERE response_type = 'aborted') AS aborted,
                    count(*) FILTER (WHERE response_type = 'error') AS error,
@@ -349,6 +353,8 @@ def usage_summary(
             "refusal_shortcut": r["refusal_shortcut"],
             "smalltalk": r["smalltalk"],
             "source_lookup": r["source_lookup"],
+            "section_lookup": r["section_lookup"],
+            "page_lookup": r["page_lookup"],
             "catalog": r["catalog"],
             "aborted": r["aborted"],
             "error": r["error"],
@@ -431,7 +437,7 @@ def _source_templates(v):
     import string
 
     if not isinstance(v, dict) or any(k not in _SOURCE_FIELDS for k in v) or any(k not in v for k in ("one", "many", "none", "not_found")):
-        raise ValueError(f"must be an object with keys one, many, none, not_found (and optionally one_with_section)")
+        raise ValueError("must be an object with keys one, many, none, not_found (and optionally one_with_section)")
     for key, template in v.items():
         if not isinstance(template, str) or not template.strip():
             raise ValueError(f"{key!r} must be a non-empty string")
@@ -439,6 +445,42 @@ def _source_templates(v):
         if not fields <= _SOURCE_FIELDS[key]:
             raise ValueError(f"{key!r} may only use the placeholders {sorted(_SOURCE_FIELDS[key])}, found {sorted(fields)}")
     return {k: t.strip() for k, t in v.items()}
+
+
+_LOOKUP_FIELDS = {"section": {"section", "title"}, "section_also": {"section", "title"}, "section_title_only": {"title"},
+                  "page": {"section", "title"}, "page_title_only": {"title"}, "none": set(), "not_found": set()}
+
+
+def _lookup_templates(v):
+    import string
+
+    if not isinstance(v, dict) or set(v) != set(_LOOKUP_FIELDS):
+        raise ValueError(f"must be an object with exactly the keys {sorted(_LOOKUP_FIELDS)}")
+    from config.runtime import DEFAULT_APP_CONFIG
+
+    offers = [m.lower() for m in DEFAULT_APP_CONFIG["smalltalk.offer_markers"][0]] + ["would you like", "want me to"]
+    for key, template in v.items():
+        if not isinstance(template, str) or not template.strip():
+            raise ValueError(f"{key!r} must be a non-empty string")
+        used = {f for _, f, _, _ in string.Formatter().parse(template) if f is not None}
+        if not used <= _LOOKUP_FIELDS[key]:
+            raise ValueError(f"{key!r} may only use the placeholders {sorted(_LOOKUP_FIELDS[key])}, found {sorted(used)}")
+        if template.strip().endswith("?") or any(m in template.lower() for m in offers):
+            raise ValueError(f"{key!r} must not be or contain a question or an offer")
+    return {k: t.strip() for k, t in v.items()}
+
+
+def _regex_list(v):
+    import re
+
+    if not isinstance(v, list) or not v or any(not isinstance(x, str) or not x.strip() for x in v):
+        raise ValueError("must be a non-empty list of non-empty regular expressions")
+    for x in v:
+        try:
+            re.compile(x)
+        except re.error as e:
+            raise ValueError(f"invalid regular expression {x!r}: {e}")
+    return v
 
 
 _CATALOG_FIELDS = {
@@ -536,7 +578,7 @@ def _label_mode(v):
 
 def _bool(v):
     if not isinstance(v, bool):
-        raise ValueError("must be true or false")
+        raise ValueError("must be true or false")  # noqa: TRY004
     return v
 
 
@@ -587,6 +629,25 @@ _APP_CONFIG_VALIDATORS = {
     "smalltalk.offer_markers": _str_list,
     "source.markers": _str_list,
     "source.filler_words": _str_list,
+    "source.max_words": _pos_int,
+    "source.markers.extra": _str_list,
+    "section.markers": _str_list,
+    "page.markers": _str_list,
+    "lookup.wh_words": _str_list,
+    "lookup.you_tokens": _str_list,
+    "lookup.source_verbs": _str_list,
+    "lookup.anaphors": _str_list,
+    "section.words": _str_list,
+    "page.words": _str_list,
+    "lookup.tail_words": _str_list,
+    "lookup.exclude_words": _str_list,
+    "lookup.generic_sections": _str_list,
+    "lookup.skip_section_patterns": _regex_list,
+    "lookup.history_messages": _pos_int,
+    "lookup.max_sections.text": _pos_int,
+    "lookup.max_sections.voice": _pos_int,
+    "lookup.templates.text": _lookup_templates,
+    "lookup.templates.voice": _lookup_templates,
     "label.mode": _label_mode,
     "label.norm_min_share": _unit_interval,
     "dup.enabled": _bool,
@@ -597,6 +658,10 @@ _APP_CONFIG_VALIDATORS = {
     "catalog.stopwords": _str_list,
     "generation.first_token_timeout_s": _pos_number,
     "generation.request_timeout_s": _pos_number,
+    "generation.connect_timeout_s": _pos_number,
+    "generation.stream_gap_timeout_s": _pos_number,
+    "generation.keepalive_expiry_s": _pos_number,   # read at API startup: restart needed
+    "generation.client_warmup": _bool,              # read at API startup: restart needed
     "generation.max_retries.voice": _nonneg_int,
     "generation.max_retries.text": _nonneg_int,
     "generation.fallback_message": _fallback_message,

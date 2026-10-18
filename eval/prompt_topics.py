@@ -22,7 +22,7 @@ TOPICS = {
 
 
 def has_topic(prompt: str, topic: str) -> bool:
-    return all(re.search(p, prompt, re.I) for p in TOPICS[topic])
+    return all(re.search(p, prompt, re.IGNORECASE) for p in TOPICS[topic])
 
 
 def missing_topics(prompt: str, topics) -> list[str]:

@@ -15,16 +15,15 @@ The earlier assistant turns in the history are fixed neutral text, so every run 
 import argparse
 import json
 import re
-import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
-from channels import common, get_channel  # noqa: E402
-from config.prompts import get_system_prompt  # noqa: E402
-from vectorstore.db import close_pool, get_pool  # noqa: E402
+from channels import common, get_channel
+from config.prompts import get_system_prompt
+from vectorstore.db import close_pool
 
 H0 = [
     {"role": "user", "content": "My dog died."},
@@ -36,9 +35,9 @@ Q1 = "can I apply for bereavement leave for my dog"
 A1 = "The handbook lists bereavement leave as two days."
 Q2 = "do I need to send proof"
 
-NOT_MENTIONED = re.compile(r"(doesn'?t|does not|don'?t|do not|isn'?t|is not|not) (mention|say|state|specify|cover|list|include|clear)|couldn'?t find|could not find|no mention|nothing (in|about|on)|not (stated|specified|covered|mentioned|clear)", re.I)
-APPLIES = re.compile(r"\b(yes|you can (apply|take|request|use)|you('re| are) (eligible|entitled)|can apply|two days|2 days|entitled to)\b", re.I)
-REQUIREMENT = re.compile(r"(don'?t|do not|doesn'?t|does not|no|won'?t|not) (need|require|necessary|needed|required|have to|must)|\b(need|needs|required|must|have to|should|requires?) (to )?(provide|submit|send|show|attach|upload|give|produce|bring|have)|\b(no|any) (proof|documents?|documentation|certificate|evidence|photos?)\b|(proof|documentation|certificate|evidence|photos?) (is|are) (needed|required|necessary|not needed|not required)|approval (isn'?t|is not|is) (required|needed)", re.I)
+NOT_MENTIONED = re.compile(r"(doesn'?t|does not|don'?t|do not|isn'?t|is not|not) (mention|say|state|specify|cover|list|include|clear)|couldn'?t find|could not find|no mention|nothing (in|about|on)|not (stated|specified|covered|mentioned|clear)", re.IGNORECASE)
+APPLIES = re.compile(r"\b(yes|you can (apply|take|request|use)|you('re| are) (eligible|entitled)|can apply|two days|2 days|entitled to)\b", re.IGNORECASE)
+REQUIREMENT = re.compile(r"(don'?t|do not|doesn'?t|does not|no|won'?t|not) (need|require|necessary|needed|required|have to|must)|\b(need|needs|required|must|have to|should|requires?) (to )?(provide|submit|send|show|attach|upload|give|produce|bring|have)|\b(no|any) (proof|documents?|documentation|certificate|evidence|photos?)\b|(proof|documentation|certificate|evidence|photos?) (is|are) (needed|required|necessary|not needed|not required)|approval (isn'?t|is not|is) (required|needed)", re.IGNORECASE)
 
 
 def run_turn(channel, query, history):

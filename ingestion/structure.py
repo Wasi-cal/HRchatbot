@@ -3,7 +3,12 @@ sections (the unit chunking operates on)."""
 import re
 
 from .ocr_utils import OCR_CONFIDENCE_THRESHOLD
-from .utils import BARE_NUMBERED_ITEM_RE, NUMBERED_SECTION_RE, QA_PATTERN_RE, ANSWER_PATTERN_RE
+from .utils import (
+    ANSWER_PATTERN_RE,
+    BARE_NUMBERED_ITEM_RE,
+    NUMBERED_SECTION_RE,
+    QA_PATTERN_RE,
+)
 
 _EFFECTIVE_DATE_RE = re.compile(
     r"(effective\s+date|version|ver\.?)\s*[:\-]?\s*([A-Za-z0-9 ,./]+)", re.IGNORECASE

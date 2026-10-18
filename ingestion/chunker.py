@@ -2,8 +2,12 @@
 import re
 
 from .utils import (
-    MAX_CHUNK_TOKENS, content_hash, estimate_tokens, normalize_text,
-    QA_PATTERN_RE, ANSWER_PATTERN_RE,
+    ANSWER_PATTERN_RE,
+    MAX_CHUNK_TOKENS,
+    QA_PATTERN_RE,
+    content_hash,
+    estimate_tokens,
+    normalize_text,
 )
 
 _SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+")
@@ -102,7 +106,7 @@ def chunk_document(sections, document_title, id_prefix):
                     _make_prose_chunk(
                         counter,
                         id_prefix,
-                        section_path_str,
+                        section_path_str,  # noqa: B023
                         "",
                         source_type,
                         ocr_conf,
@@ -118,7 +122,7 @@ def chunk_document(sections, document_title, id_prefix):
                     _make_prose_chunk(
                         counter,
                         id_prefix,
-                        section_path_str,
+                        section_path_str,  # noqa: B023
                         full_text,
                         source_type,
                         ocr_conf,
@@ -127,7 +131,7 @@ def chunk_document(sections, document_title, id_prefix):
                 )
             else:
                 # section_path_str already contains document_title.
-                header = section_path_str
+                header = section_path_str  # noqa: B023
                 # Reserve room for the header that gets prepended below, so
                 # the final piece_text (header + piece) stays under the cap
                 # instead of the piece alone.
@@ -144,7 +148,7 @@ def chunk_document(sections, document_title, id_prefix):
                         _make_prose_chunk(
                             counter,
                             id_prefix,
-                            section_path_str,
+                            section_path_str,  # noqa: B023
                             piece_text,
                             source_type,
                             ocr_conf,

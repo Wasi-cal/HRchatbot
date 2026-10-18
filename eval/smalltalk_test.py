@@ -18,21 +18,22 @@ import json
 import os
 import sys
 import time
+from itertools import pairwise
 from pathlib import Path
 
 from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
-from fastapi.testclient import TestClient  # noqa: E402
+from fastapi.testclient import TestClient
 
-import channels.text as text_ch  # noqa: E402
-import channels.voice as voice_ch  # noqa: E402
-import config.topics as topics_mod  # noqa: E402
-import generation.generate as gen_mod  # noqa: E402
-from api.main import app  # noqa: E402
-from channels import common  # noqa: E402
-from vectorstore.db import close_pool, get_pool  # noqa: E402
+import channels.text as text_ch
+import channels.voice as voice_ch
+import config.topics as topics_mod
+import generation.generate as gen_mod
+from api.main import app
+from channels import common
+from vectorstore.db import close_pool, get_pool
 
 _results = []
 
@@ -136,7 +137,7 @@ def test_replies():
         name = ch.CHANNEL
         for category in ch._RESPONSES:
             seq = [ch.smalltalk_reply(category) for _ in range(30)]
-            check(f"[{name}] no back-to-back repeat for {category!r}", all(a != b for a, b in zip(seq, seq[1:])))
+            check(f"[{name}] no back-to-back repeat for {category!r}", all(a != b for a, b in pairwise(seq)))
             check(f"[{name}] {category!r} replies are short and spoken-friendly", all(len(r.split()) <= 20 for r in seq))
         cap = ch.smalltalk_reply(ch.CAPABILITIES)
         topics = topics_mod.get_topics()

@@ -1,5 +1,5 @@
 """POST /api/chat - the text channel: small talk, a source lookup or a catalog reply, else retrieve once + generate once."""
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, BackgroundTasks
 from pydantic import BaseModel, Field
@@ -45,6 +45,18 @@ class SourceLookupResponse(BaseModel):
     text: str
 
 
+class SectionLookupResponse(BaseModel):
+    """"What section is that in": the cleaned section names of the previous answer's chunks, templated - no LLM call."""
+    type: Literal["section_lookup"] = "section_lookup"
+    text: str
+
+
+class PageLookupResponse(BaseModel):
+    """"What page number": no page data exists, so the reply says so and names the section - no LLM call."""
+    type: Literal["page_lookup"] = "page_lookup"
+    text: str
+
+
 class CatalogResponse(BaseModel):
     """"What documents do you have": a templated reply from the cached title list - no LLM, retrieval or
     embedding call."""
@@ -60,7 +72,7 @@ class SmalltalkResponse(BaseModel):
 
 
 ChatResponse = Annotated[
-    Union[AnswerResponse, RefusalResponse, SmalltalkResponse, SourceLookupResponse, CatalogResponse], Field(discriminator="type")
+    AnswerResponse | RefusalResponse | SmalltalkResponse | SourceLookupResponse | SectionLookupResponse | PageLookupResponse | CatalogResponse, Field(discriminator="type")
 ]
 
 
@@ -84,20 +96,20 @@ def chat(req: ChatRequest, background: BackgroundTasks):
         )
         return SmalltalkResponse(text=text)
 
-    # "Where is this from": 0 LLM calls, one re-retrieval of the previous answer's turn.
+    # "Where is this from" / "what section" / "what page number": 0 LLM calls, one re-retrieval of the previous answer's turn.
     source = text_channel.source_reply(req.query, history)
     if source:
         background.add_task(
             log_query,
             query_text=req.query,
-            response_type="source_lookup",
+            response_type=source["type"],
             answer_text=source["text"],
             chunk_ids_used=source["chunk_ids"],
             timing=source["timing"],
             contextualized=False,
             advisory=False,
         )
-        return SourceLookupResponse(text=source["text"])
+        return {"source_lookup": SourceLookupResponse, "section_lookup": SectionLookupResponse, "page_lookup": PageLookupResponse}[source["type"]](text=source["text"])
 
     # "What documents do you have": templated from the cached title list, 0 LLM / retrieval / embedding calls.
     catalog_answer = text_channel.catalog_reply(req.query, history)

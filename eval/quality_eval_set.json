@@ -1843,5 +1843,125 @@
     "history": [],
     "expected_behavior": "Plain, confident: 7 days. No hedging, no 'check with HR'.",
     "notes": "Prompt v8 measurement turn (eval/coverage_claims_measure.py)."
+  },
+  {
+    "id": "lk_source",
+    "query": "What's the source?",
+    "category": "source_lookup",
+    "channel": "voice",
+    "history": [
+      {
+        "role": "user",
+        "content": "how many days of earned leave do I get"
+      },
+      {
+        "role": "assistant",
+        "content": "You get 21 days of earned leave every calendar year. Up to 10 unused days carry forward to the next year; any excess lapses on December 31st."
+      }
+    ],
+    "expected_behavior": "source_lookup",
+    "notes": "REAL TRANSCRIPT (voice). Used to go through the model: this one already worked ('That's from the employee handbook policy.'). Now deterministic: 0 LLM calls, 1 retrieval + 1 embedding of the ORIGINAL answered question ('how many days of earned leave do I get'), chunks equal to the answer's. Expect a templated reply that names the document (and, for section/page, the cleaned section: no numbering, no table-row label); never a question or an offer."
+  },
+  {
+    "id": "lk_page",
+    "query": "What page number?",
+    "category": "page_lookup",
+    "channel": "voice",
+    "history": [
+      {
+        "role": "user",
+        "content": "how many days of earned leave do I get"
+      },
+      {
+        "role": "assistant",
+        "content": "You get 21 days of earned leave every calendar year. Up to 10 unused days carry forward to the next year; any excess lapses on December 31st."
+      },
+      {
+        "role": "user",
+        "content": "What's the source?"
+      },
+      {
+        "role": "assistant",
+        "content": "That's from the employee handbook policy."
+      }
+    ],
+    "expected_behavior": "page_lookup",
+    "notes": "REAL TRANSCRIPT (voice). Used to go through the model: \"I couldn't find the page number in the HR policies. You may want to reach out to HR.\". Now deterministic: 0 LLM calls, 1 retrieval + 1 embedding of the ORIGINAL answered question ('how many days of earned leave do I get'), chunks equal to the answer's. Expect a templated reply that names the document (and, for section/page, the cleaned section: no numbering, no table-row label); never a question or an offer. No page data exists: the reply says so and names the section, e.g. 'I don't have page numbers for that document, but it's in the ... section of the ...'."
+  },
+  {
+    "id": "lk_section",
+    "query": "What section of the HR policies did you get it from?",
+    "category": "section_lookup",
+    "channel": "voice",
+    "history": [
+      {
+        "role": "user",
+        "content": "how many days of earned leave do I get"
+      },
+      {
+        "role": "assistant",
+        "content": "You get 21 days of earned leave every calendar year. Up to 10 unused days carry forward to the next year; any excess lapses on December 31st."
+      },
+      {
+        "role": "user",
+        "content": "What's the source?"
+      },
+      {
+        "role": "assistant",
+        "content": "That's from the employee handbook policy."
+      },
+      {
+        "role": "user",
+        "content": "What page number?"
+      },
+      {
+        "role": "assistant",
+        "content": "I don't have page numbers for that document, but it's in the leave policy section of the employee handbook policy."
+      }
+    ],
+    "expected_behavior": "section_lookup",
+    "notes": "REAL TRANSCRIPT (voice). Used to go through the model: \"I couldn't find the specific section...\" (section_path is stored per chunk). Now deterministic: 0 LLM calls, 1 retrieval + 1 embedding of the ORIGINAL answered question ('how many days of earned leave do I get'), chunks equal to the answer's. Expect a templated reply that names the document (and, for section/page, the cleaned section: no numbering, no table-row label); never a question or an offer."
+  },
+  {
+    "id": "lk_source2",
+    "query": "And where are you sourcing this from?",
+    "category": "source_lookup",
+    "channel": "voice",
+    "history": [
+      {
+        "role": "user",
+        "content": "how many days of earned leave do I get"
+      },
+      {
+        "role": "assistant",
+        "content": "You get 21 days of earned leave every calendar year. Up to 10 unused days carry forward to the next year; any excess lapses on December 31st."
+      },
+      {
+        "role": "user",
+        "content": "What's the source?"
+      },
+      {
+        "role": "assistant",
+        "content": "That's from the employee handbook policy."
+      },
+      {
+        "role": "user",
+        "content": "What page number?"
+      },
+      {
+        "role": "assistant",
+        "content": "I don't have page numbers for that document, but it's in the leave policy section of the employee handbook policy."
+      },
+      {
+        "role": "user",
+        "content": "What section of the HR policies did you get it from?"
+      },
+      {
+        "role": "assistant",
+        "content": "That's in the leave policy section of the employee handbook policy."
+      }
+    ],
+    "expected_behavior": "source_lookup",
+    "notes": "REAL TRANSCRIPT (voice). Used to go through the model: \"I can't provide the source of the information...\" (the phrase was not in source.markers); the walk-back skips the earlier source, page and section turns. Now deterministic: 0 LLM calls, 1 retrieval + 1 embedding of the ORIGINAL answered question ('how many days of earned leave do I get'), chunks equal to the answer's. Expect a templated reply that names the document (and, for section/page, the cleaned section: no numbering, no table-row label); never a question or an offer."
   }
 ]

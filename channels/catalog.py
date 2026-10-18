@@ -46,9 +46,7 @@ def is_catalog_question(text: str, history: list | None = None) -> bool:
     nouns = [common.normalize(n) for n in common.memo_config("catalog.nouns", []) or []]
     if not ({n for n in nouns if " " not in n} & set(tokens) or " ".join(expanded.split()) in {n for n in nouns if " " in n}):
         return False
-    if common.previous_turn_invites_reply(history) and words[0] not in QUESTION_STARTERS:
-        return False
-    return True
+    return not (common.previous_turn_invites_reply(history) and words[0] not in QUESTION_STARTERS)
 
 
 def _join_and(items: list[str]) -> str:

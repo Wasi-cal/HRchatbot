@@ -20,20 +20,18 @@ from dotenv import load_dotenv
 ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(ROOT / ".env")
 
-import pymupdf  # noqa: E402
-from fastapi.testclient import TestClient  # noqa: E402
+import pymupdf
+from fastapi.testclient import TestClient
 
-import channels.text as text_ch  # noqa: E402
-import channels.voice as voice_ch  # noqa: E402
-import config.labels as labels_mod  # noqa: E402
-import vectorstore.retrieve as retrieve_mod  # noqa: E402
-from api import admin as admin_mod  # noqa: E402
-from api.main import app  # noqa: E402
-from channels import common  # noqa: E402
-from config.doc_caches import invalidate_document_caches  # noqa: E402
-from config.runtime import get_app_config, set_app_config  # noqa: E402
-from eval import turn_calls  # noqa: E402
-from vectorstore.db import close_pool, get_pool  # noqa: E402
+import channels.text as text_ch
+import config.labels as labels_mod
+import vectorstore.retrieve as retrieve_mod
+from api import admin as admin_mod
+from api.main import app
+from config.doc_caches import invalidate_document_caches
+from config.runtime import get_app_config
+from eval import turn_calls
+from vectorstore.db import close_pool, get_pool
 
 DOCS_DIR = ROOT / "hr docs"
 STAGING = admin_mod.STAGING_DIR
@@ -362,8 +360,8 @@ def test_helper():
     src = inspect.getsource(admin_mod)
     check("admin.py uses invalidate_document_caches() on upload, restrict, status and title (no direct invalidate_topics)",
           src.count("invalidate_document_caches()") >= 4 and "invalidate_topics" not in src, str(src.count("invalidate_document_caches()")))
-    from cache.redis_cache import MISS, get_cached
     import config.topics as topics_mod
+    from cache.redis_cache import MISS, get_cached
     topics_mod.get_catalog_titles(); labels_mod.get_label_norms(); topics_mod.get_topics()
     check("the three document-derived caches are populated", all(get_cached(k) is not MISS for k in (topics_mod.CATALOG_CACHE_KEY, labels_mod.LABEL_NORMS_CACHE_KEY, topics_mod.TOPICS_CACHE_KEY)))
     invalidate_document_caches()
@@ -390,6 +388,10 @@ def test_stopwords_and_counts(client):
     now = turn_calls.run_all(client)
     turn_calls.print_table(now)
     for label, base in baseline.items():
+        if "source lookup" in label:  # one Redis read fewer since lookups scan the longer history window directly (never more calls)
+            same = all(now[label][k] == base[k] for k in ("llm", "retrieve", "embed")) and all(now[label][k] <= base[k] for k in ("db", "redis"))
+            check(f"unchanged vs baseline (no more calls): {label}", same, f"baseline {base} now {now[label]}")
+            continue
         check(f"unchanged vs baseline: {label}", now[label] == base, f"baseline {base} now {now[label]}")
 
 

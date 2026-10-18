@@ -31,9 +31,14 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
-from channels import get_channel  # noqa: E402
-from eval.coverage_claims_measure import COVERAGE, HEDGE_FACT, HEDGE_UNSTATED, _LogTap  # noqa: E402
-from vectorstore.db import close_pool  # noqa: E402
+from channels import get_channel
+from eval.coverage_claims_measure import (
+    COVERAGE,
+    HEDGE_FACT,
+    HEDGE_UNSTATED,
+    _LogTap,
+)
+from vectorstore.db import close_pool
 
 RESULTS = Path(__file__).parent / "results"
 CONFIGS = {
@@ -67,10 +72,10 @@ TURNS = [
 ]
 KEY_TURNS = ["dog", "who_bereavement", "proof_bereavement", "proof_sick", "approval_earned", "intern", "trip"]
 
-REQ_POS = re.compile(r"\b(need|needs|required|requires?|must|have to|should)\b[^.]{0,40}\b(proof|approval|approved|documents?|documentation|certificates?|photos?|provide|submit|send|notice)|\b(proof|approval|documents?|documentation|certificates?|photos?)\b[^.]{0,25}\b(is|are) (needed|required|necessary)|\bautomatically\b", re.I)
-NEGATED = re.compile(r"(don'?t|do not|doesn'?t|does not|no|not) (need|require|required|necessary|needed)|no need|not required|isn'?t required|isn'?t needed", re.I)
-NOUNS = re.compile(r"approval|approve|proof|documents?|documentation|photos?|certificates?|evidence", re.I)
-BAD_GROUP_CLAIM = re.compile(r"not entitled|are not eligible|typically|differs|different (?:leave )?polic", re.I)
+REQ_POS = re.compile(r"\b(need|needs|required|requires?|must|have to|should)\b[^.]{0,40}\b(proof|approval|approved|documents?|documentation|certificates?|photos?|provide|submit|send|notice)|\b(proof|approval|documents?|documentation|certificates?|photos?)\b[^.]{0,25}\b(is|are) (needed|required|necessary)|\bautomatically\b", re.IGNORECASE)
+NEGATED = re.compile(r"(don'?t|do not|doesn'?t|does not|no|not) (need|require|required|necessary|needed)|no need|not required|isn'?t required|isn'?t needed", re.IGNORECASE)
+NOUNS = re.compile(r"approval|approve|proof|documents?|documentation|photos?|certificates?|evidence", re.IGNORECASE)
+BAD_GROUP_CLAIM = re.compile(r"not entitled|are not eligible|typically|differs|different (?:leave )?polic", re.IGNORECASE)
 
 
 def _sentences(text):
@@ -91,7 +96,7 @@ def screen(turn, kinds, text):
     if "d" in kinds:
         flags["d"] = "couldn't find" in t.lower() and not BAD_GROUP_CLAIM.search(t)
     if "t" in kinds:
-        flags["t"] = bool(re.search(r"five-day|5-day|working week|working days", t, re.I) and re.search(r"\b(2|two)\b", t) and not re.search(r"\b(4|four)\b", t))
+        flags["t"] = bool(re.search(r"five-day|5-day|working week|working days", t, re.IGNORECASE) and re.search(r"\b(2|two)\b", t) and not re.search(r"\b(4|four)\b", t))
     return flags
 
 
@@ -128,7 +133,7 @@ class Switcher:
         self.current = name
 
     def restore(self):
-        for ch, prompt_id in self.original.items():
+        for prompt_id in self.original.values():
             self.client.post(f"/api/admin/prompts/{prompt_id}/activate")
         self.client.patch("/api/admin/config/prompts.turn_reminder", json={"value": self.saved["reminder"]})
         self.client.patch("/api/admin/config/generation.temperature", json={"value": self.saved["temperature"]})
@@ -155,7 +160,7 @@ def main():
                 jobs = [(ch, t) for ch in ("text", "voice") for t in TURNS]
 
                 def work(job):
-                    ch, (key, q, hist, kinds) = job
+                    ch, (_key, q, hist, _kinds) = job
                     return job, get_channel(ch).answer(q, history=hist)["answer"]
 
                 with ThreadPoolExecutor(args.workers) as pool:
@@ -181,15 +186,15 @@ def main():
     usage = {}
     for c, rows in usage_rows.items():
         if rows:
-            m = lambda k: round(sum(x.get(k, 0) for x in rows) / len(rows), 1)
+            m = lambda k, rows=rows: round(sum(x.get(k, 0) for x in rows) / len(rows), 1)
             usage[c] = {"turns": len(rows), "ttft_ms": m("ttft_ms"), "prompt_tokens": m("prompt_tokens"), "cached_tokens": m("cached_tokens"), "completion_tokens": m("completion_tokens")}
     out = {"label": args.label, "runs": args.runs, "configs": {k: {**v, "reminder": str(v["reminder"]) if v["reminder"] else None} for k, v in CONFIGS.items()},
            "summary_flags": summary, "usage": usage, "per_turn": {"|".join(k): v for k, v in per_turn.items()}, "records": records}
     (RESULTS / f"ab_{args.label}.json").write_text(json.dumps(out, indent=2, ensure_ascii=False))
     # ---- blinded side by side
     rng = random.Random(20261014)
-    key, lines = {}, [f"# Blinded side-by-side ({args.label})", "", "Each block shows the answers of THREE configurations as sets A/B/C (order shuffled per turn and channel). "
-                      "Grade them blind; the mapping is in the key file.", ""]
+    key, lines = {}, [f"# Blinded side-by-side ({args.label})", "", ("Each block shows the answers of THREE configurations as sets A/B/C (order shuffled per turn and channel). "
+                      "Grade them blind; the mapping is in the key file."), ""]
     by = {}
     for r in records:
         by.setdefault((r["turn"], r["channel"], r["config"]), []).append(r)

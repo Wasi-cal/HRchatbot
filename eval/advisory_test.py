@@ -20,17 +20,15 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
-from fastapi.testclient import TestClient  # noqa: E402
+from fastapi.testclient import TestClient
 
-import channels.text as text_ch  # noqa: E402
-import channels.voice as voice_ch  # noqa: E402
-import generation.generate as gen_mod  # noqa: E402
-import vectorstore.retrieve as retrieve_mod  # noqa: E402
-from api.main import app  # noqa: E402
-from api.voice import conversation_history  # noqa: E402
-from channels import common  # noqa: E402
-from config.runtime import get_app_config, set_app_config  # noqa: E402
-from vectorstore.db import close_pool, get_pool  # noqa: E402
+import generation.generate as gen_mod
+import vectorstore.retrieve as retrieve_mod
+from api.main import app
+from api.voice import conversation_history
+from channels import common
+from config.runtime import get_app_config, set_app_config
+from vectorstore.db import close_pool, get_pool
 
 T1 = "whats my leave policy"
 T2 = "i need to go to my hometown for a week but i only have 3 leaves left"
@@ -345,11 +343,9 @@ def test_quality_set():
 
 
 def main():
-    install_ok = False
     try:
         with TestClient(app) as client:
             install_counters()
-            install_ok = True
             client.post("/api/chat", json={"query": "warm up: what is the leave policy"})
             test_history()
             test_deterministic_logic()

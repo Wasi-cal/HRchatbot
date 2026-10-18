@@ -11,7 +11,6 @@ Restricting is reverted at the end. Equivalent curl commands are in
 api/README.md.
 """
 import argparse
-import json
 import sys
 from pathlib import Path
 

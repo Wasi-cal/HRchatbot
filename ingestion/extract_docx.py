@@ -22,7 +22,7 @@ def extract_docx(path):
     blocks = []
     try:
         doc = Document(path)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         return [], [f"failed to open DOCX: {exc}"]
 
     for child in doc.element.body.iterchildren():
@@ -33,7 +33,7 @@ def extract_docx(path):
             elif child.tag == qn("w:tbl"):
                 table = Table(child, doc)
                 blocks.append(_table_to_block(table))
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             errors.append(f"element extraction failed: {exc}")
 
     return blocks, errors
@@ -78,7 +78,7 @@ def _handle_inline_image(doc, drawing_el):
             pil_img = Image.open(
                 io.BytesIO(image_part.blob)
             ).convert("RGB")
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             logger.debug(
                 "failed to load embedded docx image %s: %s",
                 rId,

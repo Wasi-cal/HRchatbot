@@ -19,18 +19,18 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
-from fastapi.testclient import TestClient  # noqa: E402
+from fastapi.testclient import TestClient
 
-import channels.text as text_ch  # noqa: E402
-import channels.voice as voice_ch  # noqa: E402
-from eval.prompt_topics import has_topic  # noqa: E402
-import config.prompts as prompts_mod  # noqa: E402
-import generation.generate as gen_mod  # noqa: E402
-import vectorstore.retrieve as retrieve_mod  # noqa: E402
-from api.main import app  # noqa: E402
-from channels import common  # noqa: E402
-from config.runtime import get_app_config, set_app_config  # noqa: E402
-from vectorstore.db import close_pool, get_pool  # noqa: E402
+import channels.text as text_ch
+import channels.voice as voice_ch
+import config.prompts as prompts_mod
+import generation.generate as gen_mod
+import vectorstore.retrieve as retrieve_mod
+from api.main import app
+from channels import common
+from config.runtime import get_app_config
+from eval.prompt_topics import has_topic
+from vectorstore.db import close_pool, get_pool
 
 REFERRAL_Q = "will I get paid extra for recommending a friend for a job here"
 TRIP_Q = "i need to go to my hometown for a week and i have only 3 leaves left"
@@ -181,7 +181,7 @@ def test_smalltalk(client):
 # ---- (c) source lookup --------------------------------------------------------------------------------------------
 
 def chunk_ids_of(mod, query, history=None):
-    return [e for e in mod.answer_stream(query, history=history) if e["type"] == "done"][0]["chunk_ids"]
+    return next(e for e in mod.answer_stream(query, history=history) if e["type"] == "done")["chunk_ids"]
 
 
 def test_source(client):
@@ -357,8 +357,8 @@ def test_counts(client):
 
 # When the user has SAID they are an intern, "as an intern" / "you are an intern" is correct wording; only the
 # unsupported claims count there.
-BAD_CLAIM_STATED = re.compile(r"not entitled|are not eligible|typically|differs|different (?:leave )?polic", re.I)
-BAD_CLAIM = re.compile(r"as an intern|you are an intern|not entitled|are not eligible|typically|differs|different (?:leave )?polic", re.I)
+BAD_CLAIM_STATED = re.compile(r"not entitled|are not eligible|typically|differs|different (?:leave )?polic", re.IGNORECASE)
+BAD_CLAIM = re.compile(r"as an intern|you are an intern|not entitled|are not eligible|typically|differs|different (?:leave )?polic", re.IGNORECASE)
 
 
 def test_model_behaviour():
@@ -375,7 +375,7 @@ def test_model_behaviour():
               all("couldn't find" in a.lower().replace("\u2019", "'") and not BAD_CLAIM_STATED.search(a) for a in flow), " || ".join(a[:90] for a in flow))
         trips = [ch.answer(TRIP_Q)["answer"] for _ in range(3)]
         check(f"[{name}] trip / 3 leaves left: states the working-week assumption and says 2 unpaid days, never 4",
-              all(re.search(r"five-day|5-day|working week|working days", a, re.I) and re.search(r"\b(2|two)\b", a) and not re.search(r"\b(4|four)\b", a) for a in trips), " || ".join(a[:110] for a in trips))
+              all(re.search(r"five-day|5-day|working week|working days", a, re.IGNORECASE) and re.search(r"\b(2|two)\b", a) and not re.search(r"\b(4|four)\b", a) for a in trips), " || ".join(a[:110] for a in trips))
 
 
 def test_quality_set():

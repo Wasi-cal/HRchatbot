@@ -93,7 +93,7 @@ def try_extract_tables(img: Image.Image):
         doc = I2TImage(buf, detect_rotation=False)
         ocr = TesseractOCR(lang="eng")
         extracted = doc.extract_tables(ocr=ocr, implicit_rows=False, borderless_tables=False)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logger.warning("img2table extraction failed: %s", exc)
         return []
 
@@ -101,7 +101,7 @@ def try_extract_tables(img: Image.Image):
     for table in extracted:
         try:
             df = table.df
-        except Exception:
+        except Exception:  # noqa: BLE001, S112
             continue
         if df is None or df.empty:
             continue
@@ -117,7 +117,7 @@ def try_extract_tables(img: Image.Image):
             )
             crop = img.crop((x1, y1, x2, y2))
             _, conf = ocr_plain_text(crop)
-        except Exception:
+        except Exception:  # noqa: BLE001
             conf = 0.5
             x1 = y1 = x2 = y2 = 0
 

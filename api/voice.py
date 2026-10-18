@@ -18,7 +18,6 @@ once and stream (channels/voice.py); a "where is this from" turn is a templated 
 applicability filtering and no per-user attributes - see
 docs/applicability_layer_removed.md.
 """
-import asyncio
 import json
 import logging
 import os
@@ -34,9 +33,9 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict
 
 from api.query_log import log_query
+from api.voice_settings import ENV_PATH_DEFAULT, build_agent_settings
 from channels import common
 from channels import voice as voice_channel
-from api.voice_settings import ENV_PATH_DEFAULT, build_agent_settings
 
 logger = logging.getLogger(__name__)
 
@@ -99,10 +98,10 @@ def _turn_pieces(turns, record: dict, handle: common.TurnHandle):
         yield text
         return
 
-    # "Where is this from": 0 LLM calls, one re-retrieval of the previous answer's turn.
+    # "Where is this from" / "what section" / "what page number": 0 LLM calls, one re-retrieval of the previous answer's turn.
     source = voice_channel.source_reply(current, history)
     if source:
-        record.update(query_text=current, response_type="source_lookup", pieces=[source["text"]],
+        record.update(query_text=current, response_type=source["type"], pieces=[source["text"]],
                       chunk_ids_used=source["chunk_ids"], timing=source["timing"], contextualized=False, advisory=False)
         yield source["text"]
         return
@@ -198,7 +197,7 @@ def mint_token():
     if not key or key == "changeme":
         raise HTTPException(503, "DEEPGRAM_API_KEY is not configured on the server")
     # Must be an int: Deepgram silently ignores a float (e.g. 60.0) and uses its 30s default.
-    ttl = int(float(os.environ.get("DEEPGRAM_TOKEN_TTL_SECONDS", 60)))
+    ttl = int(float(os.environ.get("DEEPGRAM_TOKEN_TTL_SECONDS", "60")))
     try:
         r = httpx.post(DEEPGRAM_GRANT_URL, headers={"Authorization": f"Token {key}"},
                        json={"ttl_seconds": ttl}, timeout=10)
@@ -242,7 +241,7 @@ async def _debug_log_raw_request(request: Request):
             f"  raw body: {raw.decode('utf-8', 'replace')}")
     print(line, flush=True)
     if path := os.environ.get("VOICE_DEBUG_LOG_FILE"):
-        with open(path, "a", encoding="utf-8") as f:
+        with open(path, "a", encoding="utf-8") as f:  # noqa: ASYNC230
             f.write(line + "\n")
 
 
@@ -276,12 +275,12 @@ def _chunk(completion_id, model, created, delta, finish=None) -> str:
 
 _END = object()
 _think_logger = logging.getLogger("hrchatbot.voice")
-_TYPE_BY_RESPONSE = {"answer": "answer", "refusal_shortcut": "shortcut", "smalltalk": "smalltalk", "source_lookup": "source_lookup",
+_TYPE_BY_RESPONSE = {"answer": "answer", "refusal_shortcut": "shortcut", "smalltalk": "smalltalk", "source_lookup": "source_lookup", "section_lookup": "section_lookup", "page_lookup": "page_lookup",
                      "catalog": "catalog", "aborted": "aborted", "error": "error"}
 
 
 def _log_think(started: float, kind: str, disconnected: bool, handle: common.TurnHandle | None = None, **extra) -> None:
-    """ONE INFO line per think request: type (answer | source_lookup | smalltalk | catalog | shortcut | aborted | error),
+    """ONE INFO line per think request: type (answer | source_lookup | section_lookup | page_lookup | smalltalk | catalog | shortcut | aborted | error),
     duration_ms and client_disconnected; generation turns add the OpenAI request id, attempts, time to response headers,
     time to first token and token usage (all captured from the same call - no extra request)."""
     fields = {"type": kind, "duration_ms": round((time.monotonic() - started) * 1000), "client_disconnected": disconnected}
@@ -301,7 +300,7 @@ def _next_piece(iterator):
 
 
 @router.post("/v1/chat/completions")
-async def think(req: ThinkRequest, authorization: str | None = Header(None), _debug=Depends(_debug_log_raw_request)):
+async def think(req: ThinkRequest, authorization: str | None = Header(None), _debug=Depends(_debug_log_raw_request)):  # noqa: B008
     started = time.monotonic()
     try:
         _check_auth(authorization)

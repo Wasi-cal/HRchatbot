@@ -38,7 +38,7 @@ def _conninfo() -> str:
 def _configure_connection(conn):
     try:
         register_vector(conn)
-    except Exception:
+    except Exception:  # noqa: BLE001, S110
         # The pgvector extension/type doesn't exist yet - this happens on
         # a brand-new database before setup_db.py has run. Connections
         # opened after that will register successfully.
@@ -50,8 +50,8 @@ def get_pool() -> ConnectionPool:
     if _pool is None:
         _pool = ConnectionPool(
             conninfo=_conninfo(),
-            min_size=int(os.environ.get("PG_POOL_MIN", 1)),
-            max_size=int(os.environ.get("PG_POOL_MAX", 5)),
+            min_size=int(os.environ.get("PG_POOL_MIN", "1")),
+            max_size=int(os.environ.get("PG_POOL_MAX", "5")),
             configure=_configure_connection,
             open=True,
         )

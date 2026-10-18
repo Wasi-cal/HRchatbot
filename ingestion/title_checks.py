@@ -45,7 +45,7 @@ def title_warning(title: str | None, generic_phrases: list[str], pdf_path: Path 
     if pdf_path is not None and Path(pdf_path).suffix.lower() == ".pdf":
         try:
             repeated = repeated_lines(Path(pdf_path))
-        except Exception:  # a warning must never fail an upload
+        except Exception:  # a warning must never fail an upload  # noqa: BLE001
             repeated = {}
         if normalized and normalized in repeated:
             reasons.append(f"the title equals a line repeated on {repeated[normalized]} pages of the source file (a running header?)")

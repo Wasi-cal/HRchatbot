@@ -21,9 +21,9 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
-import channels.text as text_ch  # noqa: E402
-from channels import common  # noqa: E402
-from vectorstore.db import close_pool  # noqa: E402
+import channels.text as text_ch
+from channels import common
+from vectorstore.db import close_pool
 
 SET_PATHS = {"tuned": Path(__file__).parent / "context_dilution_set.json", "heldout": Path(__file__).parent / "context_dilution_heldout.json",
              "identity_heldout": Path(__file__).parent / "context_dilution_identity_heldout.json"}

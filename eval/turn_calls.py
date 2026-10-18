@@ -12,22 +12,21 @@ made before the catalog intent existed (see CALLS_BASELINE in that file).
 import argparse
 import json
 import os
-import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
-import psycopg  # noqa: E402
-import redis  # noqa: E402
-from fastapi.testclient import TestClient  # noqa: E402
+import psycopg
+import redis
+from fastapi.testclient import TestClient
 
-import channels.text as text_ch  # noqa: E402
-import channels.voice as voice_ch  # noqa: E402
-import generation.generate as gen_mod  # noqa: E402
-import vectorstore.retrieve as retrieve_mod  # noqa: E402
-from api.main import app  # noqa: E402
+import channels.text as text_ch
+import channels.voice as voice_ch
+import generation.generate as gen_mod
+import vectorstore.retrieve as retrieve_mod
+from api.main import app
 
 calls = {"llm": 0, "retrieve": 0, "embed": 0, "db": 0, "redis": 0}
 _installed = False

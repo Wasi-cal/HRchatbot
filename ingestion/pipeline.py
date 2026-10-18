@@ -7,8 +7,10 @@ from .extract_docx import extract_docx
 from .extract_pdf import extract_pdf
 from .qaflags import apply_qa_flags
 from .structure import (
-    build_sections, detect_document_title,
-    detect_effective_date, evaluate_structure_status,
+    build_sections,
+    detect_document_title,
+    detect_effective_date,
+    evaluate_structure_status,
 )
 from .utils import find_repeated_lines, normalize_text, strip_headers_footers
 

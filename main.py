@@ -60,7 +60,7 @@ def main():
         start = time.time()
         try:
             doc_json, stats = process_document(f)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             summary["extraction_errors"].append({"file": f.name, "error": str(exc)})
             print(f"  FAILED: {exc}")
             continue

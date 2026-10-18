@@ -3,6 +3,7 @@
 Run locally:  uvicorn api.main:app --reload   (apply the schema first: python3 -m vectorstore.setup_db)
 Docs:         http://localhost:8000/docs
 """
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -14,11 +15,15 @@ from fastapi.staticfiles import StaticFiles
 
 load_dotenv()
 
-from api import admin, chat, voice  # noqa: E402  (after load_dotenv so env is set at import)
-from cache import redis_cache  # noqa: E402
-from config.runtime import seed_runtime_config  # noqa: E402
-from vectorstore.db import close_pool, get_pool  # noqa: E402
-from vectorstore.retrieve import _get_embedder  # noqa: E402
+from api import (
+    admin,
+    chat,
+    voice,
+)
+from cache import redis_cache
+from config.runtime import get_app_config, seed_runtime_config
+from vectorstore.db import close_pool, get_pool
+from vectorstore.retrieve import _get_embedder
 
 
 @asynccontextmanager
@@ -35,7 +40,12 @@ async def lifespan(app: FastAPI):
         backfill_fingerprints(conn)  # idempotent: only documents without a content_fingerprint
     redis_cache.configure()
     _get_embedder()  # load BGE-M3 now rather than on the first request
+    from generation import generate
+
+    if os.environ.get("OPENAI_API_KEY"):
+        generate.init_client(warm_up=bool(get_app_config("generation.client_warmup", True)))  # ONE process-wide client, warmed
     yield
+    generate.close_client()
     close_pool()
 
 

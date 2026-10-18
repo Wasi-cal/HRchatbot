@@ -42,7 +42,7 @@ def _load_norms() -> dict:
     for tag_type, docs in per_doc.items():
         counts = Counter(tuple(sorted(values)) for values in docs.values())
         # most common set; ties broken by the set itself so the choice is stable
-        norm, count = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))[0]
+        norm, count = min(counts.items(), key=lambda kv: (-kv[1], kv[0]))
         norms[tag_type] = {"norm": list(norm), "share": count / len(docs), "docs": len(docs)}
     return norms
 

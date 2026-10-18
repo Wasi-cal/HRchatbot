@@ -37,9 +37,12 @@ def apply_qa_flags(chunks):
         else:
             chunk.pop("_row_mismatch", None)
 
-        if chunk["source_type"] == "ocr" and chunk.get("ocr_confidence") is not None:
-            if chunk["ocr_confidence"] < OCR_CONFIDENCE_THRESHOLD:
-                flags.append("low_ocr_confidence")
+        if (
+            chunk["source_type"] == "ocr"
+            and chunk.get("ocr_confidence") is not None
+            and chunk["ocr_confidence"] < OCR_CONFIDENCE_THRESHOLD
+        ):
+            flags.append("low_ocr_confidence")
 
         chunk["qa_flags"] = flags
         for f in flags:

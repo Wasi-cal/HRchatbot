@@ -125,7 +125,7 @@ CREATE TABLE IF NOT EXISTS query_logs (
     id                          BIGSERIAL PRIMARY KEY,
     created_at                  TIMESTAMPTZ NOT NULL DEFAULT now(),
     query_text                  TEXT NOT NULL,
-    response_type               TEXT NOT NULL CHECK (response_type IN ('answer', 'clarification', 'refusal_shortcut', 'smalltalk', 'source_lookup', 'catalog', 'aborted', 'error')),
+    response_type               TEXT NOT NULL CHECK (response_type IN ('answer', 'clarification', 'refusal_shortcut', 'smalltalk', 'source_lookup', 'section_lookup', 'page_lookup', 'catalog', 'aborted', 'error', 'crisis')),
     answer_text                 TEXT,
     user_attributes             JSONB,    -- legacy: no longer written (applicability layer unwired)
     blocking_tag_type           TEXT,     -- legacy: only on historical response_type = 'clarification' rows
@@ -145,6 +145,7 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
+-- 'section_lookup' / 'page_lookup' ("what section" / "what page number": same deterministic path as source_lookup).
 -- 'smalltalk' (greetings etc. answered without retrieval/LLM) and 'source_lookup' ("where is this from": a
 -- templated reply from a deterministic re-retrieval, no LLM; see channels/common.py) and 'catalog' ("what documents
 -- do you have": a templated reply from the cached title list; see channels/catalog.py), 'aborted' (the client
@@ -153,7 +154,7 @@ END $$;
 -- was added after the table first shipped; widen the constraint on existing databases.
 ALTER TABLE query_logs DROP CONSTRAINT IF EXISTS query_logs_response_type_check;
 ALTER TABLE query_logs ADD CONSTRAINT query_logs_response_type_check
-    CHECK (response_type IN ('answer', 'clarification', 'refusal_shortcut', 'smalltalk', 'source_lookup', 'catalog', 'aborted', 'error'));
+    CHECK (response_type IN ('answer', 'clarification', 'refusal_shortcut', 'smalltalk', 'source_lookup', 'section_lookup', 'page_lookup', 'catalog', 'aborted', 'error', 'crisis'));
 
 -- Pipeline-level tunables, editable at runtime via /api/admin/config
 -- (read through a Redis cache, see config/runtime.py). Seeded by
@@ -209,3 +210,28 @@ ALTER TABLE query_logs ADD COLUMN IF NOT EXISTS advisory BOOLEAN;
 -- upload-time exact-duplicate check; backfilled idempotently by setup_db / API startup.
 ALTER TABLE documents ADD COLUMN IF NOT EXISTS content_fingerprint TEXT;
 CREATE INDEX IF NOT EXISTS idx_documents_content_fingerprint ON documents (content_fingerprint);
+
+
+-- Situations and options (HR-advisor mode). A situation is detected from trigger phrases in the recent user messages (derived each
+-- turn from the history, nothing is stored per conversation); while active, each lever's query_text is searched next to the user's
+-- question so the policies that offer ways forward (work from home, comp-off, leave without pay, ...) reach the model together.
+-- Editable through /api/admin/situations. Gated by app_config situations.enabled.
+CREATE TABLE IF NOT EXISTS situations (
+    id      SERIAL PRIMARY KEY,
+    name    TEXT NOT NULL UNIQUE,
+    enabled BOOLEAN NOT NULL DEFAULT true
+);
+CREATE TABLE IF NOT EXISTS situation_triggers (
+    id           SERIAL PRIMARY KEY,
+    situation_id INTEGER NOT NULL REFERENCES situations(id) ON DELETE CASCADE,
+    phrase       TEXT NOT NULL CHECK (length(btrim(phrase)) > 0),
+    UNIQUE (situation_id, phrase)
+);
+CREATE TABLE IF NOT EXISTS situation_levers (
+    id           SERIAL PRIMARY KEY,
+    situation_id INTEGER NOT NULL REFERENCES situations(id) ON DELETE CASCADE,
+    position     INTEGER NOT NULL,
+    name         TEXT NOT NULL,
+    query_text   TEXT NOT NULL CHECK (length(btrim(query_text)) > 0),
+    UNIQUE (situation_id, position)
+);

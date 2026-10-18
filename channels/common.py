@@ -6,12 +6,14 @@ reply-picking machinery. Which patterns count as small talk, what the
 replies say, how settings are resolved and what the pipeline does with them
 are all decided in each channel module.
 """
+import json
 import logging
 import random
 import re
 import threading
 import time
 from dataclasses import dataclass, field
+from functools import lru_cache
 
 from config.channel_settings import channel_setting
 from config.runtime import get_app_config, memo_provider_config
@@ -72,7 +74,7 @@ class TurnHandle:
         if stream is not None:
             try:
                 stream.close()
-            except Exception:
+            except Exception:  # noqa: BLE001, S110
                 pass
 
     def cancel(self) -> None:
@@ -93,7 +95,9 @@ def generation_settings(channel: str) -> dict:
     return {
         "temperature": provider.get("temperature"),
         "top_p": provider.get("top_p"),
-        "first_token_timeout_s": float(memo_config("generation.first_token_timeout_s", 4)),
+        "first_token_timeout_s": float(memo_config("generation.first_token_timeout_s", 2.0)),
+        "connect_timeout_s": float(memo_config("generation.connect_timeout_s", 3.0)),
+        "stream_gap_timeout_s": float(memo_config("generation.stream_gap_timeout_s", 6.0)),
         "request_timeout_s": float(memo_config("generation.request_timeout_s", 20)),
         "max_retries": int(memo_config(f"generation.max_retries.{channel}", 1)),
         "fallback_message": memo_config("generation.fallback_message", "Sorry, I'm having trouble right now. Please try again."),
@@ -105,16 +109,30 @@ _gen_logger = logging.getLogger("hrchatbot.generation")
 
 def _with_options(client, cfg: dict):
     """The same client (shared connection pool) with per-attempt options: no automatic SDK retries (retrying is done
-    here, with a log line per retry) and a read timeout of first_token_timeout_s, which bounds the wait for the response
-    headers and for the first token (and, after that, the longest gap between streamed chunks)."""
+    here, with a log line per retry), a connect timeout (generation.connect_timeout_s) and a read timeout of
+    first_token_timeout_s, which bounds the wait for the response headers and the first token. Once the response has started,
+    _apply_stream_gap() relaxes the read timeout to generation.stream_gap_timeout_s."""
     if not hasattr(client, "with_options"):
         return client
     import httpx
 
     return client.with_options(
-        timeout=httpx.Timeout(connect=min(3.0, cfg["first_token_timeout_s"]), read=cfg["first_token_timeout_s"], write=10.0, pool=5.0),
+        timeout=httpx.Timeout(connect=cfg.get("connect_timeout_s", 3.0), read=cfg["first_token_timeout_s"], write=10.0, pool=5.0),
         max_retries=0,
     )
+
+
+def _apply_stream_gap(stream, cfg: dict) -> None:
+    """The first-token timeout is the read timeout of the request, which httpx would also apply between streamed chunks; a
+    mid-answer gap cannot be retried (speech has started), so after the response headers have arrived the read timeout of THIS
+    request is raised to generation.stream_gap_timeout_s. httpcore re-reads request.extensions["timeout"] for every read of the
+    body, so changing it takes effect for the rest of the stream. Best effort: any failure leaves the first-token timeout in place."""
+    try:
+        timeouts = stream.response.request.extensions.get("timeout")
+        if isinstance(timeouts, dict):
+            timeouts["read"] = cfg.get("stream_gap_timeout_s", 6.0)
+    except Exception:  # noqa: BLE001, S110
+        pass
 
 
 def _usage_fields(usage) -> dict:
@@ -150,6 +168,7 @@ def stream_completion(client, model: str, messages: list[dict], *, channel: str 
         info["attempts"] = attempt
         stream = None
         timer = None
+        completed = False
         try:
             attempt_start = time.monotonic()
             sampling = {k: cfg[k] for k in ("temperature", "top_p") if cfg.get(k) is not None}
@@ -158,6 +177,7 @@ def stream_completion(client, model: str, messages: list[dict], *, channel: str 
             info["headers_ms"] = (time.monotonic() - attempt_start) * 1000
             headers = getattr(getattr(stream, "response", None), "headers", None) or {}
             info["request_id"] = headers.get("x-request-id") if hasattr(headers, "get") else None
+            _apply_stream_gap(stream, cfg)
             handle.attach(stream)
             timer = threading.Timer(max(cfg["request_timeout_s"] - (time.monotonic() - start), 0.1), handle.expire)
             timer.daemon = True
@@ -182,10 +202,11 @@ def stream_completion(client, model: str, messages: list[dict], *, channel: str 
                 yield {"type": "token", "text": delta}
             if handle.cancelled:
                 raise TurnCancelled()
+            completed = True
             break
         except (TurnCancelled, GeneratorExit):
             raise
-        except Exception as exc:  # noqa: BLE001 - provider / network failures of any kind
+        except Exception as exc:
             if handle.cancelled:
                 raise TurnCancelled() from exc
             reason = f"{type(exc).__name__}: {str(exc)[:120]}"
@@ -207,10 +228,10 @@ def stream_completion(client, model: str, messages: list[dict], *, channel: str 
         finally:
             if timer is not None:
                 timer.cancel()
-            if stream is not None:
+            if stream is not None and not completed:  # a fully read stream returns its connection to the pool for reuse
                 try:
                     stream.close()
-                except Exception:
+                except Exception:  # noqa: BLE001, S110
                     pass
     end = time.monotonic()
     return {
@@ -236,17 +257,17 @@ def _truncate(content: str, max_chars: int, keep_tail: bool) -> str:
     return content[: max_chars - tail - len(separator)] + separator + content[-tail:]
 
 
-def clean_history(history: list | None, channel: str) -> list[dict]:
+def clean_history(history: list | None, channel: str, max_messages: int | None = None) -> list[dict]:
     """Server-side sanitisation of client/Deepgram-supplied history, which is
     UNTRUSTED: only user/assistant roles with string content survive, control
     characters are dropped, the list is capped to the last
     conversation.history_messages messages and each is truncated to
     conversation.history_max_chars characters. An over-long ASSISTANT message keeps its
     head and its tail (an offer or a question usually closes it, and "yes" is answered
-    against that), still within the character cap."""
+    against that), still within the character cap. `max_messages` overrides the cap (lookups walk back further)."""
     if not history:
         return []
-    max_messages = channel_setting("conversation.history_messages", channel, 6)
+    max_messages = max_messages or channel_setting("conversation.history_messages", channel, 6)
     max_chars = channel_setting("conversation.history_max_chars", channel, 400)
     kept = []
     for message in history:
@@ -411,8 +432,10 @@ def plan_turn(current: str, history: list | None, channel: str) -> TurnPlan:
     return plan
 
 
-from config.runtime import clear_config_memo, memo_config  # noqa: E402,F401  (kept here: channels use common.memo_config)
-
+from config.runtime import (  # noqa: F401  (kept here: channels use common.memo_config)
+    clear_config_memo,
+    memo_config,
+)
 
 # ---- text normalisation ---------------------------------------------------------------------------------
 
@@ -523,7 +546,6 @@ class ReplyPicker:
 
 # ---- source questions ("where is this from") ---------------------------------------------------------------
 
-SOURCE_MAX_WORDS = 8
 REFUSAL_PREFIX = "i couldn't find"
 
 
@@ -541,13 +563,60 @@ def _source_form(text: str, mapping: dict) -> str:
     return expand_informal(normalize(text), mapping)
 
 
-def is_source_question(text: str) -> bool:
-    """Whole-utterance match (<= 8 words) against source.markers, tolerant of filler words at either END
-    (source.filler_words: "okay whats the source of that", "so where is this from", "which document please") and of
-    informal forms (catalog.normalize_map: "where did u get that")."""
-    norm = normalize(text)
-    if not norm or len(norm.split()) > SOURCE_MAX_WORDS:
+def _cfg(key: str):
+    """memo_config with the code default, so a key added after the database was seeded still works (no DB read per turn)."""
+    from config.runtime import DEFAULT_APP_CONFIG
+
+    return memo_config(key, DEFAULT_APP_CONFIG[key][0])
+
+
+@lru_cache(maxsize=32)
+def _normalized_set(items_json: str, mapping_json: str) -> frozenset:
+    mapping = json.loads(mapping_json)
+    return frozenset(_source_form(i, mapping) for i in json.loads(items_json))
+
+
+def _forms(key: str, mapping: dict) -> frozenset:
+    """The normalized/informal-expanded forms of an editable list; cached per (list, map) content, so the cost is paid
+    once per config change rather than on every turn."""
+    return _normalized_set(json.dumps(_cfg(key)), json.dumps(mapping, sort_keys=True))
+
+
+def _has_phrase(joined: str, phrase: str) -> bool:
+    return f" {phrase} " in f" {joined} "
+
+
+def _noun_lookup(words: list[str], nouns: frozenset, wh: frozenset, tail: frozenset) -> bool:
+    """'what section is that in', 'which part of the handbook', 'what page number', 'what section of the HR policies did
+    you get it from': the utterance STARTS with what/which, then (optionally exact/specific) a section/page noun, then
+    only words from lookup.tail_words - after an optional 'of <up to 2 words>'. 'what section of the policy covers sick
+    leave' fails that tail test and so goes to the normal pipeline."""
+    if len(words) < 2 or words[0] not in wh - {"where", "from"}:
         return False
+    i = 1
+    while i < len(words) and words[i] in {"exact", "specific", "particular"}:
+        i += 1
+    if i >= len(words) or words[i] not in nouns:
+        return False
+    rest = words[i + 1:]
+    if rest and rest[0] == "of":
+        rest = rest[1:]
+        if rest and rest[0] in {"the", "this", "that", "your", "our", "these", "those"}:
+            rest = rest[1:]
+        taken = 0
+        while rest and taken < 2 and rest[0] not in tail:
+            rest, taken = rest[1:], taken + 1
+    return all(w in tail for w in rest)
+
+
+def lookup_intent(text: str) -> str | None:
+    """'source' | 'section' | 'page' | None: is this WHOLE utterance (<= source.max_words words, filler words stripped at
+    either end, informal forms expanded) a question about where the previous answer came from? Fixed markers
+    (source.markers + source.markers.extra, section.markers, page.markers) and the editable what/you/verb/anaphor pattern
+    combination. Pure in-process config reads: no DB, network or LLM call."""
+    norm = normalize(text)
+    if not norm or len(norm.split()) > int(_cfg("source.max_words")) + 4:  # cheap bound before any config work
+        return None
     mapping = memo_config("catalog.normalize_map", {}) or {}
     fillers = {normalize(w) for w in memo_config("source.filler_words", []) or []}
     words = _source_form(text, mapping).split()
@@ -555,29 +624,200 @@ def is_source_question(text: str) -> bool:
         words.pop(0)
     while words and words[-1] in fillers:
         words.pop()
-    if not words:
-        return False
-    return " ".join(words) in {_source_form(m, mapping) for m in memo_config("source.markers", []) or []}
+    if not words or len(words) > int(_cfg("source.max_words")):
+        return None
+    joined = " ".join(words)
+    if joined in _forms("page.markers", mapping):
+        return "page"
+    if joined in _forms("section.markers", mapping):
+        return "section"
+    if joined in _forms("source.markers", mapping) or joined in _forms("source.markers.extra", mapping):
+        return "source"
+    # pattern rules: vetoed by any lookup.exclude_words ("where can I find the leave form")
+    if {w for w in words} & {normalize(x) for x in _cfg("lookup.exclude_words")}:
+        return None
+    wh = frozenset(normalize(x) for x in _cfg("lookup.wh_words"))
+    tail = frozenset(normalize(x) for x in _cfg("lookup.tail_words"))
+    if _noun_lookup(words, frozenset(normalize(x) for x in _cfg("page.words")), wh, tail):
+        return "page"
+    if _noun_lookup(words, frozenset(normalize(x) for x in _cfg("section.words")), wh, tail):
+        return "section"
+    word_set = set(words)
+    if (word_set & wh and word_set & {normalize(x) for x in _cfg("lookup.you_tokens")}
+            and word_set & {normalize(x) for x in _cfg("lookup.source_verbs")}
+            and any(_has_phrase(joined, normalize(a)) for a in _cfg("lookup.anaphors"))):
+        return "source"
+    return None
 
 
-def previous_exchange(history: list[dict]) -> tuple[int, int] | None:
-    """(user_index, assistant_index) of the most recent answered exchange in CLEANED history: the last
-    assistant message and the user message before it. An exchange that was itself a source question is
-    skipped, so asking "source?" twice still refers to the real answer. None when there is no
-    assistant message to refer to."""
+def is_source_question(text: str) -> bool:
+    """Kept for callers that only care about a plain source question."""
+    return lookup_intent(text) == "source"
+
+
+def previous_exchange(history: list[dict], skip=None) -> tuple[int, int] | None:
+    """(user_index, assistant_index) of the exchange a lookup refers to, in CLEANED history: the most recent exchange that
+    produced an ANSWER. Earlier source / section / page questions are walked past, and so are replies that never had a
+    document (small talk, catalog) when `skip(user_text, history_before_it)` says so (returns a truthy label). If only
+    such replies exist, the most recent of them is returned so the caller can say "that didn't come from a policy
+    document". None when there is no assistant message to refer to."""
     end = len(history) - 1
+    fallback = None
     while end >= 0:
         a = next((i for i in range(end, -1, -1) if history[i]["role"] == "assistant"), None)
         if a is None:
-            return None
+            break
         u = next((i for i in range(a - 1, -1, -1) if history[i]["role"] == "user"), None)
         if u is None:
-            return None
-        if is_source_question(history[u]["content"]):
+            break
+        if lookup_intent(history[u]["content"]):
+            end = u - 1
+            continue
+        if skip is not None and skip(history[u]["content"], history[:u]):
+            fallback = fallback or (u, a)
             end = u - 1
             continue
         return u, a
+    return fallback
+
+
+# ---- section names for speech ------------------------------------------------------------------------------
+
+_NUMBERING = re.compile(r"^\s*\d+(?:\.\d+)*\.?\s+")
+_TRAILING_PUNCT = re.compile(r"[\s:;,.?!]+$")
+_SMALL_WORDS = {"of", "and", "the", "in", "to", "for", "on", "or", "a", "an", "at", "if"}
+
+
+def clean_section_name(raw: str | None, title: str, spoken: bool) -> str | None:
+    """A heading as it reads aloud: leading numbering ("3.0", "4.2.") and trailing punctuation dropped, an ALL-CAPS heading
+    title-cased (lower-cased when spoken), '&' read as 'and'. None for a heading that is empty, a table-row label
+    (lookup.skip_section_patterns), equal to the document title, or too generic to mean anything alone
+    (lookup.generic_sections)."""
+    if not raw or not raw.strip():
+        return None
+    if any(re.search(p, raw.strip(), re.IGNORECASE) for p in _cfg("lookup.skip_section_patterns")):
+        return None
+    name = _TRAILING_PUNCT.sub("", _NUMBERING.sub("", raw.strip())).strip()
+    if not name or name.lower() == title.strip().lower():
+        return None
+    if name.lower() in {g.strip().lower() for g in _cfg("lookup.generic_sections")}:
+        return None
+    if name.isupper():
+        name = name.lower() if spoken else " ".join(w if (i == 0 or w.lower() not in _SMALL_WORDS) else w.lower() for i, w in enumerate(name.title().split()))
+    return name.replace("&", "and")
+
+
+def _best_section(section_path: str | None, title: str, spoken: bool) -> str | None:
+    """The most specific usable heading of a chunk's section_path, walking up from the leaf (a generic leaf such as
+    '4.0 Policy Statement' gives way to its parent '16. Teleworking Policy'); the document-title segment is never used."""
+    parts = [p for p in (section_path or "").split(" > ")]
+    for part in reversed(parts[1:] if parts and parts[0].strip().lower() == title.strip().lower() else parts):
+        name = clean_section_name(part, title, spoken)
+        if name:
+            return name
     return None
+
+
+def format_location_reply(results: list[dict], templates: dict, spoken: bool, intent: str) -> str:
+    """Section and page replies, templated (lookup.templates.*): the cleaned section names of the previous answer's retrieved
+    chunks, distinct, in rank order, at most lookup.max_sections.<channel> in total, each document named once. A section
+    reply with several documents adds one 'also' sentence per further document; a page reply names the first document
+    only. When no clean section exists the title-only forms are used. A template that fails to format falls back to the
+    seeded default, so a bad edit cannot break a turn."""
+    from config.runtime import DEFAULT_LOOKUP_TEMPLATES
+    from config.topics import clean_title
+
+    channel = "voice" if spoken else "text"
+    defaults = DEFAULT_LOOKUP_TEMPLATES[channel]
+
+    def render(key: str, **fields) -> str:
+        try:
+            return templates[key].format(**fields)
+        except (KeyError, IndexError, ValueError):
+            return defaults[key].format(**fields)
+
+    docs: list[dict] = []
+    for r in results:
+        doc = next((d for d in docs if d["document_id"] == r["document_id"]), None)
+        if doc is None:
+            raw = r["document_title"]
+            doc = {"document_id": r["document_id"], "name": (clean_title(raw) or display_title(raw)) if spoken else display_title(raw),
+                   "raw": raw, "sections": []}
+            docs.append(doc)
+        section = _best_section(r["section_path"], r["document_title"], spoken)
+        if section and section not in doc["sections"]:
+            doc["sections"].append(section)
+    docs = docs[:3]
+    if not docs:
+        return render("not_found")
+    budget = max(1, int(_cfg(f"lookup.max_sections.{channel}")))
+    with_sections = [d for d in docs if d["sections"]]
+    if intent == "page":
+        with_sections = with_sections[:1]
+    if not with_sections:
+        key = "page_title_only" if intent == "page" else "section_title_only"
+        return render(key, title=_join_and([d["name"] for d in docs]))
+    sentences = []
+    for d in with_sections:
+        if budget <= 0:
+            break
+        names = d["sections"][:budget]
+        budget -= len(names)
+        key = ("page" if intent == "page" else "section" if not sentences else "section_also")
+        sentences.append(render(key, section=_join_and(names), title=d["name"]))
+    return " ".join(sentences)
+
+
+def lookup_reply(query: str, history: list | None, channel: str, smalltalk_match, retrieve_for_plan, no_match_base: str) -> dict | None:
+    """A source / section / page question when the history has an earlier assistant answer: recompute the retrieval of the
+    answer it refers to and name where it came from; else None (the caller falls through to the normal pipeline).
+    Returns {"text", "chunk_ids", "timing", "type"} with type source_lookup | section_lookup | page_lookup.
+
+    The exchange is the last one that produced an answer (earlier lookups, small talk and catalog replies are walked
+    past). Its retrieval is rebuilt by the functions a normal turn uses: plan_turn over only the history that PRECEDED it,
+    then the channel's own retrieve (`retrieve_for_plan`): 1 embedding and 1 retrieval, 0 LLM calls. If that answer was a
+    refusal, a shortcut or never had a document (small talk, catalog), a templated "didn't come from a policy document"
+    line is returned and nothing is retrieved."""
+    if not history:
+        return None
+    intent = lookup_intent(query)
+    if intent is None:
+        return None
+    from channels.catalog import is_catalog_question
+
+    def skippable(user_text: str, before: list) -> str | None:
+        return "smalltalk" if smalltalk_match(user_text, before) else "catalog" if is_catalog_question(user_text, before) else None
+
+    # a conversation can hold several lookups in a row (source, page, section ...), so the walk-back reaches further than the
+    # 6 messages a normal turn sees; the retrieval itself is planned from the usual capped window before the answered turn
+    cleaned = clean_history(history, channel, int(_cfg("lookup.history_messages")))
+    exchange = previous_exchange(cleaned, skippable)
+    if exchange is None:
+        return None
+    user_index, assistant_index = exchange
+    previous_query, previous_answer = cleaned[user_index]["content"], cleaned[assistant_index]["content"]
+    spoken = channel == "voice"
+    started = time.monotonic()
+    if (skippable(previous_query, cleaned[:user_index]) or previous_answer.lower().startswith(REFUSAL_PREFIX)
+            or previous_answer.startswith(no_match_base)):
+        results, text_key = [], "none"
+    else:
+        results = retrieve_for_plan(plan_turn(previous_query, cleaned[:user_index], channel))
+        text_key = None
+    if intent == "source":
+        templates = memo_config(f"source.templates.{channel}", {}) or {}
+        from config.runtime import DEFAULT_SOURCE_TEMPLATES
+
+        text = (templates.get("none") or DEFAULT_SOURCE_TEMPLATES[channel]["none"]) if text_key else format_source_reply(results, templates, spoken=spoken)
+    else:
+        templates = _cfg(f"lookup.templates.{channel}") or {}
+        from config.runtime import DEFAULT_LOOKUP_TEMPLATES
+
+        text = (templates.get("none") or DEFAULT_LOOKUP_TEMPLATES[channel]["none"]) if text_key else format_location_reply(results, templates, spoken, intent)
+    chunk_ids = [r["chunk_id"] for r in results]
+    logging.getLogger(f"hrchatbot.{channel}").info("turn type=%s_lookup chunks=%d", intent, len(chunk_ids))
+    return {"text": text, "chunk_ids": chunk_ids, "type": f"{intent}_lookup",
+            "timing": {"retrieval_time_ms": (time.monotonic() - started) * 1000}}
 
 
 def display_title(title: str) -> str:

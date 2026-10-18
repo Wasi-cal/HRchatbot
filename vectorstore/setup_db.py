@@ -22,7 +22,9 @@ def main():
     from config.runtime import seed_runtime_config  # after the tables exist
 
     seed_runtime_config()
-    from vectorstore.duplicates import backfill_fingerprints  # idempotent: only documents without a fingerprint
+    from vectorstore.duplicates import (
+        backfill_fingerprints,  # idempotent: only documents without a fingerprint
+    )
 
     with pool.connection() as conn:
         n = backfill_fingerprints(conn)

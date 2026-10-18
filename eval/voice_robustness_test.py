@@ -22,19 +22,23 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
-import httpx  # noqa: E402
-import uvicorn  # noqa: E402
-from fastapi.testclient import TestClient  # noqa: E402
+import httpx
+import uvicorn
+from fastapi.testclient import TestClient
 
-import channels.text as text_ch  # noqa: E402
-import channels.voice as voice_ch  # noqa: E402
-import generation.generate as gen_mod  # noqa: E402
-from api.main import app  # noqa: E402
-from api.voice_settings import build_agent_settings  # noqa: E402
-from channels import common  # noqa: E402
-from config.runtime import get_active_provider_config, get_app_config, set_app_config  # noqa: E402
-from eval import turn_calls  # noqa: E402
-from vectorstore.db import close_pool, get_pool  # noqa: E402
+import channels.text as text_ch
+import channels.voice as voice_ch
+import generation.generate as gen_mod
+from api.main import app
+from api.voice_settings import build_agent_settings
+from channels import common
+from config.runtime import (
+    get_active_provider_config,
+    get_app_config,
+    set_app_config,
+)
+from eval import turn_calls
+from vectorstore.db import close_pool, get_pool
 
 _results = []
 SECRET = os.environ.get("THINK_ENDPOINT_SECRET")
@@ -250,13 +254,15 @@ def post(port, text, **kw):
 
 def read_stream_then_abort(port, text, after_chunks):
     got = 0
-    with httpx.Client(timeout=30) as c:
-        with c.stream("POST", f"http://localhost:{port}/api/voice/v1/chat/completions", json=think_body(text), headers=HEADERS) as r:
-            for line in r.iter_lines():
-                if line.startswith("data: ") and "word" in line:
-                    got += 1
-                    if got >= after_chunks:
-                        break
+    with (
+        httpx.Client(timeout=30) as c,
+        c.stream("POST", f"http://localhost:{port}/api/voice/v1/chat/completions", json=think_body(text), headers=HEADERS) as r,
+    ):
+        for line in r.iter_lines():
+            if line.startswith("data: ") and "word" in line:
+                got += 1
+                if got >= after_chunks:
+                    break
     return got
 
 
@@ -298,9 +304,11 @@ def test_disconnect_and_logs():
             fake2 = FakeClient(["hang"])
             gen_mod._client = fake2
             started = time.monotonic()
-            with httpx.Client(timeout=30) as c:
-                with c.stream("POST", f"http://localhost:{srv.port}/api/voice/v1/chat/completions", json=think_body("how many days of earned leave do I get"), headers=HEADERS) as r:
-                    next(r.iter_lines())  # the role chunk arrives immediately; the first token never does
+            with (
+                httpx.Client(timeout=30) as c,
+                c.stream("POST", f"http://localhost:{srv.port}/api/voice/v1/chat/completions", json=think_body("how many days of earned leave do I get"), headers=HEADERS) as r,
+            ):
+                next(r.iter_lines())  # the role chunk arrives immediately; the first token never does
             closed2 = wait_for(lambda: fake2.streams and fake2.streams[0].closed, 4)
             check("disconnect while waiting for the first token: the upstream stream is closed promptly (not after the 30s hang)", closed2 and time.monotonic() - started < 5, f"{time.monotonic() - started:.1f}s")
 
@@ -443,7 +451,7 @@ def test_affirmation():
 
 # ---- (e) voice answers: no generic closers; counts -----------------------------------------------------------------------------
 
-GENERIC_CLOSER = re.compile(r"anything else|explore more options|would you like to know more|let me know if you have any|feel free to ask", re.I)
+GENERIC_CLOSER = re.compile(r"anything else|explore more options|would you like to know more|let me know if you have any|feel free to ask", re.IGNORECASE)
 
 
 def test_style_and_counts(client):
@@ -461,13 +469,17 @@ def test_style_and_counts(client):
     check("no voice answer ends with a generic closer ('anything else', 'explore more options', 'would you like to know more')", not bad, " || ".join(b[-90:] for b in bad))
     ends_offer = [a for a in answers if a.rstrip().endswith("?")]
     check("any closing offer names a specific next step (an offer, when present, contains 'want me to' / 'go through' / a named option)",
-          all(re.search(r"want me to|would you like me to|go through|walk you through|explain", a, re.I) for a in ends_offer), " || ".join(a[-100:] for a in ends_offer))
+          all(re.search(r"want me to|would you like me to|go through|walk you through|explain", a, re.IGNORECASE) for a in ends_offer), " || ".join(a[-100:] for a in ends_offer))
     print(f"       answers ending in an offer: {len(ends_offer)}/{len(answers)}; words per answer: {[len(a.split()) for a in answers]}")
     baseline = json.loads((Path(__file__).parent / "turn_calls_baseline.json").read_text())
     turn_calls.install()
     now = turn_calls.run_all(client)
     turn_calls.print_table(now)
     for label, base in baseline.items():
+        if "source lookup" in label:  # one Redis read fewer since lookups scan the longer history window directly (never more calls)
+            same = all(now[label][k] == base[k] for k in ("llm", "retrieve", "embed")) and all(now[label][k] <= base[k] for k in ("db", "redis"))
+            check(f"unchanged vs baseline (no more calls): {label}", same, f"baseline {base} now {now[label]}")
+            continue
         check(f"unchanged vs baseline: {label}", now[label] == base, f"baseline {base} now {now[label]}")
 
 

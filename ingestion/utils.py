@@ -25,7 +25,7 @@ def normalize_unicode_whitespace(text: str) -> str:
     if not text:
         return ""
     text = unicodedata.normalize("NFKC", text)
-    text = text.replace(" ", " ").replace("​", "")
+    text = text.replace(" ", " ").replace("\u200b", "")
     text = _WHITESPACE_RE.sub(" ", text)
     text = _MULTI_NEWLINE_RE.sub("\n\n", text)
     return text.strip()
@@ -119,9 +119,7 @@ def is_garbled(text: str) -> bool:
         return True
     if len(text) > 40 and len(words) < len(text) / 25:
         return True
-    if avg_word_len > 25:
-        return True
-    return False
+    return avg_word_len > 25
 
 
 # Dotted section labels ("1.1 OBJECTIVE", "4.2 Parental Leave") are an

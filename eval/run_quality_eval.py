@@ -41,8 +41,8 @@ def _format_result(result: dict) -> str:
         return f"SMALLTALK (no retrieval, no LLM)\n    {result['answer']!r}"
     if result["type"] == "catalog":
         return f"CATALOG (0 LLM, 0 retrieval, 0 embedding)\n    {result['answer']!r}"
-    if result["type"] == "source_lookup":
-        return f"SOURCE LOOKUP (0 LLM calls, 1 retrieval; chunks {result.get('chunk_ids')})\n    {result['answer']!r}"
+    if result["type"] in ("source_lookup", "section_lookup", "page_lookup"):
+        return f"{result['type'].upper().replace('_', ' ')} (0 LLM calls, 1 retrieval; chunks {result.get('chunk_ids')})\n    {result['answer']!r}"
     return (
         f"ANSWER (shortcut={result['shortcut']}, contextualized={result.get('contextualized')}, "
         f"advisory={result.get('advisory')})\n"
@@ -92,7 +92,7 @@ def run_case(case: dict, channel_override: str | None = None):
     if category:
         result = {"type": "smalltalk", "answer": channel_module.smalltalk_reply(category)}
     elif source:
-        result = {"type": "source_lookup", "answer": source["text"], "chunk_ids": source["chunk_ids"]}
+        result = {"type": source["type"], "answer": source["text"], "chunk_ids": source["chunk_ids"]}
     elif catalog_answer:
         result = {"type": "catalog", "answer": catalog_answer["text"]}
     else:

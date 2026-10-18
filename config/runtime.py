@@ -87,6 +87,60 @@ DEFAULT_SOURCE_TEMPLATES = {
     },
 }
 
+# ---- section / page lookups ("what section", "what page number") and the wider source phrasing ------------------
+# Same deterministic path as the source lookup (channels/common.py lookup_intent): 0 LLM calls, 1 retrieval.
+DEFAULT_SOURCE_MARKERS_EXTRA = [
+    "how do you know", "how do you know that", "how do you know this", "what is that based on", "what is this based on",
+    "whats that based on", "whats this based on", "can you cite that", "can you cite this", "whats your source",
+    "what is your source", "which policy is this from", "which policy is that from", "which document is this from",
+    "which document is that from", "where is this written", "where is that written", "where is it written",
+    "where is it mentioned", "where does this come from", "where does that come from",
+]
+DEFAULT_SECTION_MARKERS = [
+    "what section", "which section", "which part", "what part", "which chapter", "what chapter", "what heading",
+    "which heading", "what section is this", "what section is that", "which section is this", "which section is that",
+]
+DEFAULT_PAGE_MARKERS = [
+    "page number", "what page", "which page", "exact page", "what page number", "which page number", "the page number",
+    "what page is this", "what page is that", "which page is this", "which page is that",
+]
+DEFAULT_LOOKUP_WH_WORDS = ["where", "which", "what", "from"]
+DEFAULT_LOOKUP_YOU_TOKENS = ["you", "your", "youre"]
+DEFAULT_LOOKUP_SOURCE_VERBS = ["get", "got", "getting", "source", "sourcing", "sourced", "pull", "pulled", "pulling", "take", "taken", "taking", "find", "found", "finding", "read", "reading"]
+DEFAULT_LOOKUP_ANAPHORS = ["this", "that", "it", "these", "those", "the information", "the answer"]
+DEFAULT_SECTION_WORDS = ["section", "part", "chapter", "heading"]
+DEFAULT_PAGE_WORDS = ["page"]
+DEFAULT_LOOKUP_TAIL_WORDS = [
+    "is", "was", "are", "that", "this", "it", "in", "from", "on", "at", "of", "did", "do", "does", "you", "your", "get", "got",
+    "getting", "take", "taken", "taking", "pull", "pulled", "pulling", "find", "found", "finding", "read", "reading", "come", "came", "coming", "source", "sourced",
+    "sourcing", "written", "mentioned", "listed", "located", "under", "number", "exact", "specific", "the", "information",
+    "answer", "these", "those", "and", "that", "exactly",
+]
+DEFAULT_LOOKUP_EXCLUDE_WORDS = [
+    "covers", "cover", "covering", "covered", "says", "say", "mention", "mentions", "about", "regarding", "talks", "deals",
+    "explains", "describes", "states", "defines", "includes", "applies", "for", "can", "should", "i", "my", "me",
+]
+DEFAULT_LOOKUP_TEMPLATES = {
+    "text": {
+        "section": "That's in the {section} section of the {title}.",
+        "section_also": "It's also in the {section} section of the {title}.",
+        "section_title_only": "That's from the {title}, but I can't point to a specific section.",
+        "page": "I don't have page numbers for that document, but it's in the {section} section of the {title}.",
+        "page_title_only": "I don't have page numbers for that document, but it came from the {title}.",
+        "none": "That answer didn't come from a policy document.",
+        "not_found": "I couldn't work out which document that came from.",
+    },
+    "voice": {
+        "section": "That's in the {section} section of the {title} policy.",
+        "section_also": "It's also in the {section} section of the {title} policy.",
+        "section_title_only": "That's from the {title} policy, but I can't point to a specific section.",
+        "page": "I don't have page numbers for that document, but it's in the {section} section of the {title} policy.",
+        "page_title_only": "I don't have page numbers for that document, but it came from the {title} policy.",
+        "none": "That answer didn't come from a policy document.",
+        "not_found": "I couldn't work out which document that came from.",
+    },
+}
+
 # ---- catalog intent ("what documents do you have"): editable, see channels/catalog.py ---------------------------
 DEFAULT_CATALOG_VOCAB = [
     "document", "documents", "policy", "policies", "topic", "topics", "file", "files", "source", "sources",
@@ -193,8 +247,10 @@ DEFAULT_APP_CONFIG = {
             "triggers": ["time off", "day off", "days off", "need leave", "take leave", "want leave", "need some time"],
             "queries": ["types of leave and days entitled earned leave sick leave bereavement leave"],
         }],
-        "Topic -> expansion queries for advisory turns. A topic fires when any trigger phrase appears in the "
-        "current utterance or prior user messages; its queries are embedded in one batched encode and fused in.",
+        (
+            "Topic -> expansion queries for advisory turns. A topic fires when any trigger phrase appears in the "
+            "current utterance or prior user messages; its queries are embedded in one batched encode and fused in."
+        ),
     ),
     "retrieval.expansion.enabled": (True, "Whether advisory turns run the expansion queries (per channel copies override)."),
     "retrieval.expansion.weight": (2.0, "RRF weight of each expansion query's ranked lists relative to the main query's."),
@@ -211,7 +267,11 @@ DEFAULT_APP_CONFIG = {
         ["would you like", "want me to", "i can also"],
         "Phrases that mark an assistant message as an offer (a message ending in '?' also counts).",
     ),
-    "generation.first_token_timeout_s": (4, "Seconds to wait for the first streamed token (also the longest gap between chunks) before the attempt is aborted and retried. Failure path only."),
+    "generation.first_token_timeout_s": (2.0, "Seconds to wait for the response headers / first token before the attempt is aborted and retried (failure path only). Measured p50 is about 0.9 s, so 2.0 leaves ample margin; see eval/openai_stall_probe.py."),
+    "generation.connect_timeout_s": (3.0, "Seconds allowed to open the connection (DNS, TCP, TLS; measured about 30 ms) before the attempt is aborted and retried."),
+    "generation.stream_gap_timeout_s": (6.0, "Longest silence allowed BETWEEN streamed chunks once the answer has started (the first-token timeout no longer applies then; speech cannot be retried, so this is generous)."),
+    "generation.keepalive_expiry_s": (5.0, "Idle seconds an OpenAI connection is kept for reuse (httpx default 5). Read when the API process starts: RESTART the API after changing it."),
+    "generation.client_warmup": (True, "Send one lightweight non-LLM request (GET /models/<model>) at startup so DNS/TLS/SDK initialisation does not land on the first turn. Read at startup."),
     "generation.request_timeout_s": (20, "Overall deadline in seconds for one generation attempt chain; the stream is closed when it passes."),
     "generation.max_retries.voice": (1, "Retries after a failed or first-token-timeout attempt on the voice channel (0 = none), before the fallback message is spoken."),
     "generation.max_retries.text": (1, "Retries after a failed or first-token-timeout attempt on the text channel (0 = none), before the fallback message."),
@@ -241,6 +301,33 @@ DEFAULT_APP_CONFIG = {
     ),
     "source.templates.text": (DEFAULT_SOURCE_TEMPLATES["text"], "Text replies for a source question. Keys: one, one_with_section, many, none, not_found."),
     "source.templates.voice": (DEFAULT_SOURCE_TEMPLATES["voice"], "Voice replies for a source question (document name only). Keys: one, many, none, not_found."),
+    "source.max_words": (14, "Longest utterance (words, after filler words are stripped) that can be a source, section or page question."),
+    "source.markers.extra": (DEFAULT_SOURCE_MARKERS_EXTRA, "More whole-utterance source phrases ('how do you know', 'can you cite that'); added to source.markers."),
+    "section.markers": (DEFAULT_SECTION_MARKERS, "Whole-utterance phrases that ask which section of the document the previous answer came from."),
+    "page.markers": (DEFAULT_PAGE_MARKERS, "Whole-utterance phrases that ask for the page number of the previous answer."),
+    "lookup.wh_words": (DEFAULT_LOOKUP_WH_WORDS, "Pattern 1/4: a question word. A source question needs one of each of wh_words, you_tokens, source_verbs and anaphors."),
+    "lookup.you_tokens": (DEFAULT_LOOKUP_YOU_TOKENS, "Pattern 2/4: a second-person word ('where are YOU getting this')."),
+    "lookup.source_verbs": (DEFAULT_LOOKUP_SOURCE_VERBS, "Pattern 3/4: a sourcing verb (get, sourcing, pulled, found, read ...)."),
+    "lookup.anaphors": (DEFAULT_LOOKUP_ANAPHORS, "Pattern 4/4: a word or phrase pointing back at the previous answer (this, that, it, the information ...)."),
+    "section.words": (DEFAULT_SECTION_WORDS, "Nouns that, right after what/which at the START of the utterance, make a section question ('which part of the handbook')."),
+    "page.words": (DEFAULT_PAGE_WORDS, "Nouns that, right after what/which at the START of the utterance, make a page question ('what page is that on')."),
+    "lookup.tail_words": (DEFAULT_LOOKUP_TAIL_WORDS, "Words allowed after 'what section' / 'what page' for it to still count as a lookup; any other word ('... covers sick leave') sends the turn to the normal pipeline."),
+    "lookup.exclude_words": (DEFAULT_LOOKUP_EXCLUDE_WORDS, "Words that veto a lookup match anywhere in the utterance ('which part covers sick leave', 'where can I find')."),
+    "lookup.templates.text": (DEFAULT_LOOKUP_TEMPLATES["text"], "Text replies for section and page questions. Keys: section, section_also, section_title_only, page, page_title_only, none, not_found."),
+    "lookup.templates.voice": (DEFAULT_LOOKUP_TEMPLATES["voice"], "Voice replies for section and page questions. Same keys as the text templates."),
+    "lookup.history_messages": (40, "How many of the most recent messages a source/section/page question searches back through for the answer it refers to (a normal turn only sees conversation.history_messages)."),
+    "lookup.max_sections.text": (3, "Most distinct section names named in one text reply."),
+    "lookup.max_sections.voice": (2, "Most distinct section names named in one voice reply."),
+    "lookup.generic_sections": (
+        ["introduction", "scope", "objective", "purpose", "policy statement", "table of contents", "compliance with the policy",
+         "violation of the policy", "consequences of violation of this policy", "contact role for clarification of the policy",
+         "waiver criteria", "schedule", "for india", "disclaimer"],
+        "Section names too generic to say aloud on their own (the same heading repeats in every IT policy): the nearest more specific parent heading is named instead, or just the document.",
+    ),
+    "lookup.skip_section_patterns": (
+        [r"\|", r"^(s\.?\s?no|sl\.?\s?no|sr\.?\s?no)\b", r"^\W*$"],
+        "Regular expressions (case-insensitive) marking a heading as a table-row label or other noise, which is never spoken as a section.",
+    ),
     "retrieval.advisory.max_chunks_per_doc": (4, "Per-document cap on chunks in an advisory turn's context, applied after RRF fusion."),
     "retrieval.top_k.advisory.text": (6, "Chunks retrieved for an advisory text turn."),
     "retrieval.top_k.advisory.voice": (4, "Chunks retrieved for an advisory voice turn."),
@@ -372,7 +459,10 @@ def _seed_channel_settings(conn) -> None:
     the CURRENT effective value (so nothing changes on day one) and never
     overwriting an existing row. Retrieval and user-default settings copy the
     global app_config rows; generation settings copy the active 'generation' provider config."""
-    from config.channel_settings import CHANNEL_SETTINGS, CHANNELS  # lazy: channel_settings imports this module
+    from config.channel_settings import (  # lazy: channel_settings imports this module
+        CHANNEL_SETTINGS,
+        CHANNELS,
+    )
 
     generation = conn.execute(
         "SELECT config FROM provider_configs WHERE category = 'generation' AND is_active"

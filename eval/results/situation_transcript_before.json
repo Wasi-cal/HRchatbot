@@ -1,0 +1,554 @@
+{
+  "text": [
+    {
+      "turn": "My dog died.",
+      "type": "answer",
+      "chunks": [
+        [
+          "cies_0192",
+          "IT Security Policies"
+        ],
+        [
+          "cies_0120",
+          "IT Security Policies"
+        ],
+        [
+          "r1_0_0006",
+          "Domestic Travel Policy"
+        ]
+      ],
+      "advisory": false,
+      "contextualized": false,
+      "prompt_version": {
+        "grounding_core": 8,
+        "style": 3
+      },
+      "answer": "I'm sorry to hear about your loss. Unfortunately, the policy doesn't mention bereavement leave for pets. You may want to speak to your manager or HR about support or options available for your situation."
+    },
+    {
+      "turn": "So if it was a relative, I could have gotten a bereavement leave.",
+      "type": "answer",
+      "chunks": [
+        [
+          "k_v4_0020",
+          "Employee Handbook"
+        ],
+        [
+          "k_v4_0021",
+          "Employee Handbook"
+        ],
+        [
+          "k_v4_0036",
+          "Employee Handbook"
+        ]
+      ],
+      "advisory": false,
+      "contextualized": true,
+      "prompt_version": {
+        "grounding_core": 8,
+        "style": 3
+      },
+      "answer": "Yes, for bereavement leave, you would be entitled to 2 days, but the policy is specific to relatives and doesn't mention pets. If you need support or options related to your situation, consider speaking to your manager or HR."
+    },
+    {
+      "turn": "It's telling me that my pet is not related to me at all.",
+      "type": "answer",
+      "chunks": [
+        [
+          "k_v4_0020",
+          "Employee Handbook"
+        ],
+        [
+          "k_v4_0021",
+          "Employee Handbook"
+        ],
+        [
+          "k_v4_0036",
+          "Employee Handbook"
+        ]
+      ],
+      "advisory": false,
+      "contextualized": true,
+      "prompt_version": {
+        "grounding_core": 8,
+        "style": 3
+      },
+      "answer": "I'm really sorry to hear that. The policy specifies that bereavement leave is intended for relatives, and does not include pets. If you're looking for support due to your loss, you may want to discuss your situation with your manager or HR."
+    },
+    {
+      "turn": "I'm very sick, can't travel, my manager rejected work from home.",
+      "type": "answer",
+      "chunks": [
+        [
+          "k_v4_0022",
+          "Employee Handbook"
+        ],
+        [
+          "k_v4_0024",
+          "Employee Handbook"
+        ],
+        [
+          "r1_0_0003",
+          "Domestic Travel Policy"
+        ]
+      ],
+      "advisory": false,
+      "contextualized": false,
+      "prompt_version": {
+        "grounding_core": 8,
+        "style": 3
+      },
+      "answer": "I'm sorry to hear that you're unwell. The policy allows for work from home under certain situations, but it requires prior approval from your manager. As your request was denied, here are a few options you might consider:\n\n- Explore other leave types you may be eligible for, like sick leave, as per policy.\n- Discuss the situation further with your manager to see if there's a possibility for reconsideration based on your health.\n- Consult with HR for guidance on your current situation and any other support options available.\n\nYou may want to take the next step by discussing these options with your manager or HR."
+    },
+    {
+      "turn": "My birthday is next week, can I take leave that day?",
+      "type": "answer",
+      "chunks": [
+        [
+          "k_v4_0020",
+          "Employee Handbook"
+        ],
+        [
+          "k_v4_0021",
+          "Employee Handbook"
+        ],
+        [
+          "k_v4_0023",
+          "Employee Handbook"
+        ],
+        [
+          "k_v4_0022",
+          "Employee Handbook"
+        ],
+        [
+          "_1_0_0008",
+          "Calfus Performance App"
+        ],
+        [
+          "r1_0_0010",
+          "Calfus Certification R"
+        ]
+      ],
+      "advisory": true,
+      "contextualized": true,
+      "prompt_version": {
+        "grounding_core": 8,
+        "style": 3
+      },
+      "answer": "Yes, you can take your birthday leave, which is 1 day. It is typically used on the day of your birthday, but you should inform your manager in advance. Make sure to communicate your plans to ensure proper leave approval."
+    },
+    {
+      "turn": "I plan to go to my hometown for a week but I only have three days of earned leave left, is there anything else we can do?",
+      "type": "answer",
+      "chunks": [
+        [
+          "k_v4_0020",
+          "Employee Handbook"
+        ],
+        [
+          "k_v4_0021",
+          "Employee Handbook"
+        ],
+        [
+          "k_v4_0023",
+          "Employee Handbook"
+        ],
+        [
+          "k_v4_0022",
+          "Employee Handbook"
+        ],
+        [
+          "r1_0_0006",
+          "Domestic Travel Policy"
+        ],
+        [
+          "r1_0_0003",
+          "Domestic Travel Policy"
+        ]
+      ],
+      "advisory": true,
+      "contextualized": true,
+      "prompt_version": {
+        "grounding_core": 8,
+        "style": 3
+      },
+      "answer": "You have a few options to consider for your trip, assuming a five-day working week. Here are the possibilities:\n\n- Use your 3 days of earned leave, which leaves you with 2 unpaid days. \n- You could also explore using sick leave if you have a valid reason for it, which offers 7 days total.\n- Another option is to request leave without pay (LWP) for the 2 extra days, but this requires approval.\n\nNext, you should discuss these options with your manager to find the best solution for your situation."
+    },
+    {
+      "turn": "Well, I don't want to take leave without pay.",
+      "type": "answer",
+      "chunks": [
+        [
+          "k_v4_0021",
+          "Employee Handbook"
+        ],
+        [
+          "k_v4_0020",
+          "Employee Handbook"
+        ],
+        [
+          "k_v4_0036",
+          "Employee Handbook"
+        ],
+        [
+          "k_v4_0025",
+          "Employee Handbook"
+        ],
+        [
+          "cies_0038",
+          "IT Security Policies"
+        ],
+        [
+          "r1_0_0006",
+          "Domestic Travel Policy"
+        ]
+      ],
+      "advisory": true,
+      "contextualized": false,
+      "prompt_version": {
+        "grounding_core": 8,
+        "style": 3
+      },
+      "answer": "I understand your concern about leave without pay. If you prefer not to take unpaid leave, your options are limited. You can use your 3 days of earned leave, which would leave you with 2 unpaid days. Alternatively, another option is to consider taking sick leave if applicable, …, but you'll need to have a valid reason and approval.\n\nNext, it would be best to discuss these possibilities with your manager to find a suitable arrangement for your trip."
+    },
+    {
+      "turn": "And what about the other two days?",
+      "type": "answer",
+      "chunks": [
+        [
+          "k_v4_0020",
+          "Employee Handbook"
+        ],
+        [
+          "k_v4_0021",
+          "Employee Handbook"
+        ],
+        [
+          "k_v4_0032",
+          "Employee Handbook"
+        ]
+      ],
+      "advisory": false,
+      "contextualized": true,
+      "prompt_version": {
+        "grounding_core": 8,
+        "style": 3
+      },
+      "answer": "If you don't want to take leave without pay, the policy states that if an employee doesn’t have any leave balance, the leave will be granted as loss of pay or leave without pay. Unfortunately, you don't have any other options for the remaining two days unless you can qualify for sick leave, which will require approval.\n\nThe next step would be to talk to your manager about your leave plans and see if any alternative arrangements can be made."
+    },
+    {
+      "turn": "Can I take work from home",
+      "type": "answer",
+      "chunks": [
+        [
+          "k_v4_0022",
+          "Employee Handbook"
+        ],
+        [
+          "k_v4_0018",
+          "Employee Handbook"
+        ],
+        [
+          "r1_0_0004",
+          "India Relocation Polic"
+        ]
+      ],
+      "advisory": false,
+      "contextualized": true,
+      "prompt_version": {
+        "grounding_core": 8,
+        "style": 3
+      },
+      "answer": "Yes, you can take work from home, but it requires prior approval from your manager or the relevant approving authority. This arrangement is applicable to all employees, provided your work can be performed normally from home on those days. \n\nNext, you should discuss your situation with your manager to seek approval for working from home."
+    },
+    {
+      "turn": "I'm at my limit, it's affecting my mental health.",
+      "type": "answer",
+      "chunks": [
+        [
+          "r2_0_0009",
+          "Calfus POSH Policy"
+        ],
+        [
+          "k_v4_0021",
+          "Employee Handbook"
+        ],
+        [
+          "r1_0_0006",
+          "Domestic Travel Policy"
+        ]
+      ],
+      "advisory": false,
+      "contextualized": false,
+      "prompt_version": {
+        "grounding_core": 8,
+        "style": 3
+      },
+      "answer": "I'm sorry to hear that you're feeling this way. Unfortunately, the current policies I've reviewed do not address mental health concerns directly or provide specific options for support. It may be beneficial to talk to your manager about your situation or seek out resources within the company that could provide assistance.\n\nIf it's a matter of filing a complaint related to your mental health concerns, you may want to refer to the policy on complaints, which outlines who can file a complaint and the circumstances under which they can do so."
+    }
+  ],
+  "voice": [
+    {
+      "turn": "My dog died.",
+      "type": "answer",
+      "chunks": [
+        [
+          "cies_0192",
+          "IT Security Policies"
+        ],
+        [
+          "cies_0120",
+          "IT Security Policies"
+        ],
+        [
+          "r1_0_0006",
+          "Domestic Travel Policy"
+        ]
+      ],
+      "advisory": false,
+      "contextualized": false,
+      "prompt_version": {
+        "grounding_core": 8,
+        "style": 4
+      },
+      "answer": "I'm really sorry to hear that. It’s tough to lose a pet. The policies don’t mention bereavement leave for pets, so you might want to consider speaking with your manager or HR about your situation."
+    },
+    {
+      "turn": "So if it was a relative, I could have gotten a bereavement leave.",
+      "type": "answer",
+      "chunks": [
+        [
+          "k_v4_0020",
+          "Employee Handbook"
+        ],
+        [
+          "k_v4_0021",
+          "Employee Handbook"
+        ],
+        [
+          "k_v4_0036",
+          "Employee Handbook"
+        ]
+      ],
+      "advisory": false,
+      "contextualized": true,
+      "prompt_version": {
+        "grounding_core": 8,
+        "style": 4
+      },
+      "answer": "Yes, you would be entitled to two days of bereavement leave for a relative. However, the policy doesn’t mention bereavement leave for pets. You might want to talk to your manager or HR about your specific situation."
+    },
+    {
+      "turn": "It's telling me that my pet is not related to me at all.",
+      "type": "answer",
+      "chunks": [
+        [
+          "k_v4_0020",
+          "Employee Handbook"
+        ],
+        [
+          "k_v4_0021",
+          "Employee Handbook"
+        ],
+        [
+          "k_v4_0036",
+          "Employee Handbook"
+        ]
+      ],
+      "advisory": false,
+      "contextualized": true,
+      "prompt_version": {
+        "grounding_core": 8,
+        "style": 4
+      },
+      "answer": "The policy doesn't specify bereavement leave for pets; it only addresses leaves for relatives. You might want to discuss your situation with your manager or HR for any possible support."
+    },
+    {
+      "turn": "I'm very sick, can't travel, my manager rejected work from home.",
+      "type": "answer",
+      "chunks": [
+        [
+          "k_v4_0022",
+          "Employee Handbook"
+        ],
+        [
+          "k_v4_0024",
+          "Employee Handbook"
+        ],
+        [
+          "r1_0_0003",
+          "Domestic Travel Policy"
+        ]
+      ],
+      "advisory": false,
+      "contextualized": false,
+      "prompt_version": {
+        "grounding_core": 8,
+        "style": 4
+      },
+      "answer": "You can request to work from home due to medical reasons if you're not fully mobile but can still be productive. However, your manager's approval is necessary for this arrangement. If your request was denied, you might want to discuss your situation further with your manager or HR."
+    },
+    {
+      "turn": "My birthday is next week, can I take leave that day?",
+      "type": "answer",
+      "chunks": [
+        [
+          "k_v4_0020",
+          "Employee Handbook"
+        ],
+        [
+          "k_v4_0021",
+          "Employee Handbook"
+        ],
+        [
+          "k_v4_0023",
+          "Employee Handbook"
+        ],
+        [
+          "k_v4_0022",
+          "Employee Handbook"
+        ]
+      ],
+      "advisory": true,
+      "contextualized": true,
+      "prompt_version": {
+        "grounding_core": 8,
+        "style": 4
+      },
+      "answer": "You can take one day of birthday leave on your birthday. Just make sure to inform your manager in advance."
+    },
+    {
+      "turn": "I plan to go to my hometown for a week but I only have three days of earned leave left, is there anything else we can do?",
+      "type": "answer",
+      "chunks": [
+        [
+          "k_v4_0020",
+          "Employee Handbook"
+        ],
+        [
+          "k_v4_0021",
+          "Employee Handbook"
+        ],
+        [
+          "k_v4_0023",
+          "Employee Handbook"
+        ],
+        [
+          "k_v4_0022",
+          "Employee Handbook"
+        ]
+      ],
+      "advisory": true,
+      "contextualized": true,
+      "prompt_version": {
+        "grounding_core": 8,
+        "style": 4
+      },
+      "answer": "Assuming a five-day working week, you would have two days of unpaid leave if you take a week off. You could request to take your remaining earned leave and consider leave without pay for the additional days. Want to discuss the process for leave without pay?"
+    },
+    {
+      "turn": "Well, I don't want to take leave without pay.",
+      "type": "answer",
+      "chunks": [
+        [
+          "k_v4_0021",
+          "Employee Handbook"
+        ],
+        [
+          "k_v4_0020",
+          "Employee Handbook"
+        ],
+        [
+          "k_v4_0036",
+          "Employee Handbook"
+        ],
+        [
+          "k_v4_0025",
+          "Employee Handbook"
+        ]
+      ],
+      "advisory": true,
+      "contextualized": false,
+      "prompt_version": {
+        "grounding_core": 8,
+        "style": 4
+      },
+      "answer": "If you don't want to take leave without pay, your best option is to discuss with your manager about possibly taking unpaid leave for just the additional days you'll need. Otherwise, consider adjusting your plans to fit within your three days of earned leave."
+    },
+    {
+      "turn": "And what about the other two days?",
+      "type": "answer",
+      "chunks": [
+        [
+          "k_v4_0020",
+          "Employee Handbook"
+        ],
+        [
+          "k_v4_0021",
+          "Employee Handbook"
+        ],
+        [
+          "k_v4_0032",
+          "Employee Handbook"
+        ]
+      ],
+      "advisory": false,
+      "contextualized": true,
+      "prompt_version": {
+        "grounding_core": 8,
+        "style": 4
+      },
+      "answer": "Since you don't want to take unpaid leave, the other two days would need to be taken as loss of pay, unless your manager can approve alternative arrangements. You may want to discuss this with them directly."
+    },
+    {
+      "turn": "Can I take work from home",
+      "type": "answer",
+      "chunks": [
+        [
+          "k_v4_0022",
+          "Employee Handbook"
+        ],
+        [
+          "k_v4_0018",
+          "Employee Handbook"
+        ],
+        [
+          "r1_0_0004",
+          "India Relocation Polic"
+        ]
+      ],
+      "advisory": false,
+      "contextualized": true,
+      "prompt_version": {
+        "grounding_core": 8,
+        "style": 4
+      },
+      "answer": "Yes, you can request to work from home, but you need to obtain prior approval from your manager. The arrangements can be temporary and should be communicated in advance to ensure proper work planning."
+    },
+    {
+      "turn": "I'm at my limit, it's affecting my mental health.",
+      "type": "answer",
+      "chunks": [
+        [
+          "r2_0_0009",
+          "Calfus POSH Policy"
+        ],
+        [
+          "k_v4_0021",
+          "Employee Handbook"
+        ],
+        [
+          "r1_0_0006",
+          "Domestic Travel Policy"
+        ]
+      ],
+      "advisory": false,
+      "contextualized": false,
+      "prompt_version": {
+        "grounding_core": 8,
+        "style": 4
+      },
+      "answer": "I'm really sorry to hear that you're going through a tough time. You might want to explore the option of taking leave without pay if you feel that time off is necessary, or consider reaching out to HR for support in handling your situation."
+    }
+  ]
+}

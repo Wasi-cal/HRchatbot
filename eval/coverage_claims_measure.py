@@ -20,9 +20,9 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
-from channels import get_channel  # noqa: E402
-from config.prompts import get_system_prompt  # noqa: E402
-from vectorstore.db import close_pool  # noqa: E402
+from channels import get_channel
+from config.prompts import get_system_prompt
+from vectorstore.db import close_pool
 
 TURNS = [
     ("dog", "can I take bereavement leave for my dog", "a"),
@@ -39,10 +39,10 @@ TURNS = [
     ("days_sick", "how many sick leaves do I get", "c"),
     ("days_earned", "how many earned leaves do I get", "c"),
 ]
-HEDGE_UNSTATED = re.compile(r"(doesn'?t|does not|don'?t|do not|isn'?t|is not|not) (mention|say|state|specify|cover|list|include|clear|provided)|couldn'?t find|could not find|no mention|nothing (in|about|on)|not (stated|specified|covered|mentioned|clear)|doesn'?t (really )?(go into|detail)", re.I)
-COVERAGE = re.compile(r"\b(family|families|relatives?|immediate|dependents?|spouse|parents?|children|siblings?|in-?laws?|loved ones|close (family|relatives))\b", re.I)
-REQUIREMENT = re.compile(r"(don'?t|do not|doesn'?t|does not|no|won'?t|not) (need|require|necessary|needed|required|have to|must)|\b(need|needs|required|must|have to|should|requires?) (to )?(provide|submit|send|show|attach|upload|give|produce|bring|have|get)\b|\b(no|any|some) (proof|documents?|documentation|certificates?|evidence|photos?)\b|\b(proof|documentation|certificates?|evidence|photos?|documents?) (is|are) (needed|required|necessary|not needed|not required)|\b(medical )?certificates?\b|approval (isn'?t|is not|is) (required|needed)|\bautomatically\b", re.I)
-HEDGE_FACT = re.compile(r"\b(typically|usually|generally|may|might|approximately|around|roughly|likely|probably|depends|up to|check with|confirm with|not sure|couldn'?t find|I believe|should be)\b", re.I)
+HEDGE_UNSTATED = re.compile(r"(doesn'?t|does not|don'?t|do not|isn'?t|is not|not) (mention|say|state|specify|cover|list|include|clear|provided)|couldn'?t find|could not find|no mention|nothing (in|about|on)|not (stated|specified|covered|mentioned|clear)|doesn'?t (really )?(go into|detail)", re.IGNORECASE)
+COVERAGE = re.compile(r"\b(family|families|relatives?|immediate|dependents?|spouse|parents?|children|siblings?|in-?laws?|loved ones|close (family|relatives))\b", re.IGNORECASE)
+REQUIREMENT = re.compile(r"(don'?t|do not|doesn'?t|does not|no|won'?t|not) (need|require|necessary|needed|required|have to|must)|\b(need|needs|required|must|have to|should|requires?) (to )?(provide|submit|send|show|attach|upload|give|produce|bring|have|get)\b|\b(no|any|some) (proof|documents?|documentation|certificates?|evidence|photos?)\b|\b(proof|documentation|certificates?|evidence|photos?|documents?) (is|are) (needed|required|necessary|not needed|not required)|\b(medical )?certificates?\b|approval (isn'?t|is not|is) (required|needed)|\bautomatically\b", re.IGNORECASE)
+HEDGE_FACT = re.compile(r"\b(typically|usually|generally|may|might|approximately|around|roughly|likely|probably|depends|up to|check with|confirm with|not sure|couldn'?t find|I believe|should be)\b", re.IGNORECASE)
 
 
 def screen(text, kinds):
@@ -124,7 +124,7 @@ class _settings:
         return self
 
     def __exit__(self, *exc):
-        for ch, prompt_id in self.rows.items():
+        for prompt_id in self.rows.values():
             self.client.post(f"/api/admin/prompts/{prompt_id}/activate")
         self.client.patch("/api/admin/config/prompts.turn_reminder", json={"value": self.saved["reminder"]})
         self.client.patch("/api/admin/config/generation.temperature", json={"value": self.saved["temperature"]})
@@ -143,7 +143,7 @@ def run(args):
     jobs = [(channel, key, question, kinds, i) for channel in ("text", "voice") for key, question, kinds in TURNS for i in range(args.runs)]
 
     def work(job):
-        channel, key, question, kinds_for_turn, i = job
+        channel, _key, question, _kinds_for_turn, _i = job
         return job, get_channel(channel).answer(question)["answer"]
 
     with ThreadPoolExecutor(args.workers) as pool:

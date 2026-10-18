@@ -15,12 +15,12 @@ from dotenv import load_dotenv
 ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(ROOT / ".env")
 
-import channels.text as text_ch  # noqa: E402
-import channels.voice as voice_ch  # noqa: E402
-import config.prompts as prompts_mod  # noqa: E402
-from config.runtime import get_app_config, set_app_config  # noqa: E402
-from vectorstore.db import close_pool, get_pool  # noqa: E402
-from vectorstore.retrieve import retrieve  # noqa: E402
+import channels.text as text_ch
+import channels.voice as voice_ch
+import config.prompts as prompts_mod
+from config.runtime import get_app_config, set_app_config
+from vectorstore.db import close_pool, get_pool
+from vectorstore.retrieve import retrieve
 
 NOTE = "channel_separation_test"
 _results = []
@@ -102,8 +102,9 @@ def test_settings():
 
 def test_prompts():
     print("\n=== (c) Prompts: each channel has independent grounding AND style ===")
-    from api.main import app
     from fastapi.testclient import TestClient
+
+    from api.main import app
 
     prompts_mod.refresh_prompt_cache()  # start from DB truth, not a cache entry up to 30s old
     before_text, before_voice = prompts_mod.get_system_prompt("text"), prompts_mod.get_system_prompt("voice")
@@ -140,7 +141,7 @@ def test_compat_routers():
     from access_control.ask_and_answer import ask_and_answer
     from generation.generate import generate_answer
     for ch in ("text", "voice"):
-        done = [e for e in generate_answer("how many days of earned leave do I get", channel=ch) if e["type"] == "done"][0]
+        done = next(e for e in generate_answer("how many days of earned leave do I get", channel=ch) if e["type"] == "done")
         r = ask_and_answer("how many days of earned leave do I get", channel=ch)
         check(f"generate_answer / ask_and_answer route channel={ch!r}",
               done["prompt_version"] == prompts_mod.get_system_prompt(ch)[1] and r["type"] == "answer"

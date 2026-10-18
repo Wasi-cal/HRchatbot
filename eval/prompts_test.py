@@ -18,18 +18,20 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
-from fastapi.testclient import TestClient  # noqa: E402
+from fastapi.testclient import TestClient
 
-from eval.prompt_topics import has_topic  # noqa: E402
-import config.prompts as prompts_mod  # noqa: E402
-from config.runtime import get_app_config  # noqa: E402
-import generation.generate as gen_mod  # noqa: E402
-from api.main import app  # noqa: E402
-from cache.redis_cache import MISS  # noqa: E402
-from config.runtime import get_app_config, set_app_config  # noqa: E402
-from generation.generate import generate_answer  # noqa: E402
-from vectorstore.db import close_pool, get_pool  # noqa: E402
-from vectorstore.retrieve import retrieve  # noqa: E402
+import config.prompts as prompts_mod
+import generation.generate as gen_mod
+from api.main import app
+from cache.redis_cache import MISS
+from config.runtime import (
+    get_app_config,
+    set_app_config,
+)
+from eval.prompt_topics import has_topic
+from generation.generate import generate_answer
+from vectorstore.db import close_pool, get_pool
+from vectorstore.retrieve import retrieve
 
 TEST_NOTE = "prompts_test"
 LENGTH_QUERIES = [

@@ -39,7 +39,6 @@ def configure(url: str | None = None) -> None:
 
 
 def _get_client() -> redis.Redis | None:
-    global _client
     if time.monotonic() < _down_until:
         return None
     if _client is None:
@@ -60,7 +59,7 @@ def get_cached(key: str):
     try:
         raw = client.get(KEY_PREFIX + key)
         return MISS if raw is None else json.loads(raw)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         _mark_down(exc)
         return MISS
 
@@ -73,7 +72,7 @@ def set_cached(key: str, value, ttl: int | None = None) -> bool:
     try:
         client.set(KEY_PREFIX + key, json.dumps(value), ex=ttl)
         return True
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         _mark_down(exc)
         return False
 
@@ -87,6 +86,6 @@ def delete_cached(key: str) -> bool:
     try:
         client.delete(KEY_PREFIX + key)
         return True
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         _mark_down(exc)
         return False

@@ -1,15 +1,19 @@
 """PDF extraction: per-page text-layer detection, layout-aware digital text,
 digital table separation, and OCR routing for scanned/mixed pages."""
+import io
 import logging
 from collections import Counter
 
 import pymupdf
 from PIL import Image
 
-from .ocr_utils import ocr_plain_text, try_extract_tables, upscale_if_low_dpi, MIN_OCR_DPI_TARGET
+from .ocr_utils import (
+    MIN_OCR_DPI_TARGET,
+    ocr_plain_text,
+    try_extract_tables,
+    upscale_if_low_dpi,
+)
 from .utils import BARE_NUMBERED_ITEM_RE, NUMBERED_SECTION_RE
-
-import io
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +36,7 @@ def extract_pdf(path):
     page_raw_texts = []
     try:
         doc = pymupdf.open(path)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         return [], [], [f"failed to open PDF: {exc}"]
 
     body_size = _estimate_body_font_size(doc)
@@ -44,7 +48,7 @@ def extract_pdf(path):
             page_num = page_index + 1
             try:
                 raw_text = page.get_text().strip()
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 errors.append(f"page {page_num}: text extraction failed: {exc}")
                 raw_text = ""
 
@@ -55,17 +59,17 @@ def extract_pdf(path):
                 try:
                     page_blocks = _extract_digital_page(page, page_num, body_size, heading_sizes)
                     blocks.extend(page_blocks)
-                except Exception as exc:
+                except Exception as exc:  # noqa: BLE001
                     errors.append(f"page {page_num}: digital extraction failed: {exc}")
 
                 try:
                     blocks.extend(_extract_embedded_images(doc, page, page_num))
-                except Exception as exc:
+                except Exception as exc:  # noqa: BLE001
                     errors.append(f"page {page_num}: embedded image OCR failed: {exc}")
             else:
                 try:
                     blocks.extend(_extract_scanned_page(page, page_num))
-                except Exception as exc:
+                except Exception as exc:  # noqa: BLE001
                     errors.append(f"page {page_num}: OCR extraction failed: {exc}")
     finally:
         doc.close()
@@ -119,7 +123,7 @@ def _estimate_body_font_size(doc):
     for page in doc:
         try:
             d = page.get_text("dict")
-        except Exception:
+        except Exception:  # noqa: BLE001, S112
             continue
         for b in d.get("blocks", []):
             for l in b.get("lines", []):
@@ -135,7 +139,7 @@ def _collect_heading_sizes(doc, body_size):
     for page in doc:
         try:
             d = page.get_text("dict")
-        except Exception:
+        except Exception:  # noqa: BLE001, S112
             continue
         for b in d.get("blocks", []):
             for l in b.get("lines", []):
@@ -220,7 +224,7 @@ def _extract_digital_page(page, page_num, body_size, heading_sizes):
         for table in tf.tables:
             try:
                 rows = table.extract()
-            except Exception:
+            except Exception:  # noqa: BLE001, S112
                 continue
             if not rows or not _looks_like_real_table(rows):
                 continue
@@ -235,7 +239,7 @@ def _extract_digital_page(page, page_num, body_size, heading_sizes):
                 "row_mismatch": mismatch,
             })
             table_bboxes.append(_pad_bbox(tuple(table.bbox)))
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logger.debug("find_tables failed on page %s: %s", page_num, exc)
 
     d = page.get_text("dict")
@@ -321,9 +325,7 @@ def _looks_like_real_table(rows):
     those out so they fall through to normal heading/paragraph detection."""
     if len(rows) < 2:
         non_empty = sum(1 for r in rows for c in r if c and str(c).strip())
-        if len(rows) == 1 and non_empty >= 4 and len(rows[0]) >= 4:
-            return True
-        return False
+        return len(rows) == 1 and non_empty >= 4 and len(rows[0]) >= 4
     return True
 
 
@@ -409,9 +411,9 @@ def _extract_embedded_images(doc, page, page_num):
                 continue
             try:
                 base = doc.extract_image(xref)
-                raw_w, raw_h = base.get("width", 0), base.get("height", 0)
+                raw_w = base.get("width", 0)
                 pil_img = Image.open(io.BytesIO(base["image"])).convert("RGB")
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 logger.debug("could not extract embedded image xref %s: %s", xref, exc)
                 continue
 

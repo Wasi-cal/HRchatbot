@@ -16,18 +16,17 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
-from fastapi.testclient import TestClient  # noqa: E402
+from fastapi.testclient import TestClient
 
-import channels.text as text_ch  # noqa: E402
-import channels.voice as voice_ch  # noqa: E402
-from eval.prompt_topics import has_topic  # noqa: E402
-import config.prompts as prompts_mod  # noqa: E402
-import config.topics as topics_mod  # noqa: E402
-from api.main import app  # noqa: E402
-from channels import common  # noqa: E402
-from config.runtime import get_app_config, set_app_config  # noqa: E402
-from eval import turn_calls  # noqa: E402
-from vectorstore.db import close_pool, get_pool  # noqa: E402
+import channels.text as text_ch
+import channels.voice as voice_ch
+import config.prompts as prompts_mod
+import config.topics as topics_mod
+from api.main import app
+from config.runtime import get_app_config
+from eval import turn_calls
+from eval.prompt_topics import has_topic
+from vectorstore.db import close_pool, get_pool
 
 CHANNELS = (("text", text_ch), ("voice", voice_ch))
 POSITIVE = ["what docs do u have access to rn", "what documents do you have", "which policies do you cover", "what do you know",
@@ -145,7 +144,7 @@ def test_replies(client):
         check(f"[{name}] reply ends with a statement inviting a question without asking one", text.rstrip().endswith("."))
     v = voice_ch.catalog_reply("what documents do you have", [])["text"]
     check("voice: at most 4 short spoken names, no file names / versions / section paths / symbols",
-          not re.search(r"\.pdf|\.docx|\bv\d|\bver\d|>|_|:|&|\(", v, re.I) and len(re.findall(r",| and ", v)) <= 5, v)
+          not re.search(r"\.pdf|\.docx|\bv\d|\bver\d|>|_|:|&|\(", v, re.IGNORECASE) and len(re.findall(r",| and ", v)) <= 5, v)
     t = text_ch.catalog_reply("what documents do you have", [])["text"]
     check("text: lists at most catalog.text_max_titles (12) titles then 'and N more'", re.search(r"and \d+ more", t) is not None and t.count(" Policy") <= 12, t[:200])
 
@@ -153,7 +152,7 @@ def test_replies(client):
     try:
         set_config(client, "catalog.text_max_titles", 3)
         t3 = text_ch.catalog_reply("what documents do you have", [])["text"]
-        check("catalog.text_max_titles=3 lists 3 titles and 'and %d more'" % (len(titles) - 3), f"and {len(titles) - 3} more" in t3, t3[:160])
+        check(f"catalog.text_max_titles=3 lists 3 titles and 'and {len(titles) - 3} more'", f"and {len(titles) - 3} more" in t3, t3[:160])
         set_config(client, "catalog.text_max_titles", len(titles))
         tall = text_ch.catalog_reply("what documents do you have", [])["text"]
         check("when everything fits there is no 'and N more'", " more" not in tall.split("Example topics")[0], tall[:120])
@@ -171,8 +170,8 @@ def test_replies(client):
     topics_mod._memo.clear()
     try:
         import channels.text as t_mod
-        t_mod.get_catalog_titles = lambda: []
-        voice_ch.get_catalog_titles = lambda: []
+        t_mod.get_catalog_titles = list
+        voice_ch.get_catalog_titles = list
         check("empty title list: text says no documents are loaded yet", "no HR documents" in text_ch.catalog_reply("what documents do you have", [])["text"].lower().replace("there are no hr", "no HR") or "no hr documents" in text_ch.catalog_reply("what documents do you have", [])["text"].lower())
         check("empty title list: voice says none are loaded yet", "don't have any" in voice_ch.catalog_reply("what documents do you have", [])["text"])
     finally:
@@ -180,8 +179,8 @@ def test_replies(client):
         voice_ch.get_catalog_titles = real
 
     broken = {**get_app_config("catalog.templates.text"), "main": "{nope}"}
-    from config.runtime import DEFAULT_CATALOG_TEMPLATES
     from channels import catalog
+    from config.runtime import DEFAULT_CATALOG_TEMPLATES
     check("a broken template falls back to the seeded default instead of failing",
           "HR documents" in catalog.build_reply(["A Policy"], [], broken, spoken=False, max_titles=12, max_title_words=5, defaults=DEFAULT_CATALOG_TEMPLATES["text"]))
 
@@ -247,7 +246,7 @@ def test_calls(client):
                       ("voice catalog (which policies do you cover)", voice("which policies do you cover"))):
         fn()
         turn_calls.reset()
-        out = fn()
+        fn()
         rows[label] = dict(turn_calls.calls)
         c = rows[label]
         check(f"{label}: 0 LLM, 0 retrieval, 0 embedding, 0 Redis; DB only the response-log insert (like small talk)",
@@ -276,6 +275,10 @@ def test_calls(client):
     print()
     turn_calls.print_table(now)
     for label, base in baseline.items():
+        if "source lookup" in label:  # one Redis read fewer since lookups scan the longer history window directly (never more calls)
+            same = all(now[label][k] == base[k] for k in ("llm", "retrieve", "embed")) and all(now[label][k] <= base[k] for k in ("db", "redis"))
+            check(f"unchanged vs baseline (no more calls): {label}", same, f"baseline {base} now {now[label]}")
+            continue
         check(f"unchanged vs baseline: {label}", now[label] == base, f"baseline {base} now {now[label]}")
 
 
@@ -293,7 +296,7 @@ def test_prompt():
 
 def test_model(client):
     print("\n=== (g) Unanswerable questions must not send the user to IT / legal / finance (3 runs per channel) ===")
-    referral = re.compile(r"(contact|reach out to|speak (?:to|with)|check with|ask|consult|talk to|refer)\b[^.]{0,50}\b(IT\b|legal|finance|accounts|payroll team|admin team)", re.I)
+    referral = re.compile(r"(contact|reach out to|speak (?:to|with)|check with|ask|consult|talk to|refer)\b[^.]{0,50}\b(IT\b|legal|finance|accounts|payroll team|admin team)", re.IGNORECASE)
     set_config(client, "catalog.enabled", False)  # reproduce the transcript: the utterance reaches retrieval + generation
     try:
         for name, ch in CHANNELS:

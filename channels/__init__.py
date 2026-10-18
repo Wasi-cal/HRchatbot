@@ -24,7 +24,7 @@ def get_channel(name: str):
 # One INFO line per turn from "hrchatbot.text" / "hrchatbot.voice" (turn type, prompt versions,
 # timings), so a channel's behaviour can be followed with a simple grep. uvicorn does not
 # configure application loggers, so attach a handler here if none exists yet.
-import logging  # noqa: E402
+import logging
 
 _root = logging.getLogger("hrchatbot")
 if not _root.handlers:

@@ -11,7 +11,11 @@ import time
 from channels import catalog, common
 from config.prompts import get_system_prompt
 from config.topics import get_catalog_titles, get_topics_cached, topic_phrase
-from generation.generate import get_client, get_confidence_threshold, get_generation_model
+from generation.generate import (
+    get_client,
+    get_confidence_threshold,
+    get_generation_model,
+)
 from vectorstore.retrieve import retrieve
 
 CHANNEL = "text"
@@ -29,7 +33,7 @@ def no_match_response() -> str:
     config/topics.py); falls back to the base sentence if the lookup fails or finds none."""
     try:
         topics = topic_phrase()
-    except Exception:
+    except Exception:  # noqa: BLE001
         topics = None
     return f"{NO_MATCH_BASE} I can help with things like {topics}." if topics else NO_MATCH_BASE
 
@@ -112,42 +116,10 @@ def smalltalk_reply(category: str) -> str:
 # --------------------------------------------------------------------------
 
 def source_reply(query: str, history: list | None) -> dict | None:
-    """If query is a source question (source.markers) AND the history has an earlier assistant answer,
-    recompute the retrieval of the exchange it refers to and name the documents; else None (the caller
-    falls through to the normal pipeline). Returns {"text", "chunk_ids", "timing"}.
-
-    The previous exchange is the last assistant message and the user message before it (skipping earlier
-    source questions). Its retrieval is rebuilt by the same functions a normal turn uses
-    (common.plan_turn over only the history that PRECEDED it, then _retrieve()). If that answer was
-    small talk or a refusal there is no document to name and a templated "didn't come from a policy
-    document" line is returned instead."""
-    if not common.is_source_question(query):
-        return None
-    cleaned = common.clean_history(history, CHANNEL)
-    exchange = common.previous_exchange(cleaned)
-    if exchange is None:
-        return None
-    user_index, assistant_index = exchange
-    previous_query, previous_answer = cleaned[user_index]["content"], cleaned[assistant_index]["content"]
-    templates = common.memo_config("source.templates.text", {}) or {}
-    started = time.monotonic()
-    if (smalltalk_match(previous_query, cleaned[:user_index]) or previous_answer.lower().startswith(common.REFUSAL_PREFIX)
-            or previous_answer.startswith(NO_MATCH_BASE)):
-        text = _template(templates, "none")
-        chunk_ids: list = []
-    else:
-        plan = common.plan_turn(previous_query, cleaned[:user_index], CHANNEL)
-        results = _retrieve(plan)
-        text = common.format_source_reply(results, templates, spoken=False)
-        chunk_ids = [r["chunk_id"] for r in results]
-    logger.info("turn type=source_lookup chunks=%d", len(chunk_ids))
-    return {"text": text, "chunk_ids": chunk_ids, "timing": {"retrieval_time_ms": (time.monotonic() - started) * 1000}}
-
-
-def _template(templates: dict, key: str) -> str:
-    from config.runtime import DEFAULT_SOURCE_TEMPLATES
-
-    return templates.get(key) or DEFAULT_SOURCE_TEMPLATES[CHANNEL][key]
+    """A source, section or page question ("where is this from", "what section", "what page number") when the history has
+    an earlier answer: 0 LLM calls, one re-retrieval of that answer's turn. See common.lookup_reply. Returns
+    {"text", "chunk_ids", "timing", "type"} or None (the caller falls through to the normal pipeline)."""
+    return common.lookup_reply(query, history, CHANNEL, smalltalk_match, _retrieve, NO_MATCH_BASE)
 
 
 # --------------------------------------------------------------------------
