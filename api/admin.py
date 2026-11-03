@@ -11,6 +11,7 @@ from typing import Any, Literal
 from uuid import UUID
 
 import psycopg
+from psycopg import sql
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 from psycopg.rows import dict_row
 from pydantic import BaseModel
@@ -190,7 +191,7 @@ _DOCUMENT_SELECT = """
 @router.get("/documents")
 def list_documents():
     with get_pool().connection() as conn, conn.cursor(row_factory=dict_row) as cur:
-        cur.execute(_DOCUMENT_SELECT + " ORDER BY d.created_at DESC, d.id")
+        cur.execute(sql.SQL(_DOCUMENT_SELECT) + sql.SQL(" ORDER BY d.created_at DESC, d.id"))
         rows = cur.fetchall()
     # "possible duplicate of ..." badges come from the cached scan (cache-aside, invalidated with the other
     # document caches); a failure here must never break the listing.
