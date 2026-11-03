@@ -141,14 +141,13 @@ def sparse_search(
     active chunk's sparse_vector under the active model once, scores each
     against the query in memory, and returns the top candidate_n as
     (chunk_db_id, score) ordered by score descending."""
-    filter_sql = _visibility_filter_sql()
     rows = conn.execute(
-        f"""
+        """
         SELECT ce.chunk_id, ce.sparse_vector
         FROM chunk_embeddings ce
         JOIN chunks c ON c.id = ce.chunk_id
         JOIN documents d ON d.id = c.document_id
-        WHERE ce.embedding_model_id = %s AND NOT c.is_superseded AND {filter_sql}
+        WHERE ce.embedding_model_id = %s AND NOT c.is_superseded AND NOT d.is_restricted
         """,
         [model_id],
     ).fetchall()
