@@ -13,17 +13,20 @@ Checks:
 """
 import sys
 
-from psycopg import sql
-
 from vectorstore.db import close_pool, get_pool
 from vectorstore.embedder import BGEM3Embedder
 
 DEFAULT_QUERY = "what is the parental leave policy?"
 
-TABLES = [
-    "documents", "applicability_tags", "document_applicability",
-    "chunks", "embedding_models", "chunk_embeddings", "provider_configs",
-]
+TABLES = {
+    "documents": "SELECT count(*) FROM documents",
+    "applicability_tags": "SELECT count(*) FROM applicability_tags",
+    "document_applicability": "SELECT count(*) FROM document_applicability",
+    "chunks": "SELECT count(*) FROM chunks",
+    "embedding_models": "SELECT count(*) FROM embedding_models",
+    "chunk_embeddings": "SELECT count(*) FROM chunk_embeddings",
+    "provider_configs": "SELECT count(*) FROM provider_configs",
+}
 
 
 def check_embedding_coverage(conn):
@@ -100,10 +103,8 @@ def run_test_query(conn, query: str, embedder: BGEM3Embedder, model_id: int, top
 
 def print_row_counts(conn):
     print("\n=== Row counts ===")
-    for table in TABLES:
-        count = conn.execute(
-            sql.SQL("SELECT count(*) FROM {}").format(sql.Identifier(table))
-        ).fetchone()[0]
+    for table, query in TABLES.items():
+        count = conn.execute(query).fetchone()[0]
         print(f"  {table}: {count}")
 
 
