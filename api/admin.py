@@ -308,17 +308,9 @@ def usage_summary(
     days: int = Query(7, ge=0, description="Window in days; 0 = all time"),
     source: Literal["text", "voice"] | None = Query(None, description="Filter by request origin"),
 ):
-    clauses, params = [], []
-    if days:
-        clauses.append("created_at >= now() - make_interval(days => %s)")
-        params.append(days)
-    if source:
-        clauses.append("source = %s")
-        params.append(source)
-    where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with get_pool().connection() as conn, conn.cursor(row_factory=dict_row) as cur:
         cur.execute(
-            f"""
+            """
             SELECT count(*) AS total,
                    count(*) FILTER (WHERE response_type = 'answer') AS answer,
                    count(*) FILTER (WHERE response_type = 'clarification') AS clarification,
@@ -335,9 +327,11 @@ def usage_summary(
                    avg(retrieval_time_ms) AS avg_retrieval_time_ms,
                    avg(ttft_ms) AS avg_ttft_ms,
                    avg(total_generation_time_ms) AS avg_total_generation_time_ms
-            FROM query_logs {where}
+            FROM query_logs
+            WHERE (%s = 0 OR created_at >= now() - make_interval(days => %s))
+              AND (%s IS NULL OR source = %s)
             """,
-            params,
+            (days, days, source, source),
         )
         r = cur.fetchone()
 
