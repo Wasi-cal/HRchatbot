@@ -8,8 +8,6 @@ vectorstore, DB/cache, the LLM client). Neither module imports the other
 (enforced by eval/channel_separation_test.py), so a bug in one channel's
 flow, copy or settings can be debugged without reading the other's.
 """
-import importlib
-
 CHANNELS = ("text", "voice")
 
 
@@ -18,7 +16,11 @@ def get_channel(name: str):
     (generation.generate.generate_answer, access_control.ask_and_answer)."""
     if name not in CHANNELS:
         raise ValueError(f"unknown channel {name!r}; expected one of {CHANNELS}")
-    return importlib.import_module(f"channels.{name}")
+    if name == "text":
+        from channels import text
+        return text
+    from channels import voice
+    return voice
 
 
 # One INFO line per turn from "hrchatbot.text" / "hrchatbot.voice" (turn type, prompt versions,
