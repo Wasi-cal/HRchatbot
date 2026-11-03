@@ -29,6 +29,7 @@ dependencies = [
 
 [tool.uv]
 package = false
+exclude-newer = "7 days"
 
 [dependency-groups]
 voice-test = [
