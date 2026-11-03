@@ -1,9 +1,10 @@
 name: veil
 
 on:
-  schedule:
-    - cron: "0 6 * * *"
   workflow_dispatch:
+  pull_request:
+    types: [opened, reopened, synchronize]
+  # Never use pull_request_target. A run on a fork pull request must not get secrets.
 
 permissions:
   contents: write
@@ -17,34 +18,13 @@ jobs:
   veil:
     runs-on: ubuntu-latest
     steps:
+      # Must run first. veil reads .gozu/jira-to-pr.yml from this checkout.
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      # The veil source. The repo is public, so no token is needed.
-      # No image is published yet (GR-29), so the runner builds it.
-      - uses: actions/checkout@v4
-        with:
-          repository: Wasi-cal/veil
-          ref: d6f26fd2fde6f037d0df4dcacc2405a08096a065
-          path: .veil-src
-          persist-credentials: false
-      - name: Build the image
-        run: docker build -t veil:trial .veil-src
-      - name: Run veil
+      - uses: Wasi-cal/veil@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: |
-          docker run --rm \
-            -v "$GITHUB_WORKSPACE:/github/workspace" \
-            -v "$GITHUB_STEP_SUMMARY:$GITHUB_STEP_SUMMARY" \
-            -e GITHUB_WORKSPACE=/github/workspace \
-            -e GITHUB_REPOSITORY -e GITHUB_EVENT_NAME -e GITHUB_STEP_SUMMARY \
-            -e GITHUB_TOKEN -e JIRA_EMAIL -e JIRA_API_TOKEN -e OPENAI_API_KEY \
-            veil:trial || status=$?
-          # Print the report in the log, so a person can read it without the Summary page.
-          echo "----- veil report -----"
-          cat "$GITHUB_STEP_SUMMARY" || true
-          exit "${status:-0}"

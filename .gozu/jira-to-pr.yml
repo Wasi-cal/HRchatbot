@@ -1,3 +1,4 @@
 jira_site_url: "https://gozu-calfus.atlassian.net"
 jira_project_keys: ["SEC"]
 ticket_token_cap: 30000
+pull_request_enabled: true
