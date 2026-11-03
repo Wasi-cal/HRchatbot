@@ -164,14 +164,13 @@ def sparse_search(
 def sparse_search_many(conn, query_sparses: list[dict], model_id: int, limits: list[int]):
     """sparse_search() for several queries over ONE fetch of the chunk sparse vectors
     (the fetch dominates its cost). limits[i] is candidate_n for query i."""
-    filter_sql = _visibility_filter_sql()
     rows = conn.execute(
-        f"""
+        """
         SELECT ce.chunk_id, ce.sparse_vector
         FROM chunk_embeddings ce
         JOIN chunks c ON c.id = ce.chunk_id
         JOIN documents d ON d.id = c.document_id
-        WHERE ce.embedding_model_id = %s AND NOT c.is_superseded AND {filter_sql}
+        WHERE ce.embedding_model_id = %s AND NOT c.is_superseded AND NOT d.is_restricted
         """,
         [model_id],
     ).fetchall()
