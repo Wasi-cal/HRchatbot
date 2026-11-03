@@ -109,14 +109,14 @@ def dense_search_many(conn, query_denses: list, model_id: int, limits: list[int]
     filter_sql = _visibility_filter_sql()
     parts, params = [], []
     for i, (vec, limit) in enumerate(zip(query_denses, limits)):
-        parts.append(f"""(SELECT {i} AS q, ce.chunk_id, 1 - (ce.dense_vector <=> %s) AS similarity
+        parts.append("""(SELECT %s AS q, ce.chunk_id, 1 - (ce.dense_vector <=> %s) AS similarity
             FROM chunk_embeddings ce
             JOIN chunks c ON c.id = ce.chunk_id
             JOIN documents d ON d.id = c.document_id
             WHERE ce.embedding_model_id = %s AND NOT c.is_superseded AND {filter_sql}
             ORDER BY ce.dense_vector <=> %s
             LIMIT %s)""")
-        params += [vec, model_id, vec, limit]
+        params += [i, vec, model_id, vec, limit]
     rows = conn.execute(" UNION ALL ".join(parts) + " ORDER BY q, similarity DESC", params).fetchall()
     out = [[] for _ in query_denses]
     for q, chunk_db_id, similarity in rows:
