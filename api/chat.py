@@ -27,6 +27,8 @@ class ChatRequest(BaseModel):
 class AnswerResponse(BaseModel):
     type: Literal["answer"] = "answer"
     text: str
+    # Conversation title written by the SAME generation call as the answer (no extra LLM call); None if the model omitted it.
+    title: str | None = None
     timing: dict
 
 
@@ -124,7 +126,7 @@ def chat(req: ChatRequest, background: BackgroundTasks):
         )
         return CatalogResponse(text=catalog_answer["text"])
 
-    result = text_channel.answer(req.query, history=history)
+    result = text_channel.answer(req.query, history=history, want_title=True)
     shortcut = result["shortcut"]
     background.add_task(
         log_query,
@@ -138,5 +140,6 @@ def chat(req: ChatRequest, background: BackgroundTasks):
         contextualized=result.get("contextualized"),
         advisory=result.get("advisory"),
     )
-    cls = RefusalResponse if shortcut else AnswerResponse
-    return cls(text=result["answer"], timing=result["timing"])
+    if shortcut:
+        return RefusalResponse(text=result["answer"], timing=result["timing"])
+    return AnswerResponse(text=result["answer"], title=result.get("title"), timing=result["timing"])

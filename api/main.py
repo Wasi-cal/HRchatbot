@@ -18,6 +18,7 @@ load_dotenv()
 from api import (
     admin,
     chat,
+    policies,
     voice,
 )
 from cache import redis_cache
@@ -66,6 +67,7 @@ app.add_middleware(
 
 app.include_router(chat.router)
 app.include_router(admin.router)
+app.include_router(policies.router)
 app.include_router(voice.router)
 
 

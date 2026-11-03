@@ -21,10 +21,11 @@ from config.runtime import get_app_config, memo_provider_config
 # ---- generation ---------------------------------------------------------------------
 
 
-def build_messages(query: str, chunks: list[dict], system_prompt: str, history: list[dict] | None = None) -> list[dict]:
+def build_messages(query: str, chunks: list[dict], system_prompt: str, history: list[dict] | None = None, extra: str = "") -> list[dict]:
     """[system prompt (stable first, so provider prefix caching applies)] + prior chat
     turns + ONE final user message holding the retrieved excerpts and the current
-    question. Excerpts attach to the current turn only, never to history turns."""
+    question. Excerpts attach to the current turn only, never to history turns. `extra` (optional) is a per-turn
+    instruction placed after the reminder; the system prompt itself is never touched."""
     blocks = []
     for i, chunk in enumerate(chunks, start=1):
         label = f"[Applies to: {chunk['applies_to']}]\n" if chunk.get("applies_to") else ""
@@ -37,13 +38,30 @@ def build_messages(query: str, chunks: list[dict], system_prompt: str, history: 
     user_content = (
         "Retrieved policy excerpts (internal grounding only - never mention the "
         "excerpt labels, source titles, or section names in your answer):\n\n"
-        f"{context}\n\n" + (f"{reminder}\n\n" if reminder else "") + f"Employee question: {query}"
+        f"{context}\n\n" + (f"{reminder}\n\n" if reminder else "") + (f"{extra}\n\n" if extra else "") + f"Employee question: {query}"
     )
     return [
         {"role": "system", "content": system_prompt},
         *(history or []),
         {"role": "user", "content": user_content},
     ]
+
+
+TITLE_INSTRUCTION = (
+    "After your answer, on a new final line, write exactly: [[TITLE: <3 to 7 word title covering every topic of this whole "
+    "conversation so far, including the earlier questions above and not only the latest one (e.g. Annual leave and expense claims); "
+    "a topic label, no quotes or trailing punctuation>]]. This line is not part of the answer."
+)
+_TITLE_RE = re.compile(r"\[\[\s*TITLE\s*:\s*(.*?)\s*\]\]", re.IGNORECASE | re.DOTALL)
+
+
+def split_title(answer: str) -> tuple[str, str | None]:
+    """(answer without the title marker, the title or None). Also drops a marker the model left unfinished at the end."""
+    matches = _TITLE_RE.findall(answer)
+    cleaned = _TITLE_RE.sub("", answer)
+    cleaned = re.sub(r"\[\[\s*TITLE.*\Z", "", cleaned, flags=re.IGNORECASE | re.DOTALL).rstrip()
+    title = " ".join(matches[-1].split()).strip(" .\"'")[:60] if matches else None
+    return cleaned, (title or None)
 
 
 class TurnCancelled(Exception):

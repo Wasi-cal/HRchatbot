@@ -169,6 +169,7 @@ def answer_stream(
     confidence_threshold: float | None = None,
     history: list | None = None,
     handle: common.TurnHandle | None = None,
+    want_title: bool = False,
 ):
     """One turn: retrieve ONCE, generate ONCE, stream. A generator yielding dict events:
 
@@ -216,7 +217,7 @@ def answer_stream(
 
     model = get_generation_model(CHANNEL)
     system_prompt, prompt_version = get_system_prompt(CHANNEL)
-    messages = common.build_messages(query, results, system_prompt, plan.history)
+    messages = common.build_messages(query, results, system_prompt, plan.history, extra=common.TITLE_INSTRUCTION if want_title else "")
     stats = yield from common.stream_completion(get_client(), model, messages, channel=CHANNEL, handle=handle)
 
     timing = {
@@ -251,17 +252,20 @@ def answer(
     k: int | None = None,
     confidence_threshold: float | None = None,
     history: list | None = None,
+    want_title: bool = False,
 ) -> dict:
     """Non-streaming answer_stream(): {"type": "answer", "answer", "shortcut", "timing",
     "chunk_ids", "prompt_version", "contextualized", "advisory"}."""
     final_event = None
     for event in answer_stream(query, top_k=top_k, candidate_n=candidate_n, k=k,
-                               confidence_threshold=confidence_threshold, history=history):
+                               confidence_threshold=confidence_threshold, history=history, want_title=want_title):
         if event["type"] == "done":
             final_event = event
+    text, title = common.split_title(final_event["answer"]) if want_title else (final_event["answer"], None)
     return {
         "type": "answer",
-        "answer": final_event["answer"],
+        "answer": text,
+        "title": title,
         "shortcut": final_event["shortcut"],
         "timing": final_event["timing"],
         "chunk_ids": final_event.get("chunk_ids", []),
