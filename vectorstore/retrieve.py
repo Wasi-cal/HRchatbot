@@ -88,14 +88,13 @@ def dense_search(
     """Cosine-similarity search via the HNSW index. Returns a list of
     (chunk_db_id, similarity) ordered by similarity descending - list
     position gives the dense rank (1-based)."""
-    filter_sql = _visibility_filter_sql()
     rows = conn.execute(
-        f"""
+        """
         SELECT ce.chunk_id, 1 - (ce.dense_vector <=> %s) AS similarity
         FROM chunk_embeddings ce
         JOIN chunks c ON c.id = ce.chunk_id
         JOIN documents d ON d.id = c.document_id
-        WHERE ce.embedding_model_id = %s AND NOT c.is_superseded AND {filter_sql}
+        WHERE ce.embedding_model_id = %s AND NOT c.is_superseded AND NOT d.is_restricted
         ORDER BY ce.dense_vector <=> %s
         LIMIT %s
         """,
