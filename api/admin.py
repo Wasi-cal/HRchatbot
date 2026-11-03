@@ -260,7 +260,7 @@ def set_document_status(document_id: UUID, body: StatusRequest):
             if cur.rowcount == 0:
                 raise HTTPException(404, "Document not found")
             cur.execute("UPDATE chunks SET is_superseded = %s WHERE document_id = %s", (flag, document_id))
-            cur.execute(_DOCUMENT_SELECT + " WHERE d.id = %s", (document_id,))
+            cur.execute(sql.SQL(_DOCUMENT_SELECT) + sql.SQL(" WHERE d.id = %s"), (document_id,))
             row = cur.fetchone()
             conn.commit()
     except psycopg.errors.UniqueViolation:
