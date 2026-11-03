@@ -220,24 +220,20 @@ def rrf_fuse(dense_results, sparse_results, k: int = DEFAULT_RRF_K):
 # details (no extra round trip). retrieve() turns them into a label with config.labels.compute_label(), which
 # shows a tag type only where the document deviates from the norm (norms come from the cache). NULL when the
 # document has no tags.
-_TAGS_SQL = """
-    (SELECT json_object_agg(g.tag_type, g.vals)
-       FROM (SELECT at.tag_type, array_agg(at.tag_value ORDER BY at.tag_value) AS vals
-               FROM document_applicability da
-               JOIN applicability_tags at ON at.id = da.tag_id
-              WHERE da.document_id = d.id
-              GROUP BY at.tag_type) g)
-"""
-
-
 def fetch_chunk_details(conn, chunk_db_ids: list) -> dict:
     """Returns {chunk_db_id: (chunk_id, section_path, text, document_title,
     document_id, tags)}. tags is the document's {tag_type: [values]} (None when it has none)."""
     if not chunk_db_ids:
         return {}
     rows = conn.execute(
-        f"""
-        SELECT c.id, c.chunk_id, c.section_path, c.text, d.document_title, d.id, {_TAGS_SQL} AS tags
+        """
+        SELECT c.id, c.chunk_id, c.section_path, c.text, d.document_title, d.id,
+               (SELECT json_object_agg(g.tag_type, g.vals)
+                  FROM (SELECT at.tag_type, array_agg(at.tag_value ORDER BY at.tag_value) AS vals
+                          FROM document_applicability da
+                          JOIN applicability_tags at ON at.id = da.tag_id
+                         WHERE da.document_id = d.id
+                         GROUP BY at.tag_type) g) AS tags
         FROM chunks c
         JOIN documents d ON d.id = c.document_id
         WHERE c.id = ANY(%s)
