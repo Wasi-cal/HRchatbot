@@ -13,6 +13,8 @@ Checks:
 """
 import sys
 
+from psycopg import sql
+
 from vectorstore.db import close_pool, get_pool
 from vectorstore.embedder import BGEM3Embedder
 
@@ -99,7 +101,9 @@ def run_test_query(conn, query: str, embedder: BGEM3Embedder, model_id: int, top
 def print_row_counts(conn):
     print("\n=== Row counts ===")
     for table in TABLES:
-        count = conn.execute(f"SELECT count(*) FROM {table}").fetchone()[0]
+        count = conn.execute(
+            sql.SQL("SELECT count(*) FROM {}").format(sql.Identifier(table))
+        ).fetchone()[0]
         print(f"  {table}: {count}")
 
 
