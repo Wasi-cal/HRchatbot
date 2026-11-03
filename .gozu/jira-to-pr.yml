@@ -1,4 +1,8 @@
 jira_site_url: "https://gozu-calfus.atlassian.net"
-jira_project_keys: ["SEC"]
+jira_project_keys: ["VT"]
 ticket_token_cap: 30000
 pull_request_enabled: true
+# The VT workflow has only To Do, In Progress and Done. It has no In Review status.
+in_review_status: "In Progress"
+# No label is needed. veil takes every open ticket without an assignee.
+eligible_label: ""
