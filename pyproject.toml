@@ -29,6 +29,7 @@ dependencies = [
 
 [tool.uv]
 package = false
+required-version = ">=0.9.17"
 exclude-newer = "7 days"
 
 [dependency-groups]
