@@ -1,9 +1,10 @@
 name: veil
 
 on:
-  schedule:
-    - cron: "0 6 * * *"
   workflow_dispatch:
+  pull_request:
+    types: [opened, reopened, synchronize]
+  # Never use pull_request_target. A run on a fork pull request must not get secrets.
 
 permissions:
   contents: write
@@ -17,10 +18,11 @@ jobs:
   veil:
     runs-on: ubuntu-latest
     steps:
+      # Must run first. veil reads .gozu/jira-to-pr.yml from this checkout.
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - uses: calfus/veil@v1
+      - uses: Wasi-cal/veil@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
