@@ -4,10 +4,11 @@ version = "0.1.0"
 description = "HR RAG chatbot - document ingestion, chunking, embedding, and vector store pipeline"
 requires-python = ">=3.11"
 dependencies = [
+    "setuptools>=84.1.0",
     "pymupdf>=1.24",
     "python-docx>=1.1",
     "pytesseract>=0.3.10",
-    "pillow>=10.0",
+    "pillow>=13.0.0",  # Fix PILfont signed glyph-width overflow.
     "img2table>=1.3",
     "numpy>=1.24",
     "pandas>=2.0",
@@ -25,6 +26,11 @@ dependencies = [
     # --- runtime config cache ---
     "redis>=5.0",
     "httpx>=0.28.1",
+    "aiohttp==3.14.4",
+    "multidict>=6.9.1",
+    "certifi>=2026.10.19",
+    "filelock>=4.2.1",
+    "opentelemetry-api>=1.45.1",
 ]
 
 [tool.uv]
