@@ -53,14 +53,13 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="HR Chatbot API", lifespan=lifespan)
 
 # SECURITY GAP - DEV ONLY: there is NO authentication or authorization
-# anywhere in this API, and CORS is wide open. That means anyone who can
-# reach the server can call /api/admin/* (upload or restrict documents,
-# read all query logs and answers). Before any real deployment: add auth,
-# put /api/admin behind an admin role, and restrict allow_origins to the
-# real frontend origin.
+# anywhere in this API. Anyone who can reach the server can call /api/admin/*
+# (upload or restrict documents, read all query logs and answers). Before any
+# real deployment: add auth and put /api/admin behind an admin role. Set
+# CORS_ORIGINS to the allowed frontend origins.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(","),
     allow_methods=["*"],
     allow_headers=["*"],
 )
