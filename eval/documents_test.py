@@ -54,7 +54,7 @@ def snapshot():
     with get_pool().connection() as conn:
         return {
             "docs": {r[0] for r in conn.execute("SELECT id FROM documents").fetchall()},
-            "counts": tuple(conn.execute(f"SELECT count(*) FROM {t}").fetchone()[0] for t in ("documents", "chunks", "chunk_embeddings", "document_applicability", "applicability_tags")),
+            "counts": conn.execute("SELECT (SELECT count(*) FROM documents), (SELECT count(*) FROM chunks), (SELECT count(*) FROM chunk_embeddings), (SELECT count(*) FROM document_applicability), (SELECT count(*) FROM applicability_tags)").fetchone(),
             "log_max": conn.execute("SELECT coalesce(max(id), 0) FROM query_logs").fetchone()[0],
             "tag_max": conn.execute("SELECT coalesce(max(id), 0) FROM applicability_tags").fetchone()[0],
             "staged": {p.name for p in STAGING.glob("*")} if STAGING.exists() else set(),
