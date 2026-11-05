@@ -13,12 +13,15 @@ concurrency:
   group: gozu-veil-${{ github.repository }}
   cancel-in-progress: false
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
-  scan:
+  gozu-veil:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     steps:
+      # veil reads .gozu/jira-to-pr.yml from this checkout.
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -29,18 +32,6 @@ jobs:
           jira-email: ${{ secrets.JIRA_EMAIL }}
           jira-api-token: ${{ secrets.JIRA_API_TOKEN }}
           jira-project-key: VT
-
-  veil:
-    needs: scan
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    steps:
-      # veil reads .gozu/jira-to-pr.yml from this checkout.
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
       - uses: Wasi-cal/veil@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
