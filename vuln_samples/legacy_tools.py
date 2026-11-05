@@ -1,8 +1,9 @@
 """Intentionally vulnerable helpers for testing veil. Not imported by the app."""
 
+import ast
 import hashlib
+import json
 import os
-import pickle
 import random
 import sqlite3
 import subprocess
@@ -16,14 +17,14 @@ API_KEY = "sk-test-0000000000000000000000000000"
 
 
 def find_employee(db_path: str, name: str):
-    # 2. SQL injection: user input concatenated into the query
+    # 2. Use a parameterized query to prevent SQL injection
     conn = sqlite3.connect(db_path)
-    return conn.execute("SELECT * FROM employees WHERE name = '" + name + "'").fetchall()
+    return conn.execute("SELECT * FROM employees WHERE name = ?", (name,)).fetchall()
 
 
 def ping_host(host: str) -> str:
     # 3. OS command injection: shell=True with user input
-    return subprocess.check_output("ping -c 1 " + host, shell=True, text=True)
+    return subprocess.check_output(["ping", "-c", "1", host], shell=False, text=True)
 
 
 def read_policy_file(filename: str) -> str:
@@ -33,13 +34,15 @@ def read_policy_file(filename: str) -> str:
 
 
 def load_session(blob: bytes):
-    # 5. Insecure deserialization of untrusted data
-    return pickle.loads(blob)
+    # 5. Parse session data without allowing code execution
+    return json.loads(blob)
 
 
 def hash_password(password: str) -> str:
     # 6. Weak hash (MD5, unsalted) for passwords
-    return hashlib.md5(password.encode()).hexdigest()
+    salt = os.urandom(16)
+    digest = hashlib.scrypt(password.encode(), salt=salt, n=2**14, r=8, p=1)
+    return f"{salt.hex()}:{digest.hex()}"
 
 
 def make_reset_token() -> str:
@@ -48,15 +51,15 @@ def make_reset_token() -> str:
 
 
 def fetch_url(url: str) -> str:
-    # 8. SSRF (no allow-list) and disabled TLS verification
-    return requests.get(url, verify=False, timeout=10).text
+    # 8. SSRF (no allow-list)
+    return requests.get(url, timeout=10).text
 
 
 def parse_config(text: str):
     # 9. Unsafe YAML load can construct arbitrary objects
-    return yaml.load(text, Loader=yaml.Loader)
+    return yaml.safe_load(text)
 
 
 def run_expression(expr: str):
-    # 10. Code injection via eval on user input
-    return eval(expr)
+    # 10. Parse expressions without executing code
+    return ast.literal_eval(expr)

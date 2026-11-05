@@ -1,0 +1,40 @@
+# Gozu scans the branch of the pull request and makes Jira tickets. Then veil fixes the tickets
+# and opens Fix PRs (branches veil/fix-*, label veil-fix). When you merge a Fix PR, the next run
+# of this workflow lets Gozu close the tickets whose finding is gone.
+name: gozu-veil
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, reopened, synchronize]
+  # Never use pull_request_target. A run on a fork pull request must not get secrets.
+
+concurrency:
+  group: gozu-veil-${{ github.repository }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  gozu-veil:
+    runs-on: ubuntu-latest
+    steps:
+      # veil reads .gozu/jira-to-pr.yml from this checkout.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: Wasi-cal/Gozu-Action@v1
+        with:
+          jira-url: https://gozu-calfus.atlassian.net
+          jira-email: ${{ secrets.JIRA_EMAIL }}
+          jira-api-token: ${{ secrets.JIRA_API_TOKEN }}
+          jira-project-key: VT
+      - uses: Wasi-cal/veil@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

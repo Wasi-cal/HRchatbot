@@ -6,3 +6,6 @@ pull_request_enabled: true
 in_review_status: "In Progress"
 # No label is needed. veil takes every open ticket without an assignee.
 eligible_label: ""
+# The cheap model thinks less before each step. This costs less. The strong model keeps its own default.
+# Trial: compare the Cost section of the run summary with a run that has no value here.
+cheap_reasoning_effort: "low"
