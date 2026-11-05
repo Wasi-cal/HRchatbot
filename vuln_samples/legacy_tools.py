@@ -56,7 +56,7 @@ def fetch_url(url: str) -> str:
 
 def parse_config(text: str):
     # 9. Unsafe YAML load can construct arbitrary objects
-    return yaml.load(text, Loader=yaml.Loader)
+    return yaml.safe_load(text)
 
 
 def run_expression(expr: str):
