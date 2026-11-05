@@ -1,8 +1,8 @@
 """Intentionally vulnerable helpers for testing veil. Not imported by the app."""
 
 import hashlib
+import json
 import os
-import pickle
 import random
 import sqlite3
 import subprocess
@@ -33,8 +33,8 @@ def read_policy_file(filename: str) -> str:
 
 
 def load_session(blob: bytes):
-    # 5. Insecure deserialization of untrusted data
-    return pickle.loads(blob)
+    # 5. Parse session data without allowing code execution
+    return json.loads(blob)
 
 
 def hash_password(password: str) -> str:
