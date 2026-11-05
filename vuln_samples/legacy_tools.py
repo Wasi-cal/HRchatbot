@@ -50,8 +50,8 @@ def make_reset_token() -> str:
 
 
 def fetch_url(url: str) -> str:
-    # 8. SSRF (no allow-list) and disabled TLS verification
-    return requests.get(url, verify=False, timeout=10).text
+    # 8. SSRF (no allow-list)
+    return requests.get(url, timeout=10).text
 
 
 def parse_config(text: str):
