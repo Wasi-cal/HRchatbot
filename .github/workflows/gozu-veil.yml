@@ -1,0 +1,65 @@
+# One workflow, two steps in order: Gozu scans the branch of the pull request and makes Jira tickets,
+# then veil fixes those tickets and opens Fix PRs (branches veil/fix-*, label veil-fix).
+# When a Fix PR is merged, the push starts this workflow again. Gozu then closes the tickets
+# whose finding is gone (auto-close).
+name: gozu-veil
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, reopened, synchronize]
+  # Never use pull_request_target. A run on a fork pull request must not get secrets.
+
+concurrency:
+  group: gozu-veil-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    # Fix PRs are opened with GITHUB_TOKEN, so they never start this workflow. This guard is a second lock.
+    # A fork PR gets no secrets, so it is skipped.
+    if: >-
+      !startsWith(github.head_ref, 'veil/fix-') && !startsWith(github.head_ref, 'gozu/fix-') &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      created: ${{ steps.gozu.outputs.tickets-created }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - id: gozu
+        uses: Wasi-cal/Gozu-Action@v1.0.0
+        with:
+          jira-url: https://gozu-calfus.atlassian.net
+          jira-email: ${{ secrets.JIRA_EMAIL }}
+          jira-api-token: ${{ secrets.JIRA_API_TOKEN }}
+          jira-project-key: VT
+          # veil's own branches are never scanned. The default branch is always skipped.
+          skip-branches: |
+            veil/*
+            gozu/fix-*
+
+  veil:
+    needs: scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      # Jira search takes a few seconds to show the tickets that Gozu just made.
+      - if: needs.scan.outputs.created != '' && needs.scan.outputs.created != '0'
+        run: sleep 30
+      # Must run before veil. veil reads .gozu/jira-to-pr.yml from this checkout.
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: Wasi-cal/veil@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
