@@ -11,6 +11,7 @@ from typing import Any, Literal
 from uuid import UUID
 
 import psycopg
+from psycopg import sql
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 from psycopg.rows import dict_row
 from pydantic import BaseModel
@@ -190,7 +191,7 @@ _DOCUMENT_SELECT = """
 @router.get("/documents")
 def list_documents():
     with get_pool().connection() as conn, conn.cursor(row_factory=dict_row) as cur:
-        cur.execute(_DOCUMENT_SELECT + " ORDER BY d.created_at DESC, d.id")
+        cur.execute(sql.SQL(_DOCUMENT_SELECT) + sql.SQL(" ORDER BY d.created_at DESC, d.id"))
         rows = cur.fetchall()
     # "possible duplicate of ..." badges come from the cached scan (cache-aside, invalidated with the other
     # document caches); a failure here must never break the listing.
@@ -259,7 +260,7 @@ def set_document_status(document_id: UUID, body: StatusRequest):
             if cur.rowcount == 0:
                 raise HTTPException(404, "Document not found")
             cur.execute("UPDATE chunks SET is_superseded = %s WHERE document_id = %s", (flag, document_id))
-            cur.execute(_DOCUMENT_SELECT + " WHERE d.id = %s", (document_id,))
+            cur.execute(sql.SQL(_DOCUMENT_SELECT) + sql.SQL(" WHERE d.id = %s"), (document_id,))
             row = cur.fetchone()
             conn.commit()
     except psycopg.errors.UniqueViolation:
@@ -307,17 +308,9 @@ def usage_summary(
     days: int = Query(7, ge=0, description="Window in days; 0 = all time"),
     source: Literal["text", "voice"] | None = Query(None, description="Filter by request origin"),
 ):
-    clauses, params = [], []
-    if days:
-        clauses.append("created_at >= now() - make_interval(days => %s)")
-        params.append(days)
-    if source:
-        clauses.append("source = %s")
-        params.append(source)
-    where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
     with get_pool().connection() as conn, conn.cursor(row_factory=dict_row) as cur:
         cur.execute(
-            f"""
+            """
             SELECT count(*) AS total,
                    count(*) FILTER (WHERE response_type = 'answer') AS answer,
                    count(*) FILTER (WHERE response_type = 'clarification') AS clarification,
@@ -334,9 +327,11 @@ def usage_summary(
                    avg(retrieval_time_ms) AS avg_retrieval_time_ms,
                    avg(ttft_ms) AS avg_ttft_ms,
                    avg(total_generation_time_ms) AS avg_total_generation_time_ms
-            FROM query_logs {where}
+            FROM query_logs
+            WHERE (%s = 0 OR created_at >= now() - make_interval(days => %s))
+              AND (%s IS NULL OR source = %s)
             """,
-            params,
+            (days, days, source, source),
         )
         r = cur.fetchone()
 
