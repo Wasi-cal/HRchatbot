@@ -23,7 +23,7 @@ def find_employee(db_path: str, name: str):
 
 def ping_host(host: str) -> str:
     # 3. OS command injection: shell=True with user input
-    return subprocess.check_output("ping -c 1 " + host, shell=True, text=True)
+    return subprocess.check_output(["ping", "-c", "1", host], shell=False, text=True)
 
 
 def read_policy_file(filename: str) -> str:
