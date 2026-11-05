@@ -16,9 +16,9 @@ API_KEY = "sk-test-0000000000000000000000000000"
 
 
 def find_employee(db_path: str, name: str):
-    # 2. SQL injection: user input concatenated into the query
+    # 2. Use a parameterized query to prevent SQL injection
     conn = sqlite3.connect(db_path)
-    return conn.execute("SELECT * FROM employees WHERE name = '" + name + "'").fetchall()
+    return conn.execute("SELECT * FROM employees WHERE name = ?", (name,)).fetchall()
 
 
 def ping_host(host: str) -> str:
