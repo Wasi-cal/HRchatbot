@@ -1,5 +1,6 @@
 """Intentionally vulnerable helpers for testing veil. Not imported by the app."""
 
+import ast
 import hashlib
 import json
 import os
@@ -60,5 +61,5 @@ def parse_config(text: str):
 
 
 def run_expression(expr: str):
-    # 10. Code injection via eval on user input
-    return eval(expr)
+    # 10. Parse expressions without executing code
+    return ast.literal_eval(expr)
