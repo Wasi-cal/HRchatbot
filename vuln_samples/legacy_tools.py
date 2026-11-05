@@ -39,7 +39,9 @@ def load_session(blob: bytes):
 
 def hash_password(password: str) -> str:
     # 6. Weak hash (MD5, unsalted) for passwords
-    return hashlib.md5(password.encode()).hexdigest()
+    salt = os.urandom(16)
+    digest = hashlib.scrypt(password.encode(), salt=salt, n=2**14, r=8, p=1)
+    return f"{salt.hex()}:{digest.hex()}"
 
 
 def make_reset_token() -> str:
