@@ -88,14 +88,13 @@ def dense_search(
     """Cosine-similarity search via the HNSW index. Returns a list of
     (chunk_db_id, similarity) ordered by similarity descending - list
     position gives the dense rank (1-based)."""
-    filter_sql = _visibility_filter_sql()
     rows = conn.execute(
-        f"""
+        """
         SELECT ce.chunk_id, 1 - (ce.dense_vector <=> %s) AS similarity
         FROM chunk_embeddings ce
         JOIN chunks c ON c.id = ce.chunk_id
         JOIN documents d ON d.id = c.document_id
-        WHERE ce.embedding_model_id = %s AND NOT c.is_superseded AND {filter_sql}
+        WHERE ce.embedding_model_id = %s AND NOT c.is_superseded AND NOT d.is_restricted
         ORDER BY ce.dense_vector <=> %s
         LIMIT %s
         """,
@@ -110,14 +109,14 @@ def dense_search_many(conn, query_denses: list, model_id: int, limits: list[int]
     filter_sql = _visibility_filter_sql()
     parts, params = [], []
     for i, (vec, limit) in enumerate(zip(query_denses, limits)):
-        parts.append(f"""(SELECT {i} AS q, ce.chunk_id, 1 - (ce.dense_vector <=> %s) AS similarity
+        parts.append("""(SELECT %s AS q, ce.chunk_id, 1 - (ce.dense_vector <=> %s) AS similarity
             FROM chunk_embeddings ce
             JOIN chunks c ON c.id = ce.chunk_id
             JOIN documents d ON d.id = c.document_id
             WHERE ce.embedding_model_id = %s AND NOT c.is_superseded AND {filter_sql}
             ORDER BY ce.dense_vector <=> %s
             LIMIT %s)""")
-        params += [vec, model_id, vec, limit]
+        params += [i, vec, model_id, vec, limit]
     rows = conn.execute(" UNION ALL ".join(parts) + " ORDER BY q, similarity DESC", params).fetchall()
     out = [[] for _ in query_denses]
     for q, chunk_db_id, similarity in rows:
@@ -142,14 +141,13 @@ def sparse_search(
     active chunk's sparse_vector under the active model once, scores each
     against the query in memory, and returns the top candidate_n as
     (chunk_db_id, score) ordered by score descending."""
-    filter_sql = _visibility_filter_sql()
     rows = conn.execute(
-        f"""
+        """
         SELECT ce.chunk_id, ce.sparse_vector
         FROM chunk_embeddings ce
         JOIN chunks c ON c.id = ce.chunk_id
         JOIN documents d ON d.id = c.document_id
-        WHERE ce.embedding_model_id = %s AND NOT c.is_superseded AND {filter_sql}
+        WHERE ce.embedding_model_id = %s AND NOT c.is_superseded AND NOT d.is_restricted
         """,
         [model_id],
     ).fetchall()
@@ -166,14 +164,13 @@ def sparse_search(
 def sparse_search_many(conn, query_sparses: list[dict], model_id: int, limits: list[int]):
     """sparse_search() for several queries over ONE fetch of the chunk sparse vectors
     (the fetch dominates its cost). limits[i] is candidate_n for query i."""
-    filter_sql = _visibility_filter_sql()
     rows = conn.execute(
-        f"""
+        """
         SELECT ce.chunk_id, ce.sparse_vector
         FROM chunk_embeddings ce
         JOIN chunks c ON c.id = ce.chunk_id
         JOIN documents d ON d.id = c.document_id
-        WHERE ce.embedding_model_id = %s AND NOT c.is_superseded AND {filter_sql}
+        WHERE ce.embedding_model_id = %s AND NOT c.is_superseded AND NOT d.is_restricted
         """,
         [model_id],
     ).fetchall()
@@ -223,24 +220,20 @@ def rrf_fuse(dense_results, sparse_results, k: int = DEFAULT_RRF_K):
 # details (no extra round trip). retrieve() turns them into a label with config.labels.compute_label(), which
 # shows a tag type only where the document deviates from the norm (norms come from the cache). NULL when the
 # document has no tags.
-_TAGS_SQL = """
-    (SELECT json_object_agg(g.tag_type, g.vals)
-       FROM (SELECT at.tag_type, array_agg(at.tag_value ORDER BY at.tag_value) AS vals
-               FROM document_applicability da
-               JOIN applicability_tags at ON at.id = da.tag_id
-              WHERE da.document_id = d.id
-              GROUP BY at.tag_type) g)
-"""
-
-
 def fetch_chunk_details(conn, chunk_db_ids: list) -> dict:
     """Returns {chunk_db_id: (chunk_id, section_path, text, document_title,
     document_id, tags)}. tags is the document's {tag_type: [values]} (None when it has none)."""
     if not chunk_db_ids:
         return {}
     rows = conn.execute(
-        f"""
-        SELECT c.id, c.chunk_id, c.section_path, c.text, d.document_title, d.id, {_TAGS_SQL} AS tags
+        """
+        SELECT c.id, c.chunk_id, c.section_path, c.text, d.document_title, d.id,
+               (SELECT json_object_agg(g.tag_type, g.vals)
+                  FROM (SELECT at.tag_type, array_agg(at.tag_value ORDER BY at.tag_value) AS vals
+                          FROM document_applicability da
+                          JOIN applicability_tags at ON at.id = da.tag_id
+                         WHERE da.document_id = d.id
+                         GROUP BY at.tag_type) g) AS tags
         FROM chunks c
         JOIN documents d ON d.id = c.document_id
         WHERE c.id = ANY(%s)
